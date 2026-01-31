@@ -7,6 +7,7 @@ const corsHeaders = {
 }
 
 Deno.serve(async (req) => {
+    // Handle CORS
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
     }
@@ -14,51 +15,39 @@ Deno.serve(async (req) => {
     try {
         const { reports, startDate, endDate } = await req.json()
 
-        const openAiKey = Deno.env.get('OPENAI_API_KEY')
-        if (!openAiKey) {
-            throw new Error('Server Config Error: Missing OpenAI Key');
+        if (!reports || reports.length === 0) {
+            throw new Error('No hay reportes para analizar en este periodo.')
         }
 
-        const reportContext = reports.map((r: any) => ({
-            id: r.tracking_id,
-            date: r.created_at,
+        const openAiKey = Deno.env.get('OPENAI_API_KEY')
+        if (!openAiKey) {
+            throw new Error('Configuración de Servidor: Falta OPENAI_API_KEY en Supabase.');
+        }
+
+        // Simplificar reportes para ahorrar tokens y evitar errores de tamaño
+        const reportContext = reports.slice(0, 50).map((r: any) => ({
             sector: r.sector,
-            content: r.content,
-            status: r.status,
-            ai_summary: r.ai_summary,
-            ai_category: r.ai_category,
-            ai_urgency: r.ai_urgency,
-            ai_solutions: r.ai_solutions
+            content: r.content?.substring(0, 200), // Solo los primeros 200 caracteres
+            urgency: r.ai_urgency,
+            category: r.ai_category
         }));
 
         const prompt = `
-      Eres un consultor senior en Gestión de Calidad en Salud y Seguridad del Paciente para el Sanatorio Argentino.
-      Tu tarea es realizar un Informe de Inteligencia de Calidad basado en un conjunto de datos de reportes de incidentes.
-      
-      Periodo del informe: ${startDate} al ${endDate}
-      Total de reportes recibidos: ${reports.length}
-      
-      DATOS DE REPORTES:
+      Actúa como el Director de Calidad del Sanatorio Argentino. 
+      Analiza estos reportes (${startDate} a ${endDate}):
       ${JSON.stringify(reportContext)}
 
-      Debes realizar un análisis profundo estructurado en 4 partes EXACTAS:
-      
-      1. ANÁLISIS DESCRIPTIVO: Resume cuantitativamente qué ocurrió este periodo. Menciona los sectores más afectados y los tipos de casos predominantes.
-      2. ANÁLISIS DIAGNÓSTICO: Identifica patrones y causas raíz. ¿Por qué están ocurriendo estos incidentes? Busca hilos conductores entre diferentes reportes.
-      3. ANÁLISIS PREDICTIVO: Basado en estos datos, ¿qué riesgos ves para el próximo periodo? Identifica "puntos calientes" y tipos de incidentes que podrían repetirse o intensificarse si no se actúa.
-      4. ANÁLISIS PRESCRIPTIVO: Proporciona 3 a 5 recomendaciones estratégicas concretas para el Comité de Calidad del Sanatorio para mitigar los riesgos detectados.
+      Genera un reporte de inteligencia clínica con 4 secciones:
+      1. descriptive: Resumen de qué pasó y áreas críticas.
+      2. diagnostic: Por qué ocurrió (causas raíz detectadas).
+      3. predictive: Qué riesgos ves para el próximo mes.
+      4. prescriptive: 3 acciones estratégicas para mejorar.
 
-      IMPORTANTE:
-      - Mantén un tono formal, profesional y de liderazgo médico.
-      - Sé específico basándote en los datos proporcionados.
-      - Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
-      {
-        "descriptive": "Texto del análisis...",
-        "diagnostic": "Texto del análisis...",
-        "predictive": "Texto del análisis...",
-        "prescriptive": "Texto del análisis..."
-      }
+      IMPORTANTE: Responde ÚNICAMENTE con un objeto JSON válido. NO incluyas texto extra, ni bloques de código markdown.
+      Formato: {"descriptive": "...", "diagnostic": "...", "predictive": "...", "prescriptive": "..."}
     `;
+
+        console.log(`[Intelligence] Iniciando análisis para ${reports.length} reportes...`);
 
         const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
@@ -68,19 +57,25 @@ Deno.serve(async (req) => {
             },
             body: JSON.stringify({
                 model: 'gpt-4o-mini',
-                messages: [{ role: 'user', content: prompt }],
-                temperature: 0.4
+                messages: [
+                    { role: 'system', content: 'Eres un analista de datos de salud que solo responde en JSON puro.' },
+                    { role: 'user', content: prompt }
+                ],
+                temperature: 0.3,
+                response_format: { type: "json_object" } // Fuerza respuesta JSON
             })
         })
 
         if (!aiResponse.ok) {
             const errBody = await aiResponse.text();
-            throw new Error(`AI Service Error: ${errBody}`);
+            console.error('OpenAI Error:', errBody);
+            throw new Error(`Error de OpenAI: ${aiResponse.status}`);
         }
 
         const aiData = await aiResponse.json()
-        let content = aiData.choices[0].message.content;
-        content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        const content = aiData.choices[0].message.content;
+
+        console.log("[Intelligence] Análisis completado con éxito.");
 
         return new Response(content, {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -88,6 +83,7 @@ Deno.serve(async (req) => {
         })
 
     } catch (error) {
+        console.error('[Intelligence Error]:', error.message);
         return new Response(JSON.stringify({ error: error.message }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 500,
