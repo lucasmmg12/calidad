@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../utils/supabase';
-import { Send, ShieldAlert, CheckCircle, Loader2, ChevronDown, User, Lock, Info, AlertTriangle, Lightbulb, Paperclip, X } from 'lucide-react';
+import { Send, ShieldAlert, CheckCircle, Loader2, ChevronDown, User, Lock, Info, AlertTriangle, Lightbulb, Paperclip, X, Phone } from 'lucide-react';
 
 export const ReportingForm = () => {
     const [loading, setLoading] = useState(false);
@@ -123,31 +123,21 @@ export const ReportingForm = () => {
 
     if (successId) {
         return (
-            <div className="max-w-md mx-auto mt-10 p-8 bg-white rounded-2xl shadow-card border border-gray-100 text-center animate-in zoom-in-95 duration-300">
-                <div className="flex justify-center mb-6">
-                    <div className="bg-green-50 p-4 rounded-full">
-                        <CheckCircle className="w-16 h-16 text-sanatorio-secondary" />
+            <div className="max-w-md mx-auto mt-10 p-10 glass-card text-center animate-in zoom-in-95 duration-500 rounded-[2.5rem]">
+                <div className="flex justify-center mb-8">
+                    <div className="bg-sanatorio-secondary/10 p-5 rounded-full animate-bounce">
+                        <CheckCircle className="w-20 h-20 text-sanatorio-secondary" />
                     </div>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">¡Reporte Recibido!</h2>
-                <p className="text-gray-500 mb-8">Gracias por ayudarnos a mejorar la calidad de atención.</p>
-
-                <div className="bg-sanatorio-neutral p-6 rounded-xl border border-gray-100 mb-8">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">ID DE SEGUIMIENTO</p>
-                    <p className="text-4xl font-mono font-bold text-sanatorio-primary tracking-widest">{successId}</p>
+                <h2 className="text-3xl font-display font-black text-sanatorio-primary mb-4">¡Reporte Enviado!</h2>
+                <p className="text-slate-500 mb-8 font-medium">Gracias por ayudarnos a mejorar. Tu código de seguimiento es:</p>
+                <div className="bg-slate-50 border border-slate-200 p-6 rounded-2xl mb-8 group cursor-pointer hover:border-sanatorio-primary transition-colors">
+                    <p className="text-3xl font-mono font-black text-sanatorio-primary tracking-wider group-active:scale-95 transition-transform">{successId}</p>
+                    <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-widest">Guarda este código para consultas futuras</p>
                 </div>
-
-                <p className="text-sm text-gray-400 mb-8 px-4">
-                    Guarda este código para consultar el estado.
-                </p>
-
                 <button
-                    onClick={() => {
-                        setSuccessId(null);
-                        setFormData({ sector: '', content: '', contactNumber: '' });
-                        removeFile();
-                    }}
-                    className="w-full py-4 bg-sanatorio-primary text-white rounded-xl font-bold hover:bg-[#004270] transition-all shadow-lg shadow-sanatorio-primary/20 active:scale-95"
+                    onClick={() => { setSuccessId(null); setFormData({ sector: '', content: '', contactNumber: '' }); setFile(null); setPreviewUrl(null); }}
+                    className="btn-primary w-full"
                 >
                     Enviar Nuevo Reporte
                 </button>
@@ -156,93 +146,84 @@ export const ReportingForm = () => {
     }
 
     return (
-        <div className="max-w-3xl mx-auto p-4 md:p-6">
-            <div className="mb-8 text-center space-y-2">
-                <h1 className="text-3xl md:text-4xl font-bold text-sanatorio-primary tracking-tight">Gestión de Calidad</h1>
-                <p className="text-gray-500 text-lg">Tu opinión es fundamental para mejorar nuestra atención.</p>
+        <div className="max-w-3xl mx-auto p-4 md:p-6 mb-20">
+            <div className="mb-12 text-center space-y-3">
+                <h1 className="text-4xl md:text-5xl font-display font-black text-sanatorio-primary tracking-tight">Gestión de Calidad</h1>
+                <p className="text-slate-500 text-lg font-medium">Tu voz es el motor de nuestra mejora continua.</p>
             </div>
 
             {/* Quick Guide Card */}
-            <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-6 mb-8">
-                <h3 className="text-sm font-bold text-sanatorio-primary uppercase tracking-wider mb-4 flex items-center gap-2">
+            <div className="glass-panel rounded-3xl p-8 mb-10 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-sanatorio-primary/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                <h3 className="text-xs font-bold text-sanatorio-primary uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
                     <Info className="w-4 h-4" />
                     Guía Rápida de Reporte
                 </h3>
-                <div className="grid md:grid-cols-3 gap-6">
-                    <div className="flex gap-3">
-                        <div className="bg-white p-2 rounded-lg shadow-sm h-fit">
-                            <AlertTriangle className="w-5 h-5 text-orange-500" />
+                <div className="grid md:grid-cols-3 gap-8">
+                    <div className="space-y-3">
+                        <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+                            <AlertTriangle className="w-5 h-5 text-orange-600" />
                         </div>
-                        <div>
-                            <p className="font-semibold text-gray-800 text-sm">Sé Específico</p>
-                            <p className="text-xs text-gray-500 mt-1">Indica Qué pasó, Dónde y Cuándo. Evita generalidades.</p>
-                        </div>
+                        <p className="font-bold text-slate-800 text-sm">Sé Específico</p>
+                        <p className="text-xs text-slate-500 leading-relaxed">Detalla el Qué, Dónde y Cuándo con precisión.</p>
                     </div>
-                    <div className="flex gap-3">
-                        <div className="bg-white p-2 rounded-lg shadow-sm h-fit">
-                            <Lightbulb className="w-5 h-5 text-yellow-500" />
+                    <div className="space-y-3">
+                        <div className="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center">
+                            <Lightbulb className="w-5 h-5 text-yellow-600" />
                         </div>
-                        <div>
-                            <p className="font-semibold text-gray-800 text-sm">Propone Soluciones</p>
-                            <p className="text-xs text-gray-500 mt-1">Si tienes una idea, ¡queremos escucharla!</p>
-                        </div>
+                        <p className="font-bold text-slate-800 text-sm">Aporta Ideas</p>
+                        <p className="text-xs text-slate-500 leading-relaxed">Tus sugerencias de solución son muy valiosas.</p>
                     </div>
-                    <div className="flex gap-3">
-                        <div className="bg-white p-2 rounded-lg shadow-sm h-fit">
+                    <div className="space-y-3">
+                        <div className="w-10 h-10 bg-sanatorio-secondary/10 rounded-xl flex items-center justify-center">
                             <ShieldAlert className="w-5 h-5 text-sanatorio-secondary" />
                         </div>
-                        <div>
-                            <p className="font-semibold text-gray-800 text-sm">Confidencialidad</p>
-                            <p className="text-xs text-gray-500 mt-1">Usa el modo anónimo si prefieres mantener tu privacidad.</p>
-                        </div>
+                        <p className="font-bold text-slate-800 text-sm">Privacidad</p>
+                        <p className="text-xs text-slate-500 leading-relaxed">Usa el modo anónimo para proteger tu identidad.</p>
                     </div>
                 </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-card p-6 md:p-10 border border-white/50 backdrop-blur-sm">
-                <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="glass-card rounded-[2.5rem] p-6 md:p-12">
+                <form onSubmit={handleSubmit} className="space-y-10">
 
                     {/* Toggle Anónimo */}
                     <div
-                        className={`group relative overflow-hidden rounded-2xl border-2 transition-all duration-300 cursor-pointer ${isAnonymous
-                            ? 'border-sanatorio-primary/10 bg-blue-50/50'
-                            : 'border-transparent bg-gray-50'
+                        className={`group relative overflow-hidden rounded-2xl border-2 transition-all duration-500 cursor-pointer ${isAnonymous
+                            ? 'border-sanatorio-primary/20 bg-sanatorio-primary/5'
+                            : 'border-slate-100 bg-slate-50/50 hover:border-slate-200'
                             }`}
                         onClick={() => setIsAnonymous(!isAnonymous)}
                     >
-                        <div className="absolute top-0 right-0 p-4 opacity-10">
-                            {isAnonymous ? <ShieldAlert className="w-24 h-24 text-sanatorio-primary" /> : <User className="w-24 h-24 text-gray-400" />}
-                        </div>
-
-                        <div className="p-5 flex items-center justify-between relative z-10">
-                            <div className="flex items-center gap-4">
-                                <div className={`p-3 rounded-full ${isAnonymous ? 'bg-sanatorio-primary text-white' : 'bg-gray-200 text-gray-500'}`}>
+                        <div className="p-6 flex items-center justify-between relative z-10">
+                            <div className="flex items-center gap-5">
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${isAnonymous ? 'bg-sanatorio-primary text-white rotate-[360deg] shadow-lg shadow-sanatorio-primary/20' : 'bg-white text-slate-400 border border-slate-200'}`}>
                                     {isAnonymous ? <Lock className="w-6 h-6" /> : <User className="w-6 h-6" />}
                                 </div>
                                 <div className="text-left">
-                                    <p className={`font-bold text-lg ${isAnonymous ? 'text-sanatorio-primary' : 'text-gray-600'}`}>
+                                    <p className={`font-bold text-lg ${isAnonymous ? 'text-sanatorio-primary' : 'text-slate-600'}`}>
                                         {isAnonymous ? 'Modo Anónimo Activo' : 'Modo Identificado'}
                                     </p>
-                                    <p className="text-sm text-gray-500">
-                                        {isAnonymous ? 'Tu identidad está protegida' : 'Podremos contactarte directamente'}
+                                    <p className="text-sm text-slate-400 font-medium tracking-tight">
+                                        {isAnonymous ? 'Tu identidad está 100% protegida.' : 'Podremos contactarte para darte feedback.'}
                                     </p>
                                 </div>
                             </div>
 
-                            <div className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-300 ${isAnonymous ? 'bg-sanatorio-primary' : 'bg-gray-300'}`}>
-                                <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-300 shadow-sm ${isAnonymous ? 'translate-x-6' : 'translate-x-1'}`} />
+                            <div className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-500 ${isAnonymous ? 'bg-sanatorio-primary' : 'bg-slate-300'}`}>
+                                <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-500 shadow-md ${isAnonymous ? 'translate-x-6' : 'translate-x-1'}`} />
                             </div>
                         </div>
                     </div>
 
-                    <div className="space-y-6">
+                    <div className="space-y-8">
                         {/* Selector de Sector */}
                         <div className="space-y-2">
-                            <label className="label-text">Sector / Servicio</label>
-                            <div className="relative">
+                            <label className="label-text">Sector o Servicio</label>
+                            <div className="relative group">
                                 <select
                                     required
-                                    className="input-field appearance-none cursor-pointer"
+                                    className="input-field appearance-none cursor-pointer pr-12 group-hover:border-slate-300"
                                     value={formData.sector}
                                     onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
                                 >
@@ -256,18 +237,18 @@ export const ReportingForm = () => {
                                     <option value="Limpieza">🧹 Limpieza / Maestranza</option>
                                     <option value="Otro">📝 Otro</option>
                                 </select>
-                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none group-focus-within:text-sanatorio-primary transition-colors" />
                             </div>
                         </div>
 
                         {/* Contenido */}
                         <div className="space-y-2">
-                            <label className="label-text">Detalle del Reporte</label>
+                            <label className="label-text">Detalle del Incidente</label>
                             <textarea
                                 required
                                 rows={6}
-                                placeholder="Por favor detalla qué sucedió, dónde y cuándo con la mayor precisión posible."
-                                className="input-field resize-none leading-relaxed placeholder:text-gray-400"
+                                placeholder="Describe brevemente lo sucedido..."
+                                className="input-field resize-none leading-relaxed placeholder:text-slate-300"
                                 value={formData.content}
                                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                             />
@@ -275,82 +256,80 @@ export const ReportingForm = () => {
 
                         {/* File Upload */}
                         <div className="space-y-2">
-                            <label className="label-text">Evidencia (Opcional)</label>
-                            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                            <label className="label-text">Evidencia Visual (Opcional)</label>
+                            <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4">
                                 {previewUrl ? (
-                                    <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden group">
-                                        <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                                        <button
-                                            type="button"
-                                            onClick={removeFile}
-                                            className="absolute top-2 right-2 bg-white/90 p-2 rounded-full shadow-md hover:bg-red-50 hover:text-red-500 transition-colors"
-                                        >
-                                            <X className="w-5 h-5" />
-                                        </button>
+                                    <div className="relative w-full h-56 rounded-xl overflow-hidden shadow-premium group">
+                                        <img src={previewUrl} alt="Preview" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <button
+                                                type="button"
+                                                onClick={removeFile}
+                                                className="bg-white p-3 rounded-full text-red-600 shadow-xl hover:scale-110 active:scale-95 transition-all"
+                                            >
+                                                <X className="w-6 h-6" />
+                                            </button>
+                                        </div>
                                     </div>
                                 ) : (
                                     <button
                                         type="button"
                                         onClick={() => fileInputRef.current?.click()}
-                                        className="w-full h-24 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-500 hover:border-sanatorio-primary hover:text-sanatorio-primary hover:bg-white transition-all gap-2"
+                                        className="w-full h-32 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-400 hover:border-sanatorio-primary/40 hover:text-sanatorio-primary hover:bg-white transition-all duration-300 gap-3 group"
                                     >
-                                        <div className="bg-gray-200 p-2 rounded-full mb-1">
-                                            <Paperclip className="w-5 h-5" />
+                                        <div className="bg-slate-100 p-3 rounded-2xl group-hover:bg-sanatorio-primary/10 transition-colors">
+                                            <Paperclip className="w-6 h-6" />
                                         </div>
-                                        <span className="text-sm font-medium">Adjuntar foto o evidencia</span>
-                                        <span className="text-xs text-gray-400">Máx 5MB</span>
+                                        <span className="text-sm font-bold tracking-tight">Adjuntar foto o evidencia</span>
                                     </button>
                                 )}
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    className="hidden"
-                                    accept="image/*"
-                                    onChange={handleFileChange}
-                                />
                             </div>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
+                                accept="image/*"
+                                className="hidden"
+                            />
                         </div>
 
-                        {/* Contacto (Animado) */}
-                        <div className={`overflow-hidden transition-all duration-500 ease-in-out ${!isAnonymous ? 'max-h-32 opacity-100' : 'max-h-0 opacity-0'}`}>
-                            <div className="space-y-2 pt-2">
-                                <label className="label-text flex items-center gap-2">
-                                    WhatsApp de Contacto <span className="text-gray-400 font-normal text-xs">(Opcional)</span>
-                                </label>
-                                <input
-                                    type="tel"
-                                    placeholder="Ej: 2645438114 (Sin 0 ni 15)"
-                                    className="input-field"
-                                    value={formData.contactNumber}
-                                    onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
-                                />
+                        {!isAnonymous && (
+                            <div className="space-y-2 animate-in slide-in-from-top-4">
+                                <label className="label-text">WhatsApp de Contacto</label>
+                                <div className="relative group">
+                                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 group-focus-within:text-sanatorio-primary transition-colors" />
+                                    <input
+                                        type="tel"
+                                        placeholder="Ej: 264 543 8114"
+                                        className="input-field pl-12"
+                                        value={formData.contactNumber}
+                                        onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+                                    />
+                                </div>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider ml-1">Para recibir notificaciones del estado del reporte</p>
                             </div>
-                        </div>
+                        )}
                     </div>
 
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-4 bg-sanatorio-primary text-white rounded-xl font-bold text-lg hover:bg-[#004270] transition-all flex items-center justify-center gap-3 shadow-lg shadow-sanatorio-primary/30 hover:shadow-xl hover:-translate-y-1 active:scale-95 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed group"
+                        className="btn-primary w-full disabled:opacity-50 disabled:hover:scale-100"
                     >
                         {loading ? (
-                            <>
-                                <Loader2 className="w-6 h-6 animate-spin" />
-                                Subiendo...
-                            </>
+                            <Loader2 className="w-6 h-6 animate-spin" />
                         ) : (
                             <>
-                                Enviar Reporte
-                                <Send className="w-5 h-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+                                <Send className="w-5 h-5" />
+                                Enviar Reporte Seguro
                             </>
                         )}
                     </button>
-
-                    <p className="text-center text-xs text-gray-400 mt-6 md:px-12">
+                    <p className="text-center text-[10px] text-slate-400 mt-6 md:px-12 uppercase tracking-tight font-bold">
                         Tus datos son tratados con estricta confidencialidad bajo normas de calidad del Sanatorio Argentino (ISO 9001).
                     </p>
                 </form>
             </div>
-        </div>
+        </div >
     );
 };

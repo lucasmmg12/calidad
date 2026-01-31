@@ -14,7 +14,8 @@ import {
   BarChart3,
   HelpCircle,
   LogOut,
-  LogIn
+  LogIn,
+  MessageSquareHeart
 } from 'lucide-react';
 
 function Navbar() {
@@ -35,58 +36,52 @@ function Navbar() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate('/');
+    navigate('/login');
   };
 
   return (
-    <header className="bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-3 group">
-          <img
-            src="/logosanatorio.png"
-            alt="Sanatorio Argentino Logo"
-            className="h-12 w-auto transition-transform duration-300 group-hover:scale-105"
-          />
-          <div className="hidden sm:block border-l border-gray-300 pl-3">
-            <h1 className="text-lg font-bold text-sanatorio-primary leading-none mb-1">Gestión de Calidad</h1>
-            <p className="text-xs text-sanatorio-secondary font-medium tracking-widest uppercase">Mejora Continua</p>
+    <header className="sticky top-0 z-50 w-full px-4 py-3">
+      <div className="max-w-7xl mx-auto glass-panel rounded-2xl md:rounded-3xl px-4 md:px-8 py-3 flex justify-between items-center transition-all duration-300">
+        <Link to="/" className="flex items-center gap-3 group focus:outline-none">
+          <div className="w-10 h-10 bg-sanatorio-primary rounded-xl flex items-center justify-center shadow-lg shadow-sanatorio-primary/20 group-hover:scale-110 transition-transform duration-300">
+            <MessageSquareHeart className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex flex-col">
+            <span className="font-display font-black text-xl text-sanatorio-primary tracking-tight leading-none">CALIDAD</span>
+            <span className="text-[10px] font-bold text-sanatorio-secondary tracking-[0.2em] uppercase leading-none mt-1">Sanatorio Argentino</span>
           </div>
         </Link>
 
-        <nav className="flex gap-1 sm:gap-4 items-center">
-          <Link to="/" className="px-3 py-2 text-gray-600 hover:text-sanatorio-primary hover:bg-blue-50 rounded-lg font-medium text-sm transition-all">Nuevo Reporte</Link>
-          <Link to="/track" className="px-3 py-2 text-gray-600 hover:text-sanatorio-primary hover:bg-blue-50 rounded-lg font-medium text-sm transition-all">Seguimiento</Link>
-          <Link to="/guia" className="px-3 py-2 text-gray-600 hover:text-sanatorio-primary hover:bg-blue-50 rounded-lg font-medium text-sm transition-all border border-transparent hover:border-blue-100 flex items-center gap-2">
-            <HelpCircle className="w-4 h-4" />
-            Guía
+        <nav className="flex items-center gap-1">
+          <Link to="/track" className="p-2.5 rounded-xl text-slate-500 hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 transition-all duration-200" title="Seguimiento">
+            <LayoutDashboard className="w-5 h-5" />
           </Link>
+          <Link to="/guia" className="p-2.5 rounded-xl text-slate-500 hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 transition-all duration-200" title="Guía">
+            <HelpCircle className="w-5 h-5" />
+          </Link>
+
+          <div className="w-px h-6 bg-slate-200 mx-2 hidden sm:block"></div>
 
           {session ? (
             <>
-              <Link to="/metrics" className="hidden md:flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-sanatorio-primary hover:bg-blue-50 rounded-lg font-medium text-sm transition-all">
-                <BarChart3 className="w-4 h-4" />
-                Métricas
-              </Link>
-              <Link to="/dashboard" className="hidden md:flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-sanatorio-primary hover:bg-blue-50 rounded-lg font-medium text-sm transition-all">
-                <LayoutDashboard className="w-4 h-4" />
-                Dashboard
+              <Link to="/dashboard" className="hidden sm:flex items-center gap-2 px-4 py-2 text-sanatorio-primary font-bold text-sm hover:bg-sanatorio-primary/5 rounded-xl transition-all">
+                <BarChart3 className="w-4 h-4" /> Dashboard
               </Link>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg font-medium text-sm transition-all ml-2"
-                title="Cerrar Sesión"
+                className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600 rounded-xl font-bold text-sm transition-all"
               >
                 <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Cerrar Sesión</span>
+                <span className="hidden sm:inline">Salir</span>
               </button>
             </>
           ) : (
             <Link
               to="/login"
-              className="flex items-center gap-2 px-3 py-2 bg-gray-50 text-gray-600 hover:text-sanatorio-primary hover:bg-blue-50 rounded-lg font-medium text-sm transition-all border border-gray-100"
+              className="flex items-center gap-2 px-5 py-2.5 bg-sanatorio-primary/5 text-sanatorio-primary hover:bg-sanatorio-primary hover:text-white rounded-xl font-bold text-sm transition-all border border-sanatorio-primary/10 shadow-sm"
             >
               <LogIn className="w-4 h-4" />
-              Acceso Admin
+              <span className="hidden sm:inline">Admin</span>
             </Link>
           )}
         </nav>
@@ -98,7 +93,7 @@ function Navbar() {
 function App() {
   return (
     <Router>
-      <div className="min-h-screen flex flex-col font-sans text-gray-900 bg-gray-50/50">
+      <div className="min-h-screen flex flex-col font-sans text-slate-900 selection:bg-sanatorio-primary/10 selection:text-sanatorio-primary">
         <Navbar />
 
         {/* Main Content */}
@@ -121,27 +116,33 @@ function App() {
         </main>
 
         {/* Enhanced Footer */}
-        <footer className="bg-white border-t border-gray-100 mt-auto relative overflow-hidden">
+        <footer className="mt-20 border-t border-slate-200/60 bg-white/30 backdrop-blur-md relative overflow-hidden">
           {/* Call to Action Section */}
-          <div className="bg-gradient-to-r from-sanatorio-primary to-[#00385c] py-12 px-4 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+          <div className="bg-gradient-to-br from-sanatorio-primary via-[#00385c] to-slate-900 py-16 px-4 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-sanatorio-secondary/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/4"></div>
 
-            <div className="max-w-4xl mx-auto text-center relative z-10 text-white">
-              <h2 className="text-2xl md:text-3xl font-bold mb-3 text-white">Tu voz construye nuestra excelencia</h2>
-              <p className="text-blue-100 text-lg max-w-2xl mx-auto mb-8">
-                Cada reporte, sugerencia o feedback nos ayuda a elevar los estándares de cuidado para nuestros pacientes. Gracias por ser parte del cambio.
+            <div className="max-w-4xl mx-auto text-center relative z-10 px-4">
+              <h2 className="text-3xl md:text-5xl font-display font-black mb-6 text-white leading-tight">
+                Tu voz construye nuestra <span className="text-sanatorio-secondary">excelencia</span>
+              </h2>
+              <p className="text-blue-100/80 text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed italic">
+                "Cada reporte, sugerencia o feedback nos ayuda a elevar los estándares de cuidado para nuestros pacientes. Gracias por ser parte del cambio."
               </p>
-              {/* Button Removed */}
             </div>
           </div>
 
           {/* Copyright Section */}
-          <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-400">
+          <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col md:flex-row justify-between items-center gap-6 text-sm text-slate-400 font-medium">
             <p>© {new Date().getFullYear()} Sanatorio Argentino • Desarrollado por el Departamento de Innovación y Transformación Digital</p>
-            <div className="flex gap-6">
+            <div className="flex gap-8 items-center">
               <Link to="/privacidad" className="hover:text-sanatorio-primary transition-colors">Privacidad</Link>
               <Link to="/terminos" className="hover:text-sanatorio-primary transition-colors">Términos</Link>
-              <a href="mailto:innovacion@sanatorioargentino.com.ar" className="hover:text-sanatorio-primary transition-colors">Contacto</a>
+              <div className="w-1 h-1 bg-slate-300 rounded-full hidden sm:block"></div>
+              <a href="mailto:innovacion@sanatorioargentino.com.ar" className="hover:text-sanatorio-primary transition-colors flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-sanatorio-secondary"></span>
+                Soporte IT
+              </a>
             </div>
           </div>
         </footer>

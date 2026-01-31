@@ -4,38 +4,59 @@
   --color-sanatorio-primary: #00548B;
   --color-sanatorio-secondary: #00A99D;
   --color-sanatorio-white: #FFFFFF;
-  --color-sanatorio-neutral: #F4F7F9;
-  --color-sanatorio-text: #333333;
+  --color-sanatorio-neutral: #F8FAFC;
+  --color-sanatorio-text: #1E293B;
 
-  --font-sans: 'Montserrat', 'Open Sans', sans-serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Outfit', sans-serif;
 
-  --shadow-soft: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-  --shadow-card: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --shadow-glass: 0 8px 32px 0 rgba(0, 84, 139, 0.08);
+  --shadow-premium: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
 }
 
 @layer base {
   body {
-    @apply bg-sanatorio-neutral text-sanatorio-text font-sans antialiased;
-    background-image: linear-gradient(to bottom, #eff6ff, #f4f7f9);
+    @apply bg-slate-50 text-slate-800 font-sans antialiased;
+    background-image:
+      radial-gradient(at 0% 0%, rgba(0, 84, 139, 0.03) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(0, 169, 157, 0.03) 0px, transparent 50%);
     min-height: 100vh;
   }
 
   h1,
   h2,
   h3,
-  h4,
-  h5,
-  h6 {
-    @apply font-bold text-sanatorio-primary;
+  h4 {
+    @apply font-display font-bold text-sanatorio-primary tracking-tight;
   }
 }
 
 @layer utilities {
+  .glass-panel {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-glass;
+  }
+
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-md border border-white/50 shadow-premium transition-all duration-300;
+  }
+
+  .glass-card:hover {
+    @apply shadow-xl -translate-y-1 border-white/80;
+  }
+
   .input-field {
-    @apply w-full p-4 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary transition-all duration-200 outline-none;
+    @apply w-full p-4 border border-slate-200 rounded-2xl bg-white/50 backdrop-blur-sm focus:bg-white focus:ring-4 focus:ring-sanatorio-primary/10 focus:border-sanatorio-primary transition-all duration-300 outline-none text-slate-700 font-medium;
   }
 
   .label-text {
-    @apply block text-sm font-semibold text-gray-700 mb-2 ml-1;
+    @apply block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1;
+  }
+
+  .btn-primary {
+    @apply px-6 py-4 bg-sanatorio-primary text-white rounded-2xl font-bold font-display shadow-lg shadow-sanatorio-primary/25 hover:bg-[#004270] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-4 bg-white text-sanatorio-primary border border-sanatorio-primary/10 rounded-2xl font-bold font-display shadow-sm hover:bg-slate-50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2;
   }
 }

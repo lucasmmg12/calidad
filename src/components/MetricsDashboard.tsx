@@ -3,14 +3,19 @@ import { supabase } from '../utils/supabase';
 import {
     BarChart3,
     PieChart,
-    Activity,
     TrendingUp,
     Clock,
     CheckCircle2,
     AlertOctagon,
     ArrowUpRight,
-    Zap
+    Zap,
+    FileDown,
+    BrainCircuit,
+    Loader2
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import confetti from 'canvas-confetti';
 
 export const MetricsDashboard = () => {
     const [loading, setLoading] = useState(true);
@@ -23,6 +28,8 @@ export const MetricsDashboard = () => {
         bySector: [] as { sector: string; count: number; percentage: number }[],
         byUrgency: { Verdes: 0, Amarillos: 0, Rojos: 0 }
     });
+    const [isExporting, setIsExporting] = useState(false);
+    const [rawReports, setRawReports] = useState<any[]>([]);
 
     useEffect(() => {
         calculateMetrics();
@@ -39,6 +46,8 @@ export const MetricsDashboard = () => {
             setLoading(false);
             return;
         }
+
+        setRawReports(reports);
 
         const total = reports.length;
         const resolved = reports.filter(r => r.status === 'resolved');
@@ -89,6 +98,146 @@ export const MetricsDashboard = () => {
         setLoading(false);
     };
 
+    const handleExportIntelligenceReport = async () => {
+        if (rawReports.length === 0) return;
+        setIsExporting(true);
+
+        try {
+            // 1. Get AI Analysis from Edge Function
+            const { data: aiAnalysis, error: aiError } = await supabase.functions.invoke('generate-intelligence-report', {
+                body: {
+                    reports: rawReports,
+                    startDate: new Date(Math.min(...rawReports.map(r => new Date(r.created_at).getTime()))).toLocaleDateString(),
+                    endDate: new Date().toLocaleDateString()
+                }
+            });
+
+            if (aiError) throw aiError;
+
+            // 2. Initialize PDF
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const primaryColor: [number, number, number] = [0, 84, 139]; // Sanatorio Blue
+            const secondaryColor: [number, number, number] = [0, 169, 157]; // Sanatorio Green
+
+            // --- PAGE 1: COVER & DESCRIPIVE ---
+            // Header Header
+            doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.rect(0, 0, pageWidth, 40, 'F');
+
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(24);
+            doc.text('INFORME DE INTELIGENCIA DE CALIDAD', 20, 25);
+
+            doc.setFontSize(10);
+            doc.text(`Generado el: ${new Date().toLocaleString()}`, 20, 32);
+
+            // Descriptive Section
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.setFontSize(16);
+            doc.text('1. ANÁLISIS DESCRIPTIVO (Situación Actual)', 20, 55);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(11);
+            doc.setTextColor(60, 60, 60);
+            const descriptiveLines = doc.splitTextToSize(aiAnalysis.descriptive, pageWidth - 40);
+            doc.text(descriptiveLines, 20, 65);
+
+            // KPI Table for Descriptive
+            autoTable(doc, {
+                startY: 65 + (descriptiveLines.length * 7),
+                head: [['Indicador', 'Valor']],
+                body: [
+                    ['Total Reportes Recibidos', stats.total.toString()],
+                    ['Reportes Resueltos', stats.resolved.toString()],
+                    ['Tasa de Resolución', `${Math.round((stats.resolved / stats.total) * 100)}%`],
+                    ['Incidentes Críticos (Rojos)', stats.urgentCount.toString()],
+                    ['Tiempo Promedio de Respuesta', `${stats.avgResolutionTimeHours} horas`]
+                ],
+                theme: 'striped',
+                headStyles: { fillColor: primaryColor }
+            });
+
+            // Sector Breakdown Table
+            autoTable(doc, {
+                startY: (doc as any).lastAutoTable.finalY + 10,
+                head: [['Sector', 'Reportes', 'Porcentaje']],
+                body: stats.bySector.map(s => [s.sector, s.count.toString(), `${Math.round(s.percentage)}%`]),
+                theme: 'grid',
+                headStyles: { fillColor: secondaryColor }
+            });
+
+            // --- PAGE 2: DIAGNOSTIC & PREDICTIVE ---
+            doc.addPage();
+
+            // Diagnostic Section
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.text('2. ANÁLISIS DIAGNÓSTICO (Causa Raíz)', 20, 30);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(11);
+            doc.setTextColor(60, 60, 60);
+            const diagnosticLines = doc.splitTextToSize(aiAnalysis.diagnostic, pageWidth - 40);
+            doc.text(diagnosticLines, 20, 40);
+
+            // Predictive Section
+            const predictiveY = 40 + (diagnosticLines.length * 7) + 15;
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.text('3. ANÁLISIS PREDICTIVO (Tendencias y Riesgo)', 20, predictiveY);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(11);
+            doc.setTextColor(60, 60, 60);
+            const predictiveLines = doc.splitTextToSize(aiAnalysis.predictive, pageWidth - 40);
+            doc.text(predictiveLines, 20, predictiveY + 10);
+
+            // --- PAGE 3: PRESCRIPTIVE ---
+            doc.addPage();
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.text('4. ANÁLISIS PRESCRIPTIVO (Recomendaciones)', 20, 30);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(11);
+            doc.setTextColor(60, 60, 60);
+            const prescriptiveLines = doc.splitTextToSize(aiAnalysis.prescriptive, pageWidth - 40);
+            doc.text(prescriptiveLines, 20, 40);
+
+            // Footer / Certification
+            const finalY = 40 + (prescriptiveLines.length * 7) + 30;
+            doc.setDrawColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+            doc.line(20, finalY, pageWidth - 20, finalY);
+
+            doc.setFontSize(9);
+            doc.setTextColor(150, 150, 150);
+            doc.text('Este informe ha sido generado automáticamente por el Sistema de Inteligencia de Calidad del Sanatorio Argentino.', 20, finalY + 10);
+            doc.text('Departamento de Calidad e Innovación.', 20, finalY + 15);
+
+            // Save PDF
+            doc.save(`Informe_Calidad_Intelligence_${new Date().toISOString().split('T')[0]}.pdf`);
+
+            // Success Feedback
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#00548B', '#00A99D', '#FFFFFF']
+            });
+
+        } catch (err) {
+            console.error('Error exporting PDF:', err);
+            alert('Error al generar el informe inteligente. Intente nuevamente.');
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     if (loading) {
         return <div className="p-10 flex justify-center"><div className="w-8 h-8 border-4 border-sanatorio-primary border-t-transparent rounded-full animate-spin"></div></div>;
     }
@@ -96,12 +245,32 @@ export const MetricsDashboard = () => {
     return (
         <div className="max-w-7xl mx-auto p-6 space-y-8 animate-in fade-in duration-500">
             {/* Header */}
-            <div>
-                <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-                    <Activity className="text-sanatorio-primary" />
-                    Métricas de Calidad
-                </h1>
-                <p className="text-gray-500">Análisis en tiempo real de incidentes y tiempos de respuesta.</p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 className="text-4xl font-display font-black text-sanatorio-primary tracking-tight">
+                        Inteligencia de Calidad
+                    </h1>
+                    <p className="text-slate-500 font-medium">Análisis avanzado y detección de patrones en tiempo real.</p>
+                </div>
+
+                <button
+                    onClick={handleExportIntelligenceReport}
+                    disabled={isExporting}
+                    className="btn-primary w-full md:w-auto px-8"
+                >
+                    {isExporting ? (
+                        <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Generando Informe...
+                        </>
+                    ) : (
+                        <>
+                            <FileDown className="w-5 h-5" />
+                            <BrainCircuit className="w-5 h-5 text-sanatorio-secondary" />
+                            Exportar Informe PDF
+                        </>
+                    )}
+                </button>
             </div>
 
             {/* KPI Grid */}
