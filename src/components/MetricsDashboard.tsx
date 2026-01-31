@@ -16,6 +16,9 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import confetti from 'canvas-confetti';
+import { Chart, registerables } from 'chart.js';
+
+Chart.register(...registerables);
 
 export const MetricsDashboard = () => {
     const [loading, setLoading] = useState(true);
@@ -98,6 +101,36 @@ export const MetricsDashboard = () => {
         setLoading(false);
     };
 
+    const renderChartToImage = (config: any): Promise<string> => {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 600;
+            canvas.height = 400;
+            canvas.style.visibility = 'hidden';
+            document.body.appendChild(canvas);
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return resolve('');
+
+            new Chart(ctx, {
+                ...config,
+                options: {
+                    ...config.options,
+                    animation: false,
+                    responsive: false,
+                    devicePixelRatio: 2, // High resolution
+                }
+            });
+
+            // Wait a bit for Chart.js to render
+            setTimeout(() => {
+                const imgData = canvas.toDataURL('image/png');
+                document.body.removeChild(canvas);
+                resolve(imgData);
+            }, 100);
+        });
+    };
+
     const handleExportIntelligenceReport = async () => {
         if (rawReports.length === 0) return;
         setIsExporting(true);
@@ -114,81 +147,133 @@ export const MetricsDashboard = () => {
 
             if (aiError) throw aiError;
 
-            // 2. Initialize PDF
+            // 2. Generate Charts for PDF
+            const sectorColors = ['#00548B', '#00A99D', '#00385c', '#FACC15', '#FF3131', '#00D1FF', '#6366f1', '#a855f7'];
+
+            const sectorChartImg = await renderChartToImage({
+                type: 'doughnut',
+                data: {
+                    labels: stats.bySector.map(s => s.sector),
+                    datasets: [{
+                        data: stats.bySector.map(s => s.count),
+                        backgroundColor: sectorColors,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: { position: 'right', labels: { font: { size: 14, weight: 'bold' } } },
+                        title: { display: true, text: 'Distribución por Sector', font: { size: 18, weight: 'bold' }, padding: 20 }
+                    }
+                }
+            });
+
+            const urgencyChartImg = await renderChartToImage({
+                type: 'bar',
+                data: {
+                    labels: ['Leve (Verde)', 'Medio (Amarillo)', 'Crítico (Rojo)'],
+                    datasets: [{
+                        label: 'Número de Reportes',
+                        data: [stats.byUrgency.Verdes, stats.byUrgency.Amarillos, stats.byUrgency.Rojos],
+                        backgroundColor: ['#22c55e', '#eab308', '#ef4444'],
+                        borderRadius: 10
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'Análisis de Triage (Riesgo)', font: { size: 18, weight: 'bold' }, padding: 20 }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, border: { display: false }, grid: { display: true, color: '#f1f5f9' } },
+                        x: { border: { display: false }, grid: { display: false } }
+                    }
+                }
+            });
+
+            // 3. Initialize PDF
             const doc = new jsPDF();
             const pageWidth = doc.internal.pageSize.getWidth();
             const primaryColor: [number, number, number] = [0, 84, 139]; // Sanatorio Blue
             const secondaryColor: [number, number, number] = [0, 169, 157]; // Sanatorio Green
 
             // --- PAGE 1: COVER & DESCRIPIVE ---
-            // Header Header
+            // Header
             doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-            doc.rect(0, 0, pageWidth, 40, 'F');
+            doc.rect(0, 0, pageWidth, 45, 'F');
 
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(24);
+            doc.setFontSize(26);
             doc.text('INFORME DE INTELIGENCIA DE CALIDAD', 20, 25);
 
             doc.setFontSize(10);
-            doc.text(`Generado el: ${new Date().toLocaleString()}`, 20, 32);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Periodo: ${new Date(Math.min(...rawReports.map(r => new Date(r.created_at).getTime()))).toLocaleDateString()} - ${new Date().toLocaleDateString()}`, 20, 34);
+            doc.text(`Generado por: Analytics Hub SA | ${new Date().toLocaleString()}`, 20, 39);
 
             // Descriptive Section
             doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-            doc.setFontSize(16);
-            doc.text('1. ANÁLISIS DESCRIPTIVO (Situación Actual)', 20, 55);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(18);
+            doc.text('1. ANÁLISIS DESCRIPTIVO', 20, 60);
 
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(11);
             doc.setTextColor(60, 60, 60);
             const descriptiveLines = doc.splitTextToSize(aiAnalysis.descriptive, pageWidth - 40);
-            doc.text(descriptiveLines, 20, 65);
+            doc.text(descriptiveLines, 20, 70);
 
-            // KPI Table for Descriptive
+            // KPIs
+            const kpiY = 70 + (descriptiveLines.length * 6) + 10;
             autoTable(doc, {
-                startY: 65 + (descriptiveLines.length * 7),
-                head: [['Indicador', 'Valor']],
+                startY: kpiY,
+                head: [['Métrica de Performance', 'Valor']],
                 body: [
-                    ['Total Reportes Recibidos', stats.total.toString()],
-                    ['Reportes Resueltos', stats.resolved.toString()],
-                    ['Tasa de Resolución', `${Math.round((stats.resolved / stats.total) * 100)}%`],
-                    ['Incidentes Críticos (Rojos)', stats.urgentCount.toString()],
-                    ['Tiempo Promedio de Respuesta', `${stats.avgResolutionTimeHours} horas`]
+                    ['Total Incidentes Registrados', stats.total.toString()],
+                    ['Casos Gestionados con Éxito', stats.resolved.toString()],
+                    ['Tasa de Resolución Institucional', `${Math.round((stats.resolved / stats.total) * 100)}%`],
+                    ['Alertas de Riesgo Crítico', stats.urgentCount.toString()],
+                    ['Tiempo de Respuesta Promedio', `${stats.avgResolutionTimeHours} hs`]
                 ],
                 theme: 'striped',
-                headStyles: { fillColor: primaryColor }
+                headStyles: { fillColor: primaryColor, fontSize: 11 },
+                styles: { fontSize: 10, cellPadding: 4 }
             });
 
-            // Sector Breakdown Table
-            autoTable(doc, {
-                startY: (doc as any).lastAutoTable.finalY + 10,
-                head: [['Sector', 'Reportes', 'Porcentaje']],
-                body: stats.bySector.map(s => [s.sector, s.count.toString(), `${Math.round(s.percentage)}%`]),
-                theme: 'grid',
-                headStyles: { fillColor: secondaryColor }
-            });
+            // Sector Chart
+            if (sectorChartImg) {
+                const chartImgY = (doc as any).lastAutoTable.finalY + 15;
+                doc.addImage(sectorChartImg, 'PNG', 20, chartImgY, pageWidth - 40, 80);
+            }
 
             // --- PAGE 2: DIAGNOSTIC & PREDICTIVE ---
             doc.addPage();
 
+            // Urgency Chart
+            if (urgencyChartImg) {
+                doc.addImage(urgencyChartImg, 'PNG', 20, 20, pageWidth - 40, 80);
+            }
+
             // Diagnostic Section
+            const diagY = 115;
             doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(16);
-            doc.text('2. ANÁLISIS DIAGNÓSTICO (Causa Raíz)', 20, 30);
+            doc.setFontSize(18);
+            doc.text('2. ANÁLISIS DIAGNÓSTICO', 20, diagY);
 
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(11);
             doc.setTextColor(60, 60, 60);
             const diagnosticLines = doc.splitTextToSize(aiAnalysis.diagnostic, pageWidth - 40);
-            doc.text(diagnosticLines, 20, 40);
+            doc.text(diagnosticLines, 20, diagY + 10);
 
             // Predictive Section
-            const predictiveY = 40 + (diagnosticLines.length * 7) + 15;
+            const predictiveY = diagY + 10 + (diagnosticLines.length * 6) + 15;
             doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(16);
-            doc.text('3. ANÁLISIS PREDICTIVO (Tendencias y Riesgo)', 20, predictiveY);
+            doc.setFontSize(18);
+            doc.text('3. ANÁLISIS PREDICTIVO', 20, predictiveY);
 
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(11);
@@ -200,8 +285,8 @@ export const MetricsDashboard = () => {
             doc.addPage();
             doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(16);
-            doc.text('4. ANÁLISIS PRESCRIPTIVO (Recomendaciones)', 20, 30);
+            doc.setFontSize(18);
+            doc.text('4. ANÁLISIS PRESCRIPTIVO', 20, 30);
 
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(11);
@@ -209,18 +294,32 @@ export const MetricsDashboard = () => {
             const prescriptiveLines = doc.splitTextToSize(aiAnalysis.prescriptive, pageWidth - 40);
             doc.text(prescriptiveLines, 20, 40);
 
-            // Footer / Certification
-            const finalY = 40 + (prescriptiveLines.length * 7) + 30;
-            doc.setDrawColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-            doc.line(20, finalY, pageWidth - 20, finalY);
+            // List of Recent Critical Cases (Operational Annex)
+            const annexY = 40 + (prescriptiveLines.length * 6) + 20;
+            doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.text('ANEXO: CASOS CRÍTICOS DEL PERIODO', 20, annexY);
 
-            doc.setFontSize(9);
-            doc.setTextColor(150, 150, 150);
-            doc.text('Este informe ha sido generado automáticamente por el Sistema de Inteligencia de Calidad del Sanatorio Argentino.', 20, finalY + 10);
-            doc.text('Departamento de Calidad e Innovación.', 20, finalY + 15);
+            autoTable(doc, {
+                startY: annexY + 5,
+                head: [['ID', 'Sector', 'Resumen AI', 'Estado']],
+                body: rawReports
+                    .filter(r => r.ai_urgency === 'Rojo')
+                    .slice(0, 10)
+                    .map(r => [r.tracking_id, r.sector, r.ai_summary || r.content.substring(0, 50), r.status === 'resolved' ? '✅ Resuelto' : '⏳ Pendiente']),
+                theme: 'grid',
+                headStyles: { fillColor: [239, 68, 68] },
+                styles: { fontSize: 8 }
+            });
+
+            // Final Footer
+            doc.setFontSize(8);
+            doc.setTextColor(180, 180, 180);
+            doc.text(`Sanatorio Argentino - Gestión de Calidad bajo Normas ISO 9001:2015. Documento Confidencial.`, pageWidth / 2, 285, { align: 'center' });
 
             // Save PDF
-            doc.save(`Informe_Calidad_Intelligence_${new Date().toISOString().split('T')[0]}.pdf`);
+            doc.save(`Sanatorio_Argentino_Intelligence_Report_${new Date().toISOString().split('T')[0]}.pdf`);
 
             // Success Feedback
             confetti({
