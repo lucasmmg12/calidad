@@ -131,19 +131,39 @@ export const MetricsDashboard = () => {
         });
     };
 
+    const loadImageAsBase64 = (url: string): Promise<string> => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = () => resolve('');
+            img.src = url;
+        });
+    };
+
     const handleExportIntelligenceReport = async () => {
         if (rawReports.length === 0) return;
         setIsExporting(true);
 
         try {
-            // 1. Get AI Analysis from Edge Function
-            const { data: aiAnalysis, error: aiError } = await supabase.functions.invoke('generate-intelligence-report', {
-                body: {
-                    reports: rawReports,
-                    startDate: new Date(Math.min(...rawReports.map(r => new Date(r.created_at).getTime()))).toLocaleDateString(),
-                    endDate: new Date().toLocaleDateString()
-                }
-            });
+            // 1. Get AI Analysis and Logo
+            const [{ data: aiAnalysis, error: aiError }, logoBase64] = await Promise.all([
+                supabase.functions.invoke('generate-intelligence-report', {
+                    body: {
+                        reports: rawReports,
+                        startDate: new Date(Math.min(...rawReports.map(r => new Date(r.created_at).getTime()))).toLocaleDateString(),
+                        endDate: new Date().toLocaleDateString()
+                    }
+                }),
+                loadImageAsBase64('/logosanatorio.png')
+            ]);
 
             if (aiError) throw aiError;
 
@@ -202,15 +222,19 @@ export const MetricsDashboard = () => {
             doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
             doc.rect(0, 0, pageWidth, 45, 'F');
 
+            if (logoBase64) {
+                doc.addImage(logoBase64, 'PNG', 15, 10, 25, 25);
+            }
+
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(26);
-            doc.text('INFORME DE INTELIGENCIA DE CALIDAD', 20, 25);
+            doc.setFontSize(22);
+            doc.text('INFORME DE INTELIGENCIA DE CALIDAD', logoBase64 ? 45 : 20, 25);
 
             doc.setFontSize(10);
             doc.setFont('helvetica', 'normal');
-            doc.text(`Periodo: ${new Date(Math.min(...rawReports.map(r => new Date(r.created_at).getTime()))).toLocaleDateString()} - ${new Date().toLocaleDateString()}`, 20, 34);
-            doc.text(`Generado por: Analytics Hub SA | ${new Date().toLocaleString()}`, 20, 39);
+            doc.text(`Periodo: ${new Date(Math.min(...rawReports.map(r => new Date(r.created_at).getTime()))).toLocaleDateString()} - ${new Date().toLocaleDateString()}`, logoBase64 ? 45 : 20, 32);
+            doc.text(`Analytics Hub SA | ${new Date().toLocaleString()}`, logoBase64 ? 45 : 20, 37);
 
             // Descriptive Section
             doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
