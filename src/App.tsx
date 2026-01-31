@@ -8,6 +8,7 @@ import { MetricsDashboard } from './components/MetricsDashboard';
 import { HelpGuide } from './components/HelpGuide';
 import { AdminLogin } from './components/AdminLogin';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import LegalContent from './components/LegalContent';
 import {
   MessageSquareHeart,
   LayoutDashboard,
@@ -109,6 +110,8 @@ function App() {
             <Route path="/track" element={<TrackingPage />} />
             <Route path="/guia" element={<HelpGuide />} />
             <Route path="/login" element={<AdminLogin />} />
+            <Route path="/privacidad" element={<LegalContent />} />
+            <Route path="/terminos" element={<LegalContent />} />
 
             {/* Rutas Privadas (Admin) */}
             <Route element={<ProtectedRoute />}>
@@ -138,9 +141,9 @@ function App() {
           <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-400">
             <p>© {new Date().getFullYear()} Sanatorio Argentino • Desarrollado por el Departamento de Innovación y Transformación Digital</p>
             <div className="flex gap-6">
-              <a href="#" className="hover:text-sanatorio-primary transition-colors">Privacidad</a>
-              <a href="#" className="hover:text-sanatorio-primary transition-colors">Términos</a>
-              <a href="#" className="hover:text-sanatorio-primary transition-colors">Contacto</a>
+              <Link to="/privacidad" className="hover:text-sanatorio-primary transition-colors">Privacidad</Link>
+              <Link to="/terminos" className="hover:text-sanatorio-primary transition-colors">Términos</Link>
+              <a href="mailto:innovacion@sanatorioargentino.com.ar" className="hover:text-sanatorio-primary transition-colors">Contacto</a>
             </div>
           </div>
         </footer>
