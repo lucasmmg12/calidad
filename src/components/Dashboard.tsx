@@ -174,15 +174,25 @@ export const Dashboard = () => {
         if (error) {
             alert('Error al guardar resolución');
         } else {
+            console.log('[Dashboard] Report resolved in DB. Checking if we should send WhatsApp...');
             // WhatsApp Notification if number exists
             if (selectedReport.contact_number) {
+                // IMPORTANT: Add country prefix '549' to the DB number
+                const botNumber = `549${selectedReport.contact_number}`;
+                console.log('[Dashboard] Sending notification to:', botNumber);
+
                 supabase.functions.invoke('send-whatsapp', {
                     body: {
-                        number: selectedReport.contact_number,
+                        number: botNumber,
                         message: `👋 ¡Hola! Queremos informarte que tu reporte con ID *${selectedReport.tracking_id}* ha sido gestionado con éxito.\n\n✅ *Resolución:* ${resolutionNotes}\n\nGracias por ayudarnos a mejorar la calidad de nuestra atención cada día. ✨💙`,
-                        mediaUrl: "https://i.imgur.com/vH9v5qN.png" // Successful icon
+                        mediaUrl: "https://i.imgur.com/vH9v5qN.png"
                     }
-                }).catch(err => console.error('Error sending resolution whatsapp:', err));
+                }).then(({ error: fnError }) => {
+                    if (fnError) console.error('[Dashboard] Error calling send-whatsapp:', fnError);
+                    else console.log('[Dashboard] WhatsApp resolution notification sent successfully.');
+                }).catch(err => console.error('[Dashboard] Unexpected error sending resolution whatsapp:', err));
+            } else {
+                console.log('[Dashboard] No contact number for this report (Anonymous).');
             }
 
             setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'resolved', resolution_notes: resolutionNotes, resolved_at: new Date().toISOString() } : r));
@@ -212,15 +222,25 @@ export const Dashboard = () => {
         if (error) {
             alert('Error al descartar reporte');
         } else {
+            console.log('[Dashboard] Report discarded in DB. Checking if we should send WhatsApp...');
             // WhatsApp Notification if number exists
             if (selectedReport.contact_number) {
+                // IMPORTANT: Add country prefix '549' to the DB number
+                const botNumber = `549${selectedReport.contact_number}`;
+                console.log('[Dashboard] Sending discard notification to:', botNumber);
+
                 supabase.functions.invoke('send-whatsapp', {
                     body: {
-                        number: selectedReport.contact_number,
+                        number: botNumber,
                         message: `👋 ¡Hola! Te informamos que hemos revisado tu reporte con ID *${selectedReport.tracking_id}*.\n\n🔍 *Resultado:* En esta ocasión hemos procedido a cerrarlo ya que consideramos que el reporte es irrelevante para este canal o la información es insuficiente.\n\n⚠️ Si consideras que el problema persiste o tienes nuevos detalles, por favor genera un nuevo ticket en el sistema para que podamos analizarlo nuevamente.\n\n¡Muchas gracias! Sanatorio Argentino.`,
-                        mediaUrl: "https://i.imgur.com/X2903s6.png" // Standard Info icon
+                        mediaUrl: "https://i.imgur.com/X2903s6.png"
                     }
-                }).catch(err => console.error('Error sending discard whatsapp:', err));
+                }).then(({ error: fnError }) => {
+                    if (fnError) console.error('[Dashboard] Error calling send-whatsapp (discard):', fnError);
+                    else console.log('[Dashboard] WhatsApp discard notification sent successfully.');
+                }).catch(err => console.error('[Dashboard] Unexpected error sending discard whatsapp:', err));
+            } else {
+                console.log('[Dashboard] No contact number for this report (Anonymous).');
             }
 
             setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'dismissed', resolution_notes: resolutionNotes || 'Descartado manualmente', resolved_at: new Date().toISOString() } : r));
