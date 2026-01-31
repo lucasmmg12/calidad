@@ -174,6 +174,17 @@ export const Dashboard = () => {
         if (error) {
             alert('Error al guardar resolución');
         } else {
+            // WhatsApp Notification if number exists
+            if (selectedReport.contact_number) {
+                supabase.functions.invoke('send-whatsapp', {
+                    body: {
+                        number: selectedReport.contact_number,
+                        message: `👋 ¡Hola! Queremos informarte que tu reporte con ID *${selectedReport.tracking_id}* ha sido gestionado con éxito.\n\n✅ *Resolución:* ${resolutionNotes}\n\nGracias por ayudarnos a mejorar la calidad de nuestra atención cada día. ✨💙`,
+                        mediaUrl: "https://i.imgur.com/vH9v5qN.png" // Successful icon
+                    }
+                }).catch(err => console.error('Error sending resolution whatsapp:', err));
+            }
+
             setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'resolved', resolution_notes: resolutionNotes, resolved_at: new Date().toISOString() } : r));
             setSelectedReport(null);
             setResolutionNotes('');
@@ -201,6 +212,17 @@ export const Dashboard = () => {
         if (error) {
             alert('Error al descartar reporte');
         } else {
+            // WhatsApp Notification if number exists
+            if (selectedReport.contact_number) {
+                supabase.functions.invoke('send-whatsapp', {
+                    body: {
+                        number: selectedReport.contact_number,
+                        message: `👋 ¡Hola! Te informamos que hemos revisado tu reporte con ID *${selectedReport.tracking_id}*.\n\n🔍 *Resultado:* En esta ocasión hemos procedido a cerrarlo ya que consideramos que el reporte es irrelevante para este canal o la información es insuficiente.\n\n⚠️ Si consideras que el problema persiste o tienes nuevos detalles, por favor genera un nuevo ticket en el sistema para que podamos analizarlo nuevamente.\n\n¡Muchas gracias! Sanatorio Argentino.`,
+                        mediaUrl: "https://i.imgur.com/X2903s6.png" // Standard Info icon
+                    }
+                }).catch(err => console.error('Error sending discard whatsapp:', err));
+            }
+
             setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'dismissed', resolution_notes: resolutionNotes || 'Descartado manualmente', resolved_at: new Date().toISOString() } : r));
             setSelectedReport(null);
             setResolutionNotes('');
