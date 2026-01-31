@@ -1,6 +1,22 @@
-import { ShieldCheck, UserCog, Clock, MessageSquare, BarChart3, Bell, CheckCircle2, Info } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { supabase } from '../utils/supabase';
+import { ShieldCheck, UserCog, Clock, MessageSquare, BarChart3, Bell, CheckCircle2, Info, Lock } from 'lucide-react';
 
 export const HelpGuide = () => {
+    const [isAdmin, setIsAdmin] = useState(false);
+
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setIsAdmin(!!session);
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setIsAdmin(!!session);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
     return (
         <div className="space-y-12 pb-12 animate-in fade-in duration-500">
             {/* Header Section */}
@@ -11,7 +27,7 @@ export const HelpGuide = () => {
                 </p>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-8">
+            <div className={`grid gap-8 ${isAdmin ? 'lg:grid-cols-2' : 'max-w-3xl mx-auto grid-cols-1'}`}>
 
                 {/* 1. SECCIÓN PERSONAL (REPORTEROS) */}
                 <div className="bg-white rounded-3xl shadow-card border border-gray-100 overflow-hidden flex flex-col">
@@ -78,71 +94,85 @@ export const HelpGuide = () => {
                     </div>
                 </div>
 
-                {/* 2. SECCIÓN ADMIN (GESTIÓN) */}
-                <div className="bg-white rounded-3xl shadow-card border border-gray-100 overflow-hidden flex flex-col">
-                    <div className="bg-gradient-to-br from-sanatorio-primary/5 to-transparent p-8 border-b border-gray-50">
-                        <div className="w-14 h-14 bg-sanatorio-primary rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-sanatorio-primary/20">
-                            <UserCog className="w-8 h-8 text-white" />
+                {/* 2. SECCIÓN ADMIN (GESTIÓN) - Solo visible para admins */}
+                {isAdmin ? (
+                    <div className="bg-white rounded-3xl shadow-card border border-gray-100 overflow-hidden flex flex-col animate-in slide-in-from-right-8 duration-500">
+                        <div className="bg-gradient-to-br from-sanatorio-primary/5 to-transparent p-8 border-b border-gray-50">
+                            <div className="w-14 h-14 bg-sanatorio-primary rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-sanatorio-primary/20">
+                                <UserCog className="w-8 h-8 text-white" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-800 mb-2">Guía Administrativa</h2>
+                            <p className="text-gray-500">Panel de control para Claudia y Gabriela (Comité de Calidad).</p>
                         </div>
-                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Guía Administrativa</h2>
-                        <p className="text-gray-500">Panel de control para Claudia y Gabriela (Comité de Calidad).</p>
+
+                        <div className="p-8 space-y-8 flex-grow">
+                            <div className="space-y-6">
+                                <div className="bg-red-50 p-4 rounded-xl border border-red-100 flex items-start gap-3">
+                                    <Bell className="w-5 h-5 text-red-600 shrink-0 mt-0.5 animate-bounce" />
+                                    <div>
+                                        <h4 className="text-sm font-bold text-red-800 uppercase mb-1">Alertas en Tiempo Real</h4>
+                                        <p className="text-xs text-red-700 leading-relaxed">
+                                            Los incidentes marcados como **Rojo** disparan una notificación de WhatsApp inmediata al responsable indicando resumen y riesgo potencial.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                        <BarChart3 className="w-5 h-5 text-sanatorio-primary mb-3" />
+                                        <h4 className="font-bold text-gray-800 text-sm mb-1">Métricas Clave</h4>
+                                        <p className="text-xs text-gray-500">Sigue el volumen de reportes por sector y la distribución histórica de urgencias.</p>
+                                    </div>
+                                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                        <Clock className="w-5 h-5 text-sanatorio-primary mb-3" />
+                                        <h4 className="font-bold text-gray-800 text-sm mb-1">Eficiencia</h4>
+                                        <p className="text-xs text-gray-500">Promedio de tiempo de respuesta medido en horas para auditorías de calidad.</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 pt-2">
+                                    <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                                        <CheckCircle2 className="w-5 h-5 text-green-600" />
+                                        Gestión de Casos
+                                    </h3>
+                                    <ul className="space-y-3">
+                                        <li className="flex items-start gap-2 text-sm text-gray-600">
+                                            <div className="w-1.5 h-1.5 bg-sanatorio-primary rounded-full mt-1.5 shrink-0" />
+                                            <span><strong>Filtrado:</strong> Utiliza los filtros avanzados por sector y prioridad para priorizar tareas.</span>
+                                        </li>
+                                        <li className="flex items-start gap-2 text-sm text-gray-600">
+                                            <div className="w-1.5 h-1.5 bg-sanatorio-primary rounded-full mt-1.5 shrink-0" />
+                                            <span><strong>Resolución:</strong> Al marcar como "Realizado", se requiere una nota de cierre que queda guardada para el historial.</span>
+                                        </li>
+                                        <li className="flex items-start gap-2 text-sm text-gray-600">
+                                            <div className="w-1.5 h-1.5 bg-sanatorio-primary rounded-full mt-1.5 shrink-0" />
+                                            <span><strong>Auditoría:</strong> Puedes consultar en cualquier momento los reportes resueltos y las soluciones sugeridas por la IA.</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div className="bg-blue-50/50 rounded-2xl p-5 border border-blue-100 flex items-start gap-4 mt-auto">
+                                <Info className="w-6 h-6 text-sanatorio-primary shrink-0" />
+                                <p className="text-xs text-blue-800 leading-relaxed font-medium italic">
+                                    Recuerda que los reportes identificados permiten una comunicación bidireccional vía WhatsApp para solicitar más detalles si fuera necesario.
+                                </p>
+                            </div>
+                        </div>
                     </div>
-
-                    <div className="p-8 space-y-8 flex-grow">
-                        <div className="space-y-6">
-                            <div className="bg-red-50 p-4 rounded-xl border border-red-100 flex items-start gap-3">
-                                <Bell className="w-5 h-5 text-red-600 shrink-0 mt-0.5 animate-bounce" />
-                                <div>
-                                    <h4 className="text-sm font-bold text-red-800 uppercase mb-1">Alertas en Tiempo Real</h4>
-                                    <p className="text-xs text-red-700 leading-relaxed">
-                                        Los incidentes marcados como **Rojo** disparan una notificación de WhatsApp inmediata al responsable indicando resumen y riesgo potencial.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                                    <BarChart3 className="w-5 h-5 text-sanatorio-primary mb-3" />
-                                    <h4 className="font-bold text-gray-800 text-sm mb-1">Métricas Clave</h4>
-                                    <p className="text-xs text-gray-500">Sigue el volumen de reportes por sector y la distribución histórica de urgencias.</p>
-                                </div>
-                                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                                    <Clock className="w-5 h-5 text-sanatorio-primary mb-3" />
-                                    <h4 className="font-bold text-gray-800 text-sm mb-1">Eficiencia</h4>
-                                    <p className="text-xs text-gray-500">Promedio de tiempo de respuesta medido en horas para auditorías de calidad.</p>
-                                </div>
-                            </div>
-
-                            <div className="space-y-4 pt-2">
-                                <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                                    <CheckCircle2 className="w-5 h-5 text-green-600" />
-                                    Gestión de Casos
-                                </h3>
-                                <ul className="space-y-3">
-                                    <li className="flex items-start gap-2 text-sm text-gray-600">
-                                        <div className="w-1.5 h-1.5 bg-sanatorio-primary rounded-full mt-1.5 shrink-0" />
-                                        <span><strong>Filtrado:</strong> Utiliza los filtros avanzados por sector y prioridad para priorizar tareas.</span>
-                                    </li>
-                                    <li className="flex items-start gap-2 text-sm text-gray-600">
-                                        <div className="w-1.5 h-1.5 bg-sanatorio-primary rounded-full mt-1.5 shrink-0" />
-                                        <span><strong>Resolución:</strong> Al marcar como "Realizado", se requiere una nota de cierre que queda guardada para el historial.</span>
-                                    </li>
-                                    <li className="flex items-start gap-2 text-sm text-gray-600">
-                                        <div className="w-1.5 h-1.5 bg-sanatorio-primary rounded-full mt-1.5 shrink-0" />
-                                        <span><strong>Auditoría:</strong> Puedes consultar en cualquier momento los reportes resueltos y las soluciones sugeridas por la IA.</span>
-                                    </li>
-                                </ul>
-                            </div>
+                ) : (
+                    <div className="bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center p-12 text-center space-y-4">
+                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-100">
+                            <Lock className="w-8 h-8 text-gray-300" />
                         </div>
-
-                        <div className="bg-blue-50/50 rounded-2xl p-5 border border-blue-100 flex items-start gap-4 mt-auto">
-                            <Info className="w-6 h-6 text-sanatorio-primary shrink-0" />
-                            <p className="text-xs text-blue-800 leading-relaxed font-medium italic">
-                                Recuerda que los reportes identificados permiten una comunicación bidireccional vía WhatsApp para solicitar más detalles si fuera necesario.
+                        <div className="space-y-2">
+                            <h3 className="text-xl font-bold text-gray-400">Contenido Restringido</h3>
+                            <p className="text-sm text-gray-400 max-w-xs mx-auto">
+                                La Guía Administrativa solo es visible para personal autorizado del comité de Calidad.
                             </p>
                         </div>
                     </div>
-                </div>
+                )}
 
             </div>
         </div>
