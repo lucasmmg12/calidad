@@ -10,7 +10,6 @@ import { AdminLogin } from './components/AdminLogin';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import LegalContent from './components/LegalContent';
 import {
-  MessageSquareHeart,
   LayoutDashboard,
   BarChart3,
   HelpCircle,
@@ -128,7 +127,6 @@ function App() {
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
 
             <div className="max-w-4xl mx-auto text-center relative z-10 text-white">
-              <MessageSquareHeart className="w-12 h-12 mx-auto mb-4 text-sanatorio-secondary animate-pulse" />
               <h2 className="text-2xl md:text-3xl font-bold mb-3 text-white">Tu voz construye nuestra excelencia</h2>
               <p className="text-blue-100 text-lg max-w-2xl mx-auto mb-8">
                 Cada reporte, sugerencia o feedback nos ayuda a elevar los estándares de cuidado para nuestros pacientes. Gracias por ser parte del cambio.
