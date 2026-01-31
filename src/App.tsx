@@ -136,7 +136,7 @@ function App() {
 
           {/* Copyright Section */}
           <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-400">
-            <p>© {new Date().getFullYear()} Sanatorio Argentino • Departamento de Calidad</p>
+            <p>© {new Date().getFullYear()} Sanatorio Argentino • Desarrollado por el Departamento de Innovación y Transformación Digital</p>
             <div className="flex gap-6">
               <a href="#" className="hover:text-sanatorio-primary transition-colors">Privacidad</a>
               <a href="#" className="hover:text-sanatorio-primary transition-colors">Términos</a>
