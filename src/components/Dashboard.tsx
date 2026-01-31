@@ -233,7 +233,7 @@ export const Dashboard = () => {
                     body: {
                         number: botNumber,
                         message: `👋 ¡Hola! Te informamos que hemos revisado tu reporte con ID *${selectedReport.tracking_id}*.\n\n🔍 *Resultado:* En esta ocasión hemos procedido a cerrarlo ya que consideramos que el reporte es irrelevante para este canal o la información es insuficiente.\n\n⚠️ Si consideras que el problema persiste o tienes nuevos detalles, por favor genera un nuevo ticket en el sistema para que podamos analizarlo nuevamente.\n\n¡Muchas gracias! Sanatorio Argentino.`,
-                        mediaUrl: "https://i.imgur.com/X2903s6.png"
+                        mediaUrl: "https://i.imgur.com/63f9RLD.jpeg"
                     }
                 }).then(({ error: fnError }) => {
                     if (fnError) console.error('[Dashboard] Error calling send-whatsapp (discard):', fnError);

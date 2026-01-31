@@ -97,7 +97,7 @@ export const ReportingForm = () => {
                     body: {
                         number: botNumber,
                         message: `👋 ¡Hola! Valoramos mucho que nos hayas contactado. Queremos contarte que ya recibimos tu reporte y el equipo de Calidad comenzará a revisarlo a la brevedad.\n\n🆔 Tu código de seguimiento personal es: *${trackingId}*\n\nCon este código podrás consultar los avances en el sistema cuando lo desees.\n\n¡Muchas gracias por ayudarnos a brindar una mejor atención cada día! ✨💙`,
-                        mediaUrl: "https://i.imgur.com/X2903s6.png"
+                        mediaUrl: "https://i.imgur.com/63f9RLD.jpeg"
                     }
                 }).catch(err => console.error('Error sending immediate whatsapp:', err));
             }
@@ -124,9 +124,13 @@ export const ReportingForm = () => {
     if (successId) {
         return (
             <div className="max-w-md mx-auto mt-10 p-10 glass-card text-center animate-in zoom-in-95 duration-500 rounded-[2.5rem]">
-                <div className="flex justify-center mb-8">
-                    <div className="bg-sanatorio-secondary/10 p-5 rounded-full animate-bounce">
-                        <CheckCircle className="w-20 h-20 text-sanatorio-secondary" />
+                <div className="flex justify-center mb-8 relative">
+                    <div className="bg-white p-4 rounded-2xl shadow-premium animate-pulse">
+                        <img
+                            src="/logosanatorio.png"
+                            alt="Logo"
+                            className="w-20 h-20 object-contain"
+                        />
                     </div>
                 </div>
                 <h2 className="text-3xl font-display font-black text-sanatorio-primary mb-4">¡Reporte Enviado!</h2>

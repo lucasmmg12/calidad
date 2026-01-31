@@ -14,8 +14,7 @@ import {
   BarChart3,
   HelpCircle,
   LogOut,
-  LogIn,
-  MessageSquareHeart
+  LogIn
 } from 'lucide-react';
 
 function Navbar() {
@@ -42,14 +41,12 @@ function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full px-4 py-3">
       <div className="max-w-7xl mx-auto glass-panel rounded-2xl md:rounded-3xl px-4 md:px-8 py-3 flex justify-between items-center transition-all duration-300">
-        <Link to="/" className="flex items-center gap-3 group focus:outline-none">
-          <div className="w-10 h-10 bg-sanatorio-primary rounded-xl flex items-center justify-center shadow-lg shadow-sanatorio-primary/20 group-hover:scale-110 transition-transform duration-300">
-            <MessageSquareHeart className="w-6 h-6 text-white" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-display font-black text-xl text-sanatorio-primary tracking-tight leading-none">CALIDAD</span>
-            <span className="text-[10px] font-bold text-sanatorio-secondary tracking-[0.2em] uppercase leading-none mt-1">Sanatorio Argentino</span>
-          </div>
+        <Link to="/" className="flex items-center group focus:outline-none">
+          <img
+            src="/logosanatorio.png"
+            alt="Sanatorio Argentino"
+            className="h-10 md:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+          />
         </Link>
 
         <nav className="flex items-center gap-1">
