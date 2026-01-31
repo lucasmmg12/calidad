@@ -185,7 +185,7 @@ export const Dashboard = () => {
                     body: {
                         number: botNumber,
                         message: `👋 ¡Hola! Queremos informarte que tu reporte con ID *${selectedReport.tracking_id}* ha sido gestionado con éxito.\n\n✅ *Resolución:* ${resolutionNotes}\n\nGracias por ayudarnos a mejorar la calidad de nuestra atención cada día. ✨💙`,
-                        mediaUrl: "https://i.imgur.com/vH9v5qN.png"
+                        mediaUrl: "https://i.imgur.com/PnVTbEd.jpeg"
                     }
                 }).then(({ error: fnError }) => {
                     if (fnError) console.error('[Dashboard] Error calling send-whatsapp:', fnError);
