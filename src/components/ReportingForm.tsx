@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../utils/supabase';
-import { Send, ShieldAlert, CheckCircle, Loader2, ChevronDown, User, Lock, Info, AlertTriangle, Lightbulb, Paperclip, X, Image as ImageIcon } from 'lucide-react';
+import { Send, ShieldAlert, CheckCircle, Loader2, ChevronDown, User, Lock, Info, AlertTriangle, Lightbulb, Paperclip, X } from 'lucide-react';
 
 export const ReportingForm = () => {
     const [loading, setLoading] = useState(false);

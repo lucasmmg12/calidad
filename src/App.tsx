@@ -14,7 +14,6 @@ import {
   BarChart3,
   HelpCircle,
   LogOut,
-  User,
   LogIn
 } from 'lucide-react';
 

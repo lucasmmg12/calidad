@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../utils/supabase';
-import { Search, Clock, CheckCircle, AlertCircle, FileText, ArrowRight, Activity } from 'lucide-react';
+import { Search, Clock, CheckCircle, AlertCircle, Activity } from 'lucide-react';
 
 export const TrackingPage = () => {
     const [trackingId, setTrackingId] = useState('');
@@ -108,8 +108,8 @@ export const TrackingPage = () => {
                                 return (
                                     <div key={idx} className="flex flex-col items-center gap-2 bg-white px-2">
                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${active || current
-                                                ? 'bg-green-500 border-green-500 text-white'
-                                                : 'bg-white border-gray-200 text-gray-300'
+                                            ? 'bg-green-500 border-green-500 text-white'
+                                            : 'bg-white border-gray-200 text-gray-300'
                                             }`}>
                                             {active ? <CheckCircle className="w-5 h-5" /> : (idx + 1)}
                                         </div>
