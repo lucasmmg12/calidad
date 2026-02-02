@@ -9,6 +9,7 @@ import { HelpGuide } from './components/HelpGuide';
 import { AdminLogin } from './components/AdminLogin';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import LegalContent from './components/LegalContent';
+import { ResolutionPage } from './pages/ResolutionPage';
 import {
   LayoutDashboard,
   BarChart3,
@@ -112,6 +113,7 @@ function App() {
             <Route path="/login" element={<AdminLogin />} />
             <Route path="/privacidad" element={<LegalContent />} />
             <Route path="/terminos" element={<LegalContent />} />
+            <Route path="/resolver-caso/:ticketId" element={<ResolutionPage />} />
 
             {/* Rutas Privadas (Admin) */}
             <Route element={<ProtectedRoute />}>
