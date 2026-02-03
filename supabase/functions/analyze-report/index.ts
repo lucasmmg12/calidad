@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
 
         if (cleanColor === 'Rojo') {
             const builderbotToken = Deno.env.get('BUILDERBOT_TOKEN')
-            const alertNumber = '5492645438114';
+            const alertNumber = '5492644396596';
 
             if (builderbotToken) {
                 console.log(`[Analyze] Enviando Alerta Roja a ${alertNumber}`)
