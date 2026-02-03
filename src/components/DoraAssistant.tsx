@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
-import { X, MessageCircle } from 'lucide-react';
 
 interface DoraAssistantProps {
     message?: string;
     className?: string;
-    emotion?: 'happy' | 'thinking' | 'neutral';
+    emotion?: 'happy' | 'thinking' | 'neutral'; // Kept in interface for future use
 }
 
-export const DoraAssistant = ({ message, className = '', emotion = 'neutral' }: DoraAssistantProps) => {
+export const DoraAssistant = ({ message, className = '' }: DoraAssistantProps) => {
     const [isVisible, setIsVisible] = useState(false);
-    const [isHovered, setIsHovered] = useState(false);
 
     useEffect(() => {
         // Small delay for entrance animation
@@ -22,8 +20,6 @@ export const DoraAssistant = ({ message, className = '', emotion = 'neutral' }: 
     return (
         <div
             className={`fixed bottom-0 right-4 z-40 hidden md:flex flex-col items-end transition-all duration-500 ease-out transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'} ${className}`}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
         >
             {/* Message Bubble */}
             {message && (
