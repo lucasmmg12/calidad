@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../utils/supabase';
 import { Send, ShieldAlert, Loader2, ChevronDown, User, Lock, Info, AlertTriangle, Lightbulb, Paperclip, X, Phone } from 'lucide-react';
+import { DoraAssistant } from './DoraAssistant';
 
 export const ReportingForm = () => {
     const [loading, setLoading] = useState(false);
@@ -145,12 +146,26 @@ export const ReportingForm = () => {
                 >
                     Enviar Nuevo Reporte
                 </button>
+
+                {/* Dora Success Message */}
+                <div className="hidden md:block">
+                    <DoraAssistant
+                        message="¡Excelente trabajo! Tu reporte nos ayuda a ser mejores cada día. 💙"
+                        emotion="happy"
+                    />
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="max-w-3xl mx-auto p-4 md:p-6 mb-20">
+        <div className="max-w-3xl mx-auto p-4 md:p-6 mb-20 relative">
+            <DoraAssistant
+                message={formData.content.length > 20
+                    ? "¡Muy bien! Cuantos más detalles nos des, más rápido podremos actuar."
+                    : "Hola, soy Dora 👩‍⚕️. Estoy aquí para escucharte. Todo lo que me cuentes es confidencial."}
+            />
+
             <div className="mb-12 text-center space-y-3">
                 <h1 className="text-4xl md:text-5xl font-display font-black text-sanatorio-primary tracking-tight">Gestión de Calidad</h1>
                 <p className="text-slate-500 text-lg font-medium">Tu voz es el motor de nuestra mejora continua.</p>
