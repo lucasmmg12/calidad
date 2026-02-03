@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.reports (
   ai_solutions text,
   
   -- Resolution & Status Fields
-  status text DEFAULT 'pending' CHECK (status IN ('pending', 'analyzed', 'in_progress', 'resolved')),
+  status text DEFAULT 'pending' CHECK (status IN ('pending', 'analyzed', 'pending_resolution', 'in_progress', 'resolved')),
   evidence_urls text[],           -- Multiple images for the initial report
   resolution_notes text,          -- Notes added upon resolution (Immediate Action)
   root_cause text,                -- Root Cause Analysis
@@ -92,3 +92,13 @@ CREATE POLICY "Public Access Evidence" ON storage.objects
 DROP POLICY IF EXISTS "Public Upload Evidence" ON storage.objects;
 CREATE POLICY "Public Upload Evidence" ON storage.objects 
   FOR INSERT WITH CHECK ( bucket_id = 'evidence' );
+
+-- 6. Update Status Constraint (Fix for 'pending_resolution')
+DO $$
+BEGIN
+    ALTER TABLE public.reports DROP CONSTRAINT IF EXISTS reports_status_check;
+    ALTER TABLE public.reports ADD CONSTRAINT reports_status_check 
+    CHECK (status IN ('pending', 'analyzed', 'pending_resolution', 'in_progress', 'resolved'));
+EXCEPTION
+    WHEN others THEN NULL;
+END $$;
