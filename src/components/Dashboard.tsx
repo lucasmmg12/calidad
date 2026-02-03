@@ -206,23 +206,41 @@ export const Dashboard = () => {
             }
         });
 
-        if (error) {
-            alert("Error al enviar WhatsApp: " + error.message);
-        } else {
-            // 3. Actualizar estado en BD a 'in_progress' o similar
-            const { error: dbError } = await supabase
-                .from('reports')
-                .update({
-                    status: 'pending_resolution',
-                    notes: `Derivado a ${responsiblePhone} (${isAdverse ? 'Análisis Causa' : 'Simple'}).`
-                })
-                .eq('id', selectedReport.id);
+        // 3. Determinar estado del envío
+        const whatsappStatus = error ? 'failed' : 'sent';
+        const notes = error
+            ? `Error al enviar WhatsApp a ${responsiblePhone}. (${new Date().toLocaleTimeString()})`
+            : `Derivado a ${responsiblePhone} (${isAdverse ? 'Análisis Causa' : 'Simple'}).`;
 
-            if (!dbError) {
-                setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'pending_resolution' } : r));
-                setShowReferralModal(false);
-                alert("✅ Solicitud enviada correctamente por WhatsApp");
-            }
+        if (error) {
+            console.error("Error al enviar WhatsApp:", error);
+            alert("⚠️ El mensaje NO se pudo enviar. Se registrará el fallo en el sistema.");
+        } else {
+            alert("✅ Solicitud enviada correctamente por WhatsApp");
+        }
+
+        // 4. Actualizar Base de Datos con el resultado (sea éxito o error)
+        const { error: dbError } = await supabase
+            .from('reports')
+            .update({
+                status: 'pending_resolution', // Cambiamos estado igual para que se sepa que se intentó
+                notes: notes,
+                is_adverse_event: isAdverse,
+                last_whatsapp_status: whatsappStatus,
+                last_whatsapp_sent_at: new Date().toISOString()
+            })
+            .eq('id', selectedReport.id);
+
+        if (!dbError) {
+            setReports(reports.map(r => r.id === selectedReport.id ? {
+                ...r,
+                status: 'pending_resolution',
+                last_whatsapp_status: whatsappStatus,
+                last_whatsapp_sent_at: new Date().toISOString()
+            } : r));
+            setShowReferralModal(false);
+        } else {
+            alert("Error al actualizar base de datos: " + dbError.message);
         }
 
         setIsSendingReferral(false);
@@ -321,6 +339,7 @@ export const Dashboard = () => {
                                     <th className="px-6 py-4">Sector</th>
                                     <th className="px-6 py-4">Problema</th>
                                     <th className="px-6 py-4">Prioridad</th>
+                                    <th className="px-6 py-4 text-center">Notif.</th>
                                     <th className="px-6 py-4 text-right">Ver</th>
                                 </tr>
                             </thead>
@@ -340,12 +359,23 @@ export const Dashboard = () => {
                                         <td className="px-6 py-4 text-sm text-gray-600">{report.sector || '-'}</td>
                                         <td className="px-6 py-4 text-sm text-gray-600 line-clamp-1 max-w-xs">{report.ai_summary || report.content}</td>
                                         <td className="px-6 py-4">
-                                            <span className={`inline - flex items - center gap - 1.5 px - 2 py - 0.5 rounded - full text - [10px] font - bold uppercase
+                                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase
                                                 ${report.ai_urgency === 'Rojo' ? 'bg-red-100 text-red-700' :
                                                     report.ai_urgency === 'Amarillo' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-700'
                                                 } `}>
                                                 {report.ai_urgency || 'Normal'}
                                             </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            {report.last_whatsapp_status === 'sent' && (
+                                                <div title={`Enviado: ${new Date(report.last_whatsapp_sent_at).toLocaleString()}`} className="w-3 h-3 rounded-full bg-green-500 mx-auto shadow-sm shadow-green-200"></div>
+                                            )}
+                                            {report.last_whatsapp_status === 'failed' && (
+                                                <div title="Fallo en envío" className="w-3 h-3 rounded-full bg-red-500 mx-auto animate-pulse shadow-sm shadow-red-200"></div>
+                                            )}
+                                            {!report.last_whatsapp_status && (
+                                                <div className="w-2 h-2 rounded-full bg-gray-200 mx-auto"></div>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <button className="text-gray-400 hover:text-sanatorio-primary"><Eye className="w-4 h-4" /></button>
