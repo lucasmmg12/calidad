@@ -59,42 +59,65 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
     const formRef = useRef<HTMLFormElement>(null);
 
     const generatePDF = async () => {
-        if (!formRef.current) {
-            alert("No se pudo encontrar el formulario para generar el PDF.");
-            return;
-        }
-
+        if (!formRef.current) return;
         setIsGeneratingPdf(true);
 
         try {
-            console.log("Iniciando generación de PDF...");
+            // Create a dedicated container for print (off-screen)
+            // This isolates the form from modal styles, scrollbars, and backdrops
+            const tempContainer = document.createElement('div');
+            tempContainer.style.position = 'absolute';
+            tempContainer.style.top = '-9999px';
+            tempContainer.style.left = '0';
+            tempContainer.style.width = '210mm'; // A4 width approx
+            tempContainer.style.backgroundColor = '#ffffff';
+            tempContainer.style.zIndex = '9999';
+            document.body.appendChild(tempContainer);
 
-            // Create a canvas from the form element
-            const canvas = await html2canvas(formRef.current, {
-                scale: 2, // Higher resolution
-                useCORS: true, // Handle cross-origin images
+            // Clone the form
+            // We use cloneNode to copy the exact state of inputs
+            const clone = formRef.current.cloneNode(true) as HTMLElement;
+
+            // Cleanup the clone styles for printing
+            clone.style.transform = 'none';
+            clone.style.boxShadow = 'none';
+            clone.style.margin = '0';
+            clone.style.padding = '20px';
+            clone.style.width = '100%';
+            clone.style.height = 'auto';
+            clone.style.overflow = 'visible';
+
+            // Remove "no-print" elements from clone
+            const noPrintElements = clone.querySelectorAll('.no-print');
+            noPrintElements.forEach(el => el.remove());
+
+            tempContainer.appendChild(clone);
+
+            // Small delay to ensure rendering matches
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            const canvas = await html2canvas(tempContainer, {
+                scale: 2,
+                useCORS: true,
                 logging: false,
-                backgroundColor: '#ffffff',
-                windowWidth: formRef.current.scrollWidth, // Ensure full width capture
-                windowHeight: formRef.current.scrollHeight, // Ensure full height capture
-                ignoreElements: (element) => element.classList.contains('no-print') // Ignore buttons
+                backgroundColor: '#ffffff'
             });
 
-            console.log("Canvas generado correctamente.");
+            // Cleanup
+            document.body.removeChild(tempContainer);
 
             const imgData = canvas.toDataURL('image/png');
-            // Check if jsPDF constructor is valid
             if (typeof jsPDF !== 'function') {
-                // Fallback for some bundle configurations
-                throw new Error("La librería jsPDF no se cargó correctamente. Intente recargar la página.");
+                throw new Error("Librería jsPDF no disponible.");
             }
 
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            const pdfPageHeight = pdf.internal.pageSize.getHeight();
+            const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
             // Add Header
-            pdf.setFillColor(6, 46, 112); // Sanatorio Primary Blue
+            pdf.setFillColor(6, 46, 112);
             pdf.rect(0, 0, pdfWidth, 20, 'F');
             pdf.setTextColor(255, 255, 255);
             pdf.setFontSize(16);
@@ -102,34 +125,31 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
             pdf.setFontSize(10);
             pdf.text(`ID: ${initialData?.trackingId || 'N/A'}`, pdfWidth - 40, 13);
 
-            // Add Form Image
-            // If the form is longer than one page, this simple addImage might squash it or cut it.
-            // For now, let's just add it and let it scale, assuming typical content fits or scales down.
-            // A more complex multi-page implementation would be needed for very long forms.
+            // Determine if we need to scale down to fit one page or split
+            // For now, simple scaling to avoid complexity
+            let finalHeight = imgHeight;
+            let finalWidth = pdfWidth;
 
-            // If height > A4 height, we might need to break pages, but let's try fitting first.
-            const pageHeight = pdf.internal.pageSize.getHeight();
-
-            if (pdfHeight > pageHeight - 30) {
-                // Scaling to fit if too long (simple approach)
-                const ratio = (pageHeight - 30) / pdfHeight;
-                pdf.addImage(imgData, 'PNG', 0, 25, pdfWidth, pdfHeight * ratio);
-            } else {
-                pdf.addImage(imgData, 'PNG', 0, 25, pdfWidth, pdfHeight);
+            if (imgHeight > (pdfPageHeight - 30)) {
+                // Scale to fit
+                const ratio = (pdfPageHeight - 30) / imgHeight;
+                finalHeight = imgHeight * ratio;
             }
+
+            pdf.addImage(imgData, 'PNG', 0, 25, finalWidth, finalHeight);
 
             // Footer
             const today = new Date().toLocaleDateString();
             pdf.setFontSize(8);
             pdf.setTextColor(100);
-            pdf.text(`Generado el: ${today} - Sistema de Gestión de Calidad Sanatorio Argentino`, 10, pageHeight - 10);
+            pdf.text(`Generado el: ${today} - Sistema de Gestión de Calidad Sanatorio Argentino`, 10, pdfPageHeight - 10);
 
-            pdf.save(`Accion_Correctiva_${initialData?.trackingId || 'Borrador'}.pdf`);
-            console.log("PDF guardado.");
+            pdf.save(`RCA_${initialData?.trackingId || 'doc'}.pdf`);
 
         } catch (error: any) {
             console.error('Error generating PDF:', error);
-            alert(`Error al generar el PDF: ${error?.message || error}`);
+            // Non-blocking alert
+            alert(`El documento se guardó, pero falló la descarga del PDF: ${error.message || error}`);
         } finally {
             setIsGeneratingPdf(false);
         }
@@ -138,18 +158,14 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
     const onSubmit = async (data: CorrectiveActionFormData) => {
         setIsSubmitting(true);
         try {
-            // Update Supabase if we have a reportId
+            // 1. SAVE TO DATABASE
             if (reportId) {
-                // Determine values for DB update
                 const updates = {
-                    status: 'resolved', // Or keep as pending_resolution depending on workflow? Assuming this closes it or stages it.
+                    status: 'resolved',
                     root_cause: data.rootCauseAnalysis,
                     corrective_plan: data.actionPlan,
                     assigned_to: data.responsible,
                     resolution_notes: `Acción Correctiva Registrada. Tipo: ${data.findingType}. Origen: ${data.origin}`,
-                    // Note: We might need to add implementation_date column if not exists, 
-                    // storing it in resolution_notes or another field for now if schema update strictly forbidden without explicit ask, 
-                    // but user asked for "Formulario WEB" context. I will stick to existing fields + notes for now.
                 };
 
                 const { error } = await supabase
@@ -160,17 +176,15 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                 if (error) throw error;
             }
 
-            // Auto-generate PDF on submit? Or keep it separate. User said "de esto se genere un archivo en pdf descargable".
-            // We can offer the download after saving or do it automatically.
-            // Let's prompt or just do it.
+            // 2. GENERATE PDF (Wait for it, but don't fail the whole process if it breaks)
             await generatePDF();
 
             if (onSuccess) onSuccess();
             if (onClose) onClose();
 
-        } catch (error) {
-            console.error('Error saving corrective action:', error);
-            alert('Error al guardar la acción correctiva.');
+        } catch (error: any) {
+            console.error('Error saving:', error);
+            alert(`Error al guardar: ${error.message}`);
         } finally {
             setIsSubmitting(false);
         }
