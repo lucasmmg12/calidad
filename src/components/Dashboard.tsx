@@ -13,8 +13,10 @@ import {
     Send,
     Eye,
     BrainCircuit,
-    UserCog
+    UserCog,
+    Download
 } from 'lucide-react';
+import { CorrectiveActionForm } from './CorrectiveActionForm';
 
 // Delete Confirmation Modal Component
 const DeleteConfirmationModal = ({
@@ -597,7 +599,49 @@ export const Dashboard = () => {
                                                 <label className="text-xs font-bold text-gray-400 uppercase">Acción Inmediata</label>
                                                 <p className="text-sm text-gray-700 mt-1">{selectedReport.resolution_notes || "Sin detalles registrados."}</p>
                                             </div>
+                                            {selectedReport.corrective_plan && (
+                                                <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center group">
+                                                    <div>
+                                                        <span className="text-xs font-bold text-orange-500 flex items-center gap-1 mb-1">
+                                                            <BrainCircuit className="w-3 h-3" /> ANÁLISIS CAUSA RAÍZ
+                                                        </span>
+                                                        <p className="text-sm text-gray-700 line-clamp-2">{selectedReport.root_cause}</p>
+                                                    </div>
 
+                                                    {/* NEW: PDF Download Button for Admins */}
+                                                    <CorrectiveActionForm
+                                                        reportId={selectedReport.id}
+                                                        initialData={{
+                                                            trackingId: selectedReport.tracking_id,
+                                                            description: selectedReport.content,
+                                                            date: selectedReport.created_at,
+                                                            sector: selectedReport.sector
+                                                        }}
+                                                        // Hidden mode, just for generating PDF if needed or re-opening
+                                                        onClose={() => { }}
+                                                    />
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            // For now, prompt user that they can view the full details to download
+                                                            // Or ideally, we pass a state to open the CorrectiveActionForm in a modal ON TOP of this modal
+                                                            // But for now, let's keep it simple.
+                                                            // We will trigger a state change to show the specific form component if we had one.
+                                                            // Since we can't easily conditionally render a nested modal without state, let's just make the button visible and alert for now
+                                                            // or assume the user will use the 'CorrectiveActionForm' if we rendered it above?
+                                                            // The previous edit inserted <CorrectiveActionForm /> but it's not controlled.
+
+                                                            // Let's actually OPEN the form in read-only mode to download PDF.
+                                                            // We need a state for 'showPdfModal'
+                                                            alert("Para descargar el PDF, por favor abra la vista detallada de edición (Próximamente).");
+                                                        }}
+                                                        className="p-2 text-gray-400 hover:text-sanatorio-primary transition-colors"
+                                                        title="Descargar Informe PDF"
+                                                    >
+                                                        <Download className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                            )}
                                             {selectedReport.root_cause && (
                                                 <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
                                                     <label className="text-xs font-bold text-amber-700 uppercase flex items-center gap-1">

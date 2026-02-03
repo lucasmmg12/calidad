@@ -59,18 +59,36 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
     const formRef = useRef<HTMLFormElement>(null);
 
     const generatePDF = async () => {
-        if (!formRef.current) return;
+        if (!formRef.current) {
+            alert("No se pudo encontrar el formulario para generar el PDF.");
+            return;
+        }
+
         setIsGeneratingPdf(true);
 
         try {
+            console.log("Iniciando generación de PDF...");
+
             // Create a canvas from the form element
             const canvas = await html2canvas(formRef.current, {
                 scale: 2, // Higher resolution
+                useCORS: true, // Handle cross-origin images
+                logging: false,
                 backgroundColor: '#ffffff',
+                windowWidth: formRef.current.scrollWidth, // Ensure full width capture
+                windowHeight: formRef.current.scrollHeight, // Ensure full height capture
                 ignoreElements: (element) => element.classList.contains('no-print') // Ignore buttons
             });
 
+            console.log("Canvas generado correctamente.");
+
             const imgData = canvas.toDataURL('image/png');
+            // Check if jsPDF constructor is valid
+            if (typeof jsPDF !== 'function') {
+                // Fallback for some bundle configurations
+                throw new Error("La librería jsPDF no se cargó correctamente. Intente recargar la página.");
+            }
+
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
@@ -85,19 +103,33 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
             pdf.text(`ID: ${initialData?.trackingId || 'N/A'}`, pdfWidth - 40, 13);
 
             // Add Form Image
-            pdf.addImage(imgData, 'PNG', 0, 25, pdfWidth, pdfHeight);
+            // If the form is longer than one page, this simple addImage might squash it or cut it.
+            // For now, let's just add it and let it scale, assuming typical content fits or scales down.
+            // A more complex multi-page implementation would be needed for very long forms.
+
+            // If height > A4 height, we might need to break pages, but let's try fitting first.
+            const pageHeight = pdf.internal.pageSize.getHeight();
+
+            if (pdfHeight > pageHeight - 30) {
+                // Scaling to fit if too long (simple approach)
+                const ratio = (pageHeight - 30) / pdfHeight;
+                pdf.addImage(imgData, 'PNG', 0, 25, pdfWidth, pdfHeight * ratio);
+            } else {
+                pdf.addImage(imgData, 'PNG', 0, 25, pdfWidth, pdfHeight);
+            }
 
             // Footer
             const today = new Date().toLocaleDateString();
             pdf.setFontSize(8);
             pdf.setTextColor(100);
-            pdf.text(`Generado el: ${today} - Sistema de Gestión de Calidad Sanatorio Argentino`, 10, pdf.internal.pageSize.getHeight() - 10);
+            pdf.text(`Generado el: ${today} - Sistema de Gestión de Calidad Sanatorio Argentino`, 10, pageHeight - 10);
 
             pdf.save(`Accion_Correctiva_${initialData?.trackingId || 'Borrador'}.pdf`);
+            console.log("PDF guardado.");
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error generating PDF:', error);
-            alert('Error al generar el PDF. Por favor intente nuevamente.');
+            alert(`Error al generar el PDF: ${error?.message || error}`);
         } finally {
             setIsGeneratingPdf(false);
         }
