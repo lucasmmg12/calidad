@@ -157,6 +157,47 @@ const ReferralModal = ({
     );
 };
 
+// Feedback Modal Component (Success/Error)
+const FeedbackModal = ({
+    isOpen,
+    onClose,
+    type,
+    title,
+    message
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    type: 'success' | 'error';
+    title: string;
+    message: string;
+}) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 transform transition-all scale-100 animate-in zoom-in-95 text-center">
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 mx-auto ${type === 'success' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                    {type === 'success' ? <CheckCircle className="w-8 h-8" /> : <AlertCircle className="w-8 h-8" />}
+                </div>
+
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{title}</h3>
+                <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                    {message}
+                </p>
+
+                <button
+                    onClick={onClose}
+                    className={`w-full py-3 px-4 text-white font-bold rounded-xl transition-colors shadow-lg flex items-center justify-center gap-2
+                        ${type === 'success' ? 'bg-green-600 hover:bg-green-700 shadow-green-500/30' : 'bg-red-600 hover:bg-red-700 shadow-red-500/30'}
+                    `}
+                >
+                    {type === 'success' ? 'Aceptar' : 'Entendido'}
+                </button>
+            </div>
+        </div>
+    );
+};
+
 export const Dashboard = () => {
     const [reports, setReports] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -168,6 +209,14 @@ export const Dashboard = () => {
     const [showReferralModal, setShowReferralModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSendingReferral, setIsSendingReferral] = useState(false);
+
+    // Feedback Modal State
+    const [feedbackModal, setFeedbackModal] = useState<{
+        isOpen: boolean;
+        type: 'success' | 'error';
+        title: string;
+        message: string;
+    }>({ isOpen: false, type: 'success', title: '', message: '' });
 
     useEffect(() => {
         fetchReports();
@@ -190,9 +239,7 @@ export const Dashboard = () => {
         setIsSendingReferral(true);
 
         // 1. Generar Link Único
-        // En producción, esto sería el dominio real.
         const resolutionLink = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}`;
-
         const botNumber = `549${responsiblePhone}`;
 
         // 2. Enviar WhatsApp
@@ -202,7 +249,7 @@ export const Dashboard = () => {
             body: {
                 number: botNumber,
                 message: `👋 *Solicitud de Gestión - Calidad*\n\nSe requiere su intervención para el caso: *${selectedReport.tracking_id}*\n📂 Sector: ${selectedReport.sector}\n\n📝 *Reporte:* "${selectedReport.ai_summary || selectedReport.content}"\n\n${isAdverse ? '⚠️ *Este caso requiere Análisis de Causa Raíz*' : '🛠️ Se solicita solución inmediata.'}\n\n👉 *Gestione el caso aquí:* ${resolutionLink}`,
-                mediaUrl: "https://i.imgur.com/PnVTbEd.jpeg" // Placeholder imagen gestión
+                mediaUrl: "https://i.imgur.com/JGQlbiJ.jpeg"
             }
         });
 
@@ -214,16 +261,26 @@ export const Dashboard = () => {
 
         if (error) {
             console.error("Error al enviar WhatsApp:", error);
-            alert("⚠️ El mensaje NO se pudo enviar. Se registrará el fallo en el sistema.");
+            setFeedbackModal({
+                isOpen: true,
+                type: 'error',
+                title: 'Envío Fallido',
+                message: 'El sistema no pudo conectar con WhatsApp. Se ha registrado el error para su auditoría.'
+            });
         } else {
-            alert("✅ Solicitud enviada correctamente por WhatsApp");
+            setFeedbackModal({
+                isOpen: true,
+                type: 'success',
+                title: 'Solicitud Enviada',
+                message: 'El mensaje de WhatsApp ha sido entregado correctamente al responsable.'
+            });
         }
 
-        // 4. Actualizar Base de Datos con el resultado (sea éxito o error)
+        // 4. Actualizar Base de Datos
         const { error: dbError } = await supabase
             .from('reports')
             .update({
-                status: 'pending_resolution', // Cambiamos estado igual para que se sepa que se intentó
+                status: 'pending_resolution',
                 notes: notes,
                 is_adverse_event: isAdverse,
                 last_whatsapp_status: whatsappStatus,
@@ -240,7 +297,8 @@ export const Dashboard = () => {
             } : r));
             setShowReferralModal(false);
         } else {
-            alert("Error al actualizar base de datos: " + dbError.message);
+            // Si falla la BD, mostramos alerta o log, pero ya mostramos el modal de envío.
+            console.error("Error DB:", dbError);
         }
 
         setIsSendingReferral(false);
@@ -509,6 +567,13 @@ export const Dashboard = () => {
                                                 </div>
                                                 Solicitar Gestión (WhatsApp)
                                             </button>
+
+                                            {selectedReport.last_whatsapp_status === 'sent' && selectedReport.last_whatsapp_sent_at && (
+                                                <div className="flex items-center justify-center gap-1.5 mt-3 text-xs text-green-600 font-medium bg-green-50 py-2 rounded-lg border border-green-100">
+                                                    <CheckCircle className="w-3 h-3" />
+                                                    Enviado: {new Date(selectedReport.last_whatsapp_sent_at).toLocaleString()}
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="text-center py-4 border-t border-gray-100">
@@ -540,6 +605,14 @@ export const Dashboard = () => {
                 onClose={() => setShowDeleteModal(false)}
                 onConfirm={confirmDelete}
                 isDeleting={isDeleting}
+            />
+
+            <FeedbackModal
+                isOpen={feedbackModal.isOpen}
+                onClose={() => setFeedbackModal({ ...feedbackModal, isOpen: false })}
+                type={feedbackModal.type}
+                title={feedbackModal.title}
+                message={feedbackModal.message}
             />
         </div>
     );

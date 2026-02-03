@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS public.reports (
     is_adverse_event boolean,       -- Flag for RCA requirement
   last_whatsapp_status text,      -- 'sent' or 'failed'
   last_whatsapp_sent_at timestamp with time zone,
+  notes text,                     -- Internal administrative notes
   
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -48,6 +49,7 @@ BEGIN
     ALTER TABLE public.reports ADD COLUMN IF NOT EXISTS is_adverse_event boolean;
     ALTER TABLE public.reports ADD COLUMN IF NOT EXISTS last_whatsapp_status text;
     ALTER TABLE public.reports ADD COLUMN IF NOT EXISTS last_whatsapp_sent_at timestamp with time zone;
+    ALTER TABLE public.reports ADD COLUMN IF NOT EXISTS notes text;
 EXCEPTION
     WHEN others THEN NULL;
 END $$;
