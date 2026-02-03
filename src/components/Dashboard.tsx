@@ -499,7 +499,7 @@ export const Dashboard = () => {
                     ].map(tab => (
                         <button
                             key={tab.id}
-                            onClick={() => setStatusFilter(tab.id)}
+                            onClick={() => setStatusFilter(tab.id as 'pending' | 'resolved' | 'all' | 'in_progress')}
                             className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${statusFilter === tab.id
                                 ? 'bg-white text-sanatorio-primary shadow-sm'
                                 : 'text-gray-500 hover:text-gray-700'

@@ -1,5 +1,5 @@
-import React, { forwardRef } from 'react';
-import { FileText, Building2, Search, AlertTriangle, CheckCircle2, UserCircle2, Calendar } from 'lucide-react';
+import { forwardRef } from 'react';
+import { Search, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 interface PrintableReportProps {
     data: {
