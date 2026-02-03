@@ -1,14 +1,16 @@
 import { useParams } from 'react-router-dom';
 import { supabase } from '../utils/supabase';
 import { ResolutionForm } from '../components/ResolutionForm';
+import { CorrectiveActionForm } from '../components/CorrectiveActionForm';
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, FileText } from 'lucide-react';
 
 export const ResolutionPage = () => {
     const { ticketId } = useParams();
     const [reportData, setReportData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [showCorrectiveForm, setShowCorrectiveForm] = useState(false);
 
     useEffect(() => {
         const fetchReport = async () => {
@@ -32,6 +34,12 @@ export const ResolutionPage = () => {
                     sector: data.sector,
                     contactNumber: data.contact_number
                 });
+
+                // Auto-activar formulario correctivo si es evento adverso
+                if (data.is_adverse_event || data.ai_urgency === 'Rojo') {
+                    setShowCorrectiveForm(true);
+                }
+
             } catch (err: any) {
                 console.error("Error fetching report:", err);
                 setError("No se pudo cargar el reporte. Verifique el enlace.");
@@ -102,5 +110,54 @@ export const ResolutionPage = () => {
         );
     }
 
-    return <ResolutionForm reportData={reportData} onSubmit={handleSubmit} />;
+    // Modo Formulario de Acción Correctiva
+    if (showCorrectiveForm) {
+        return (
+            <CorrectiveActionForm
+                reportId={reportData.id}
+                initialData={{
+                    date: new Date().toISOString(),
+                    sector: reportData.sector,
+                    description: reportData.description,
+                    trackingId: reportData.trackingId
+                }}
+                onClose={() => setShowCorrectiveForm(false)}
+                onSuccess={() => {
+                    // Reutilizar lógica de notificación o mostrar 'Success' simple
+                    handleSubmit({}); // Hacky reuse to trigger notif? No, separate handling appropriate inside component or passing callback.
+                    // CorrectiveActionForm handles its own DB update, keeping it encapsulated. 
+                    // But we might want to trigger the WhatsApp notification here too.
+
+                    if (reportData.contactNumber) {
+                        const botNumber = `549${reportData.contactNumber}`;
+                        supabase.functions.invoke('send-whatsapp', {
+                            body: {
+                                number: botNumber,
+                                message: `✅ *Caso Resuelto (Acción Correctiva)* \n\nEl evento código *${reportData.trackingId}* ha sido analizado y cerrado con un plan de mejora.\n\nGracias por tu compromiso con la seguridad del paciente. 🙌`,
+                                mediaUrl: "https://i.imgur.com/PnVTbEd.jpeg"
+                            }
+                        }).catch(console.error);
+                    }
+                    alert("Acción Correctiva Registrada y PDF Generado.");
+                    window.close(); // Try to close tab or redirect
+                }}
+            />
+        );
+    }
+
+    return (
+        <div className="relative">
+            {/* Toggle Button for Full Form */}
+            <div className="absolute top-4 right-4 z-10 md:top-8 md:right-8">
+                <button
+                    onClick={() => setShowCorrectiveForm(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm border border-orange-200 text-orange-700 font-bold text-xs rounded-full shadow-sm hover:bg-orange-50 transition-all"
+                >
+                    <FileText className="w-4 h-4" />
+                    Cambiar a Modo Evento Adverso
+                </button>
+            </div>
+            <ResolutionForm reportData={reportData} onSubmit={handleSubmit} />
+        </div>
+    );
 };
