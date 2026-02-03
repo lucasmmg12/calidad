@@ -53,6 +53,7 @@ export const ResolutionPage = () => {
                     root_cause: formData.rootCause,
                     corrective_plan: formData.correctivePlan,
                     implementation_date: formData.implementationDate || null,
+                    resolution_evidence_urls: formData.evidenceUrls,
                     resolved_at: new Date().toISOString(),
                     status: 'resolved'
                 })

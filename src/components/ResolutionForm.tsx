@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { supabase } from '../utils/supabase'; // Import supabase
 import {
     CheckCircle2,
     AlertTriangle,
@@ -6,7 +7,10 @@ import {
     Send,
     ClipboardCheck,
     BrainCircuit,
-    Calendar
+    Calendar,
+    Info,
+    X,
+    Loader2,
 } from 'lucide-react';
 import type { ResolutionFormData, ResolutionStatus } from '../types/resolution';
 
@@ -15,7 +19,7 @@ interface Props {
         id: string;
         trackingId: string;
         description: string;
-        isAdverseEvent: boolean; // Esto vendría de la URL o estado previo
+        isAdverseEvent: boolean;
         sector: string;
     };
     onSubmit: (data: ResolutionFormData) => Promise<void>;
@@ -27,19 +31,83 @@ export const ResolutionForm = ({ reportData, onSubmit }: Props) => {
         isAdverseEvent: reportData.isAdverseEvent,
         reportSummary: reportData.description,
         immediateAction: '',
+        evidenceUrls: [],
         rootCause: '',
         correctivePlan: '',
         implementationDate: ''
     });
 
+    const [files, setFiles] = useState<File[]>([]);
     const [status, setStatus] = useState<ResolutionStatus>('pending');
+    const [isUploading, setIsUploading] = useState(false);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            const newFiles = Array.from(e.target.files);
+            setFiles(prev => [...prev, ...newFiles]);
+        }
+    };
+
+    const removeFile = (index: number) => {
+        setFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const uploadFiles = async (): Promise<string[]> => {
+        const uploadedUrls: string[] = [];
+
+        for (const file of files) {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${reportData.trackingId}_resolution_${Math.random()}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            try {
+                const { error: uploadError } = await supabase.storage
+                    .from('evidence')
+                    .upload(filePath, file);
+
+                if (uploadError) throw uploadError;
+
+                const { data } = supabase.storage
+                    .from('evidence')
+                    .getPublicUrl(filePath);
+
+                if (data) {
+                    uploadedUrls.push(data.publicUrl);
+                }
+            } catch (error) {
+                console.error("Error uploading file:", error);
+                // Continue with other files if one fails? Or abort? 
+                // For now, simple logging and continue.
+            }
+        }
+        return uploadedUrls;
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setStatus('submitted'); // Simulación visual inmediata
-        // Aquí iría la lógica real de envío
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        onSubmit(formData);
+
+        try {
+            setIsUploading(true);
+
+            // 1. Subir archivos si existen
+            const evidenceUrls = await uploadFiles();
+
+            // 2. Preparar datos finales
+            const finalData = {
+                ...formData,
+                evidenceUrls: evidenceUrls
+            };
+
+            // 3. Enviar al padre
+            await onSubmit(finalData);
+            setStatus('submitted');
+
+        } catch (error) {
+            console.error("Error en submission:", error);
+            alert("Hubo un error al enviar el formulario. Por favor intente nuevamente.");
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     if (status === 'submitted') {
@@ -84,7 +152,7 @@ export const ResolutionForm = ({ reportData, onSubmit }: Props) => {
                 {/* Tarjeta del Incidente Original */}
                 <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-200/60">
                     <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Reporte Original</h3>
-                    <div className="bg-gray-50 rounded-xl p-4 text-gray-700 text-sm leading-relaxed border border-gray-100">
+                    <div className="bg-gray-50 rounded-xl p-4 text-gray-700 text-sm leading-relaxed border border-gray-100 italic">
                         "{reportData.description}"
                     </div>
 
@@ -105,10 +173,18 @@ export const ResolutionForm = ({ reportData, onSubmit }: Props) => {
                             <h2 className="font-bold text-gray-800">Acción Correctiva Inmediata</h2>
                         </div>
 
+                        {/* Helper Tip */}
+                        <div className="mb-4 bg-blue-50/50 p-3 rounded-lg border border-blue-100 flex gap-3">
+                            <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                            <p className="text-xs text-blue-600 leading-relaxed">
+                                <strong>¿Qué es esto?</strong> Describa la medida que tomó <em>en el momento</em> para mitigar el riesgo o solucionar el problema temporalmente (ej: limpiar el derrame, aislar el equipo, llamar a mantenimiento).
+                            </p>
+                        </div>
+
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-600 mb-2">
-                                    ¿Qué medida se tomó para solucionar el problema ahora?
+                                    Descripción de la solución
                                 </label>
                                 <textarea
                                     required
@@ -119,11 +195,44 @@ export const ResolutionForm = ({ reportData, onSubmit }: Props) => {
                                 />
                             </div>
 
-                            {/* Botón de Evidencia (Simulado) */}
-                            <button type="button" className="flex items-center gap-2 text-sm text-gray-500 font-medium hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors w-fit">
-                                <Camera className="w-4 h-4" />
-                                Adjuntar foto de la solución (Opcional)
-                            </button>
+                            {/* Manejo de Evidencia */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-600 mb-2">
+                                    Evidencia Fotográfica
+                                </label>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                                    {files.map((file, idx) => (
+                                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 group">
+                                            <img
+                                                src={URL.createObjectURL(file)}
+                                                alt="preview"
+                                                className="w-full h-full object-cover"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => removeFile(idx)}
+                                                className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-100 hover:bg-red-500 transition-colors"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+
+                                    <label className="aspect-square rounded-xl border-2 border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-blue-500">
+                                        <Camera className="w-6 h-6" />
+                                        <span className="text-[10px] font-bold">Agregar</span>
+                                        <input
+                                            type="file"
+                                            multiple
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleFileChange}
+                                        />
+                                    </label>
+                                </div>
+                                <p className="text-[10px] text-gray-400">Puede subir múltiples fotos para evidenciar el "Antes" y "Después".</p>
+                            </div>
                         </div>
                     </section>
 
@@ -138,13 +247,23 @@ export const ResolutionForm = ({ reportData, onSubmit }: Props) => {
                                 </div>
                             </div>
 
+                            {/* Helper Tip RCA */}
+                            <div className="mb-6 bg-white/60 p-3 rounded-lg border border-amber-200/50 flex gap-3">
+                                <BrainCircuit className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                                <div className="text-xs text-amber-900 leading-relaxed space-y-1">
+                                    <p><strong>Análisis de Causa Raíz:</strong> No se detenga en el síntoma visible. Pregunte "¿Por qué?" al menos 5 veces.</p>
+                                    <ul className="list-disc pl-3 opacity-80">
+                                        <li>¿Por qué falló el equipo? (Porque no tuvo mantenimiento)</li>
+                                        <li>¿Por qué no tuvo mantenimiento? (Porque no estaba en el cronograma)</li>
+                                    </ul>
+                                </div>
+                            </div>
+
                             <div className="space-y-5">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                                        <BrainCircuit className="w-4 h-4 text-amber-600" />
-                                        Análisis de Causa Raíz
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Causa Raíz Identificada
                                     </label>
-                                    <p className="text-xs text-gray-500 mb-2 italic">¿Por qué ocurrió el evento? (Considere método de los 5 porqués)</p>
                                     <textarea
                                         required
                                         className="w-full p-3 rounded-xl border border-amber-200 bg-white/80 focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all resize-none h-32 text-sm"
@@ -156,17 +275,17 @@ export const ResolutionForm = ({ reportData, onSubmit }: Props) => {
 
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Plan de Acción de Fondo</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Plan de Acción (Largo Plazo)</label>
                                         <textarea
                                             required
                                             className="w-full p-3 rounded-xl border border-amber-200 bg-white/80 focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all resize-none h-24 text-sm"
-                                            placeholder="Medidas a largo plazo..."
+                                            placeholder="Qué se hará para que esto NO vuelva a ocurrir..."
                                             value={formData.correctivePlan}
                                             onChange={e => setFormData({ ...formData, correctivePlan: e.target.value })}
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Estimada</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Estimada Implementación</label>
                                         <div className="relative">
                                             <Calendar className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
                                             <input
@@ -187,12 +306,23 @@ export const ResolutionForm = ({ reportData, onSubmit }: Props) => {
                     <div className="pt-4 pb-12">
                         <button
                             type="submit"
+                            disabled={isUploading}
                             className={`w-full py-4 rounded-xl font-bold text-white shadow-lg shadow-blue-500/20 transform transition-all active:scale-95 flex items-center justify-center gap-2 
                 ${reportData.isAdverseEvent ? 'bg-gradient-to-r from-blue-700 to-blue-900 hover:from-blue-800 hover:to-slate-900' : 'bg-blue-600 hover:bg-blue-700'}
+                disabled:opacity-70 disabled:cursor-not-allowed
               `}
                         >
-                            <span>Confirmar Resolución</span>
-                            <Send className="w-4 h-4" />
+                            {isUploading ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span>Subiendo archivos...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span>Confirmar Resolución</span>
+                                    <Send className="w-4 h-4" />
+                                </>
+                            )}
                         </button>
                         <p className="text-center text-xs text-gray-400 mt-4">
                             Sanatorio Argentino • Sistema de Gestión de Calidad
