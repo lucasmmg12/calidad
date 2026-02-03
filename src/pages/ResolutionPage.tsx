@@ -73,7 +73,7 @@ export const ResolutionPage = () => {
                     body: {
                         number: botNumber,
                         message: `✅ *¡Buenas noticias!* \n\nTe informamos que el reporte con código *${reportData.trackingId}* ha sido gestionado y resuelto exitosamente por nuestro equipo.\n\nGracias por comprometerte con la calidad y seguridad de nuestra institución. 🙌`,
-                        mediaUrl: "https://i.imgur.com/5S9X6Zt.jpeg" // Imagen de 'Caso Resuelto'
+                        mediaUrl: "https://i.imgur.com/PnVTbEd.jpeg" // Imagen de 'Caso Resuelto'
                     }
                 }).catch(err => console.error('Error enviando notificación de resolución:', err));
             }
