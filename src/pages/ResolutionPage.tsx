@@ -18,7 +18,7 @@ export const ResolutionPage = () => {
                 const { data, error } = await supabase
                     .from('reports')
                     .select('*')
-                    .eq('tracking_id', ticketId)
+                    .ilike('tracking_id', ticketId)
                     .single();
 
                 if (error) throw error;
@@ -29,7 +29,8 @@ export const ResolutionPage = () => {
                     trackingId: data.tracking_id,
                     description: data.content,
                     isAdverseEvent: data.is_adverse_event || (data.ai_category === 'Incidente' || data.ai_urgency === 'Rojo'), // Priorizar flag explícito
-                    sector: data.sector
+                    sector: data.sector,
+                    contactNumber: data.contact_number
                 });
             } catch (err: any) {
                 console.error("Error fetching report:", err);
@@ -62,6 +63,20 @@ export const ResolutionPage = () => {
             if (error) throw error;
 
             console.log("Resolución guardada exitosamente");
+
+            // NOTIFICAR AL REPORTANTE (Si existe contacto)
+            if (reportData.contactNumber) {
+                // Asumimos que el número en DB viene limpio (ej: 264xxxxxxx) y agregamos el prefijo de país 549
+                const botNumber = `549${reportData.contactNumber}`;
+
+                supabase.functions.invoke('send-whatsapp', {
+                    body: {
+                        number: botNumber,
+                        message: `✅ *¡Buenas noticias!* \n\nTe informamos que el reporte con código *${reportData.trackingId}* ha sido gestionado y resuelto exitosamente por nuestro equipo.\n\nGracias por comprometerte con la calidad y seguridad de nuestra institución. 🙌`,
+                        mediaUrl: "https://i.imgur.com/5S9X6Zt.jpeg" // Imagen de 'Caso Resuelto'
+                    }
+                }).catch(err => console.error('Error enviando notificación de resolución:', err));
+            }
         } catch (err: any) {
             console.error("Error saving resolution:", err);
             alert("Error al guardar la resolución: " + err.message);

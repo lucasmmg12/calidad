@@ -20,7 +20,7 @@ export const TrackingPage = () => {
             const { data, error } = await supabase
                 .from('reports')
                 .select('*')
-                .eq('tracking_id', trackingId.trim().toUpperCase())
+                .ilike('tracking_id', trackingId.trim())
                 .single();
 
             if (error) throw error;

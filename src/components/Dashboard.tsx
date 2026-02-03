@@ -12,7 +12,8 @@ import {
     AlertCircle,
     Send,
     Eye,
-    BrainCircuit
+    BrainCircuit,
+    UserCog
 } from 'lucide-react';
 
 // Delete Confirmation Modal Component
@@ -283,6 +284,7 @@ export const Dashboard = () => {
                 status: 'pending_resolution',
                 notes: notes,
                 is_adverse_event: isAdverse,
+                assigned_to: responsiblePhone,
                 last_whatsapp_status: whatsappStatus,
                 last_whatsapp_sent_at: new Date().toISOString()
             })
@@ -292,6 +294,7 @@ export const Dashboard = () => {
             setReports(reports.map(r => r.id === selectedReport.id ? {
                 ...r,
                 status: 'pending_resolution',
+                assigned_to: responsiblePhone,
                 last_whatsapp_status: whatsappStatus,
                 last_whatsapp_sent_at: new Date().toISOString()
             } : r));
@@ -350,9 +353,28 @@ export const Dashboard = () => {
         setUpdatingColor(false);
     }
 
-    // Filtros Simples (Solo Búsqueda/Estado si se requiere, por ahora solo reports directos)
-    // Para cumplir con el requerimiento de "compilar ya", simplificamos.
-    const filteredReports = reports;
+    // FILTROS
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState<string>('all');
+
+    const filteredReports = reports.filter(report => {
+        // Filtro por Estado (Mapeo de UI a valores BD)
+        const matchesStatus =
+            statusFilter === 'all' ? true :
+                statusFilter === 'pending' ? (report.status === 'pending' || report.status === 'analyzed') :
+                    statusFilter === 'in_progress' ? report.status === 'pending_resolution' :
+                        statusFilter === 'resolved' ? report.status === 'resolved' : true;
+
+        // Filtro por Texto (ID, Sector, Contenido)
+        const searchLower = searchTerm.toLowerCase();
+        const matchesSearch =
+            report.tracking_id?.toLowerCase().includes(searchLower) ||
+            report.sector?.toLowerCase().includes(searchLower) ||
+            report.content?.toLowerCase().includes(searchLower) ||
+            report.ai_summary?.toLowerCase().includes(searchLower);
+
+        return matchesStatus && matchesSearch;
+    });
 
     return (
         <div className="max-w-7xl mx-auto p-6">
@@ -366,7 +388,7 @@ export const Dashboard = () => {
                     </h1>
                     <p className="text-gray-500">Gestión de Calidad y Seguridad del Paciente</p>
                 </div>
-                {/* Stats Summary - Simplified */}
+                {/* Stats Summary */}
                 <div className="flex gap-2">
                     <div className="bg-white px-4 py-2 rounded-lg border border-gray-200 flex items-center gap-4 text-sm font-medium shadow-sm">
                         <span className="flex items-center gap-1 text-red-600 font-bold">
@@ -377,8 +399,44 @@ export const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Filters Bar & Quick Legend (Simplified for length constraints in this edit) */}
-            {/* ... (Podríamos incluir los filtros aquí nuevamente si es necesario, por ahora enfocamos en la gestión) */}
+            {/* Barra de Filtros */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
+
+                {/* Tabs de Estado */}
+                <div className="flex bg-gray-100 p-1 rounded-lg w-full md:w-auto">
+                    {[
+                        { id: 'all', label: 'Todos' },
+                        { id: 'pending', label: 'Pendientes' },
+                        { id: 'in_progress', label: 'En Gestión' },
+                        { id: 'resolved', label: 'Resueltos' }
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setStatusFilter(tab.id)}
+                            className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${statusFilter === tab.id
+                                ? 'bg-white text-sanatorio-primary shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Buscador */}
+                <div className="relative w-full md:w-96">
+                    <input
+                        type="text"
+                        placeholder="Buscar por ID, sector o problema..."
+                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary transition-all outline-none text-sm"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                </div>
+            </div>
 
             {/* Main Content - List View */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[400px]">
@@ -402,44 +460,52 @@ export const Dashboard = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
-                                {filteredReports.map((report) => (
-                                    <tr key={report.id} onClick={() => setSelectedReport(report)} className="hover:bg-blue-50/40 cursor-pointer transition-colors">
-                                        <td className="px-6 py-4">
-                                            {report.status === 'resolved' ? (
-                                                <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><CheckCircle className="w-3 h-3" /></div>
-                                            ) : report.status === 'pending_resolution' ? (
-                                                <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><Send className="w-3 h-3" /></div>
-                                            ) : (
-                                                <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center"><Clock className="w-3 h-3" /></div>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm font-bold text-gray-700">{report.tracking_id}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">{report.sector || '-'}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-600 line-clamp-1 max-w-xs">{report.ai_summary || report.content}</td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase
-                                                ${report.ai_urgency === 'Rojo' ? 'bg-red-100 text-red-700' :
-                                                    report.ai_urgency === 'Amarillo' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-700'
-                                                } `}>
-                                                {report.ai_urgency || 'Normal'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            {report.last_whatsapp_status === 'sent' && (
-                                                <div title={`Enviado: ${new Date(report.last_whatsapp_sent_at).toLocaleString()}`} className="w-3 h-3 rounded-full bg-green-500 mx-auto shadow-sm shadow-green-200"></div>
-                                            )}
-                                            {report.last_whatsapp_status === 'failed' && (
-                                                <div title="Fallo en envío" className="w-3 h-3 rounded-full bg-red-500 mx-auto animate-pulse shadow-sm shadow-red-200"></div>
-                                            )}
-                                            {!report.last_whatsapp_status && (
-                                                <div className="w-2 h-2 rounded-full bg-gray-200 mx-auto"></div>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button className="text-gray-400 hover:text-sanatorio-primary"><Eye className="w-4 h-4" /></button>
+                                {filteredReports.length > 0 ? (
+                                    filteredReports.map((report) => (
+                                        <tr key={report.id} onClick={() => setSelectedReport(report)} className="hover:bg-blue-50/40 cursor-pointer transition-colors group">
+                                            <td className="px-6 py-4">
+                                                {report.status === 'resolved' ? (
+                                                    <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><CheckCircle className="w-3 h-3" /></div>
+                                                ) : report.status === 'pending_resolution' ? (
+                                                    <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center animate-pulse"><Clock className="w-3 h-3" /></div>
+                                                ) : (
+                                                    <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center"><AlertCircle className="w-3 h-3" /></div>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 text-sm font-bold text-gray-700 group-hover:text-sanatorio-primary transition-colors">{report.tracking_id}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{report.sector || '-'}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600 line-clamp-1 max-w-xs">{report.ai_summary || report.content}</td>
+                                            <td className="px-6 py-4">
+                                                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase
+                                                    ${report.ai_urgency === 'Rojo' ? 'bg-red-100 text-red-700' :
+                                                        report.ai_urgency === 'Amarillo' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-700'
+                                                    } `}>
+                                                    {report.ai_urgency || 'Normal'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                {report.last_whatsapp_status === 'sent' && (
+                                                    <div title={`Enviado: ${new Date(report.last_whatsapp_sent_at).toLocaleString()}`} className="w-3 h-3 rounded-full bg-green-500 mx-auto shadow-sm shadow-green-200"></div>
+                                                )}
+                                                {report.last_whatsapp_status === 'failed' && (
+                                                    <div title="Fallo en envío" className="w-3 h-3 rounded-full bg-red-500 mx-auto animate-pulse shadow-sm shadow-red-200"></div>
+                                                )}
+                                                {!report.last_whatsapp_status && (
+                                                    <div className="w-2 h-2 rounded-full bg-gray-200 mx-auto"></div>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button className="p-2 rounded-lg hover:bg-white text-gray-400 hover:text-sanatorio-primary hover:shadow-sm transition-all"><Eye className="w-4 h-4" /></button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={7} className="px-6 py-12 text-center text-gray-400">
+                                            No se encontraron reportes con los criterios seleccionados.
                                         </td>
                                     </tr>
-                                ))}
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -519,6 +585,14 @@ export const Dashboard = () => {
                                         </div>
 
                                         <div className="space-y-4">
+                                            {selectedReport.assigned_to && (
+                                                <div className="mb-4 bg-gray-50 p-2 rounded-lg flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded-full bg-sanatorio-primary/10 flex items-center justify-center text-sanatorio-primary">
+                                                        <UserCog className="w-3 h-3" />
+                                                    </div>
+                                                    <p className="text-xs text-gray-600 font-medium">Resuelto por: <span className="text-gray-900 font-bold">{selectedReport.assigned_to}</span></p>
+                                                </div>
+                                            )}
                                             <div>
                                                 <label className="text-xs font-bold text-gray-400 uppercase">Acción Inmediata</label>
                                                 <p className="text-sm text-gray-700 mt-1">{selectedReport.resolution_notes || "Sin detalles registrados."}</p>
