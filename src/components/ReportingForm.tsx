@@ -232,14 +232,45 @@ export const ReportingForm = () => {
                                     onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
                                 >
                                     <option value="">Selecciona el área relacionada...</option>
-                                    <option value="Enfermeria">👩‍⚕️ Enfermería</option>
-                                    <option value="Guardia">🚑 Guardia</option>
-                                    <option value="UTI">🏥 Terapia Intensiva (UTI)</option>
-                                    <option value="Piso">🛏️ Internación (Piso)</option>
-                                    <option value="Quirofano">😷 Quirófano</option>
-                                    <option value="Administracion">💼 Administración</option>
-                                    <option value="Limpieza">🧹 Limpieza / Maestranza</option>
-                                    <option value="Otro">📝 Otro</option>
+                                    <option value="ADM-Administración">ADM-Administración</option>
+                                    <option value="ANST-Anestesia">ANST-Anestesia</option>
+                                    <option value="APS-Asistencia-Psicológica">APS-Asistencia-Psicológica</option>
+                                    <option value="AUX-Auxiliares-de-Hoteleria">AUX-Auxiliares-de-Hoteleria</option>
+                                    <option value="CDD-Control-de-Dispositivos">CDD-Control-de-Dispositivos</option>
+                                    <option value="CDI-Control-de-Infecciones">CDI-Control-de-Infecciones</option>
+                                    <option value="CIT-Citologia">CIT-Citologia</option>
+                                    <option value="COM-Comunicacion">COM-Comunicacion</option>
+                                    <option value="CYS-Compras-y-Suministros">CYS-Compras-y-Suministros</option>
+                                    <option value="DIR-Direccion">DIR-Direccion</option>
+                                    <option value="DXI-Diagnostico-por-Imágenes">DXI-Diagnostico-por-Imágenes</option>
+                                    <option value="EST-Estadísticas">EST-Estadísticas</option>
+                                    <option value="FACT-Facturacion">FACT-Facturacion</option>
+                                    <option value="FAR-Farmacia">FAR-Farmacia</option>
+                                    <option value="FER-Fertilidad">FER-Fertilidad</option>
+                                    <option value="FUN-Fundacion-Sanatorio-Argentino">FUN-Fundacion-Sanatorio-Argentino</option>
+                                    <option value="GCM-Guardia-Clinica-Medica">GCM-Guardia-Clinica-Medica</option>
+                                    <option value="GGO-Guardia-Gineco-Obstetricia">GGO-Guardia-Gineco-Obstetricia</option>
+                                    <option value="GPE-Guardia-de-Pediatria">GPE-Guardia-de-Pediatria</option>
+                                    <option value="HDD-Hospital-de-dia">HDD-Hospital-de-dia</option>
+                                    <option value="HDM-Hemodinamia">HDM-Hemodinamia</option>
+                                    <option value="HEM-Hemoterapia">HEM-Hemoterapia</option>
+                                    <option value="HYS-Higiene-y-Seguridad">HYS-Higiene-y-Seguridad</option>
+                                    <option value="INT-Internado">INT-Internado</option>
+                                    <option value="IPE-Internacion-Pediatrica">IPE-Internacion-Pediatrica</option>
+                                    <option value="KIN-Kinesiología">KIN-Kinesiología</option>
+                                    <option value="LAB-Laboratorio">LAB-Laboratorio</option>
+                                    <option value="LYC-Liquidación-y-Convenio">LYC-Liquidación-y-Convenio</option>
+                                    <option value="MAN-Mantenimiento">MAN-Mantenimiento</option>
+                                    <option value="MEM-Mantenimiento-Equipamiento-Medico">MEM-Mantenimiento-Equipamiento-Medico</option>
+                                    <option value="NEO-Neonatologia">NEO-Neonatologia</option>
+                                    <option value="QUI-Quirofano">QUI-Quirofano</option>
+                                    <option value="REC-Recepcion-de-Pacientes">REC-Recepcion-de-Pacientes</option>
+                                    <option value="RES-Residencias-Medicas">RES-Residencias-Medicas</option>
+                                    <option value="RH-Recursos-Humanos">RH-Recursos-Humanos</option>
+                                    <option value="SGC-Gestion-de-la-Calidad">SGC-Gestion-de-la-Calidad</option>
+                                    <option value="TYS-Tecnologia-y-sistemas">TYS-Tecnologia-y-sistemas</option>
+                                    <option value="UCI-Unidad-Cuidados-Intensivos">UCI-Unidad-Cuidados-Intensivos</option>
+                                    <option value="VAC-Vacunatorio">VAC-Vacunatorio</option>
                                 </select>
                                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none group-focus-within:text-sanatorio-primary transition-colors" />
                             </div>
