@@ -9,13 +9,14 @@ export const ReportingForm = () => {
     const [isAnonymous, setIsAnonymous] = useState(true);
     const [files, setFiles] = useState<File[]>([]);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-
     const [formData, setFormData] = useState({
         sector: '',
         content: '',
-        contactNumber: ''
+        contactNumber: '',
+        reportType: ''
     });
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const generateTrackingId = () => {
         const year = new Date().getFullYear();
@@ -95,7 +96,7 @@ export const ReportingForm = () => {
                 .insert({
                     tracking_id: trackingId,
                     sector: formData.sector,
-                    content: formData.content,
+                    content: `[TIPO: ${formData.reportType}] \n\n${formData.content}`,
                     is_anonymous: isAnonymous,
                     contact_number: dbNumber,
                     status: 'pending',
@@ -155,7 +156,7 @@ export const ReportingForm = () => {
                     <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-widest">Guarda este código para consultas futuras</p>
                 </div>
                 <button
-                    onClick={() => { setSuccessId(null); setFormData({ sector: '', content: '', contactNumber: '' }); setFiles([]); setPreviewUrls([]); }}
+                    onClick={() => { setSuccessId(null); setFormData({ sector: '', content: '', contactNumber: '', reportType: '' }); setFiles([]); setPreviewUrls([]); }}
                     className="btn-primary w-full"
                 >
                     Enviar Nuevo Reporte
@@ -308,6 +309,35 @@ export const ReportingForm = () => {
                                     <option value="TYS-Tecnologia-y-sistemas">💻 TYS-Tecnologia-y-sistemas</option>
                                     <option value="UCI-Unidad-Cuidados-Intensivos">💓 UCI-Unidad-Cuidados-Intensivos</option>
                                     <option value="VAC-Vacunatorio">🩹 VAC-Vacunatorio</option>
+                                </select>
+                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none group-focus-within:text-sanatorio-primary transition-colors" />
+                            </div>
+                        </div>
+
+                        {/* Selector de Tipo de Reporte */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                Tipo de Reporte
+                                <div className="group relative">
+                                    <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
+                                        Seleccione la categoría que mejor describe su reporte.
+                                    </div>
+                                </div>
+                            </label>
+                            <div className="relative group">
+                                <select
+                                    required
+                                    className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-sanatorio-primary focus:ring-sanatorio-primary transition-all bg-gray-50 focus:bg-white appearance-none cursor-pointer pr-12"
+                                    value={formData.reportType}
+                                    onChange={(e) => setFormData({ ...formData, reportType: e.target.value })}
+                                >
+                                    <option value="">Selecciona el tipo de hallazgo...</option>
+                                    <option value="Oportunidad de mejora">Oportunidad de mejora</option>
+                                    <option value="Evento adverso">Evento adverso</option>
+                                    <option value="Cuasi evento adverso">Cuasi evento adverso</option>
+                                    <option value="Felicitaciones">Felicitaciones</option>
+                                    <option value="Reclamo">Reclamo</option>
                                 </select>
                                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none group-focus-within:text-sanatorio-primary transition-colors" />
                             </div>
