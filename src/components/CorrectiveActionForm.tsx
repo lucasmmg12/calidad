@@ -91,8 +91,51 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
 
             tempContainer.appendChild(clone);
 
-            // Small delay to ensure rendering matches
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // COLOR SANITIZATION (Fix for html2canvas + Tailwind v4/Modern Browsers)
+            // Recursively walk the clone and convert computed oklch/lab colors to rgb
+            const ctx = document.createElement('canvas').getContext('2d');
+            const convertColorToRgb = (colorString: string) => {
+                if (!colorString || !ctx) return colorString;
+                if (!colorString.includes('oklch') && !colorString.includes('lab') && !colorString.includes('color(')) {
+                    return colorString;
+                }
+                ctx.fillStyle = colorString;
+                // Setting fillStyle forces valid CSS color parsing; if invalid it keeps old value
+                // querying standard color often returns rgb
+                // To be safe we can use fillRect and px manipulation but just getting valid assignment is usually enough for browsers if they support it
+                // BUT html2canvas fails on the *string* value in CSS.
+                // We must format it to RGB string.
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = 1;
+                tempCanvas.height = 1;
+                const tCtx = tempCanvas.getContext('2d');
+                if (!tCtx) return colorString;
+                tCtx.fillStyle = colorString;
+                tCtx.fillRect(0, 0, 1, 1);
+                const [r, g, b, a] = tCtx.getImageData(0, 0, 1, 1).data;
+                return `rgba(${r}, ${g}, ${b}, ${a / 255})`;
+            };
+
+            const sanitizeElement = (el: HTMLElement) => {
+                const computed = window.getComputedStyle(el); // Computed style of the CLONE (which is in DOM)
+
+                // Properties to check
+                const props = ['color', 'backgroundColor', 'borderColor', 'outlineColor'];
+
+                props.forEach(prop => {
+                    const val = computed.getPropertyValue(prop);
+                    if (val && (val.includes('oklch') || val.includes('lab'))) {
+                        // Convert
+                        (el.style as any)[prop] = convertColorToRgb(val);
+                    }
+                });
+
+                Array.from(el.children).forEach(child => sanitizeElement(child as HTMLElement));
+            }
+
+            // We need the clone to be rendered for getComputedStyle to yield values
+            await new Promise(resolve => setTimeout(resolve, 100)); // Short wait for layout
+            sanitizeElement(clone);
 
             const canvas = await html2canvas(tempContainer, {
                 scale: 2,
