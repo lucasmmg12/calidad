@@ -876,47 +876,43 @@ export const Dashboard = () => {
                                             <button
                                                 onClick={async () => {
                                                     const reason = window.prompt('Indique el motivo del rechazo para el responsable:');
-                                                    if (!reason) return; // Cancel if no reason provided
+                                                    if (!reason) return;
+
+                                                    const phoneInput = window.prompt('Ingrese el número de WhatsApp del responsable para notificar (ej: 351...)', '');
+                                                    // If no phone provided, we proceed but don't send WA
 
                                                     const note = `Rechazado por Calidad: ${reason} (${new Date().toLocaleDateString()})`;
 
+                                                    // 1. Update Database
                                                     const { error } = await supabase
                                                         .from('reports')
                                                         .update({
                                                             status: 'pending_resolution',
-                                                            notes: note,
-                                                            // We keep resolution_notes as history or append to it if necessary, but notes is usually the feedback field
+                                                            notes: note
                                                         })
                                                         .eq('id', selectedReport.id);
 
                                                     if (!error) {
-                                                        // AUTO-NOTIFY: Send WhatsApp to responsible about rejection
-                                                        // We use the existing contact number if available, or try to find one.
-                                                        // For now since we don't store responsible phone in reports, we might need a lookup or pass it if available.
-                                                        // Assuming we want to re-trigger the referral logic or send a specific rejection message.
-                                                        // Since we don't have the phone handy here unless it's in the report (not standard schema yet), 
-                                                        // We will attempt to use contact_number if it matches the responsible, OR we rely on the backend/webhook.
-                                                        // BUT per user request: "es importante tambien que se vuelva a enviar un mensaje al responsable"
-                                                        // We'll call the function with a specific flag or message.
+                                                        // 2. Send WhatsApp if phone provided
+                                                        if (phoneInput && phoneInput.length > 5) {
+                                                            const botNumber = `549${phoneInput.replace(/\D/g, '').replace(/^549/, '')}`;
+                                                            const resolutionLink = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}`;
 
-                                                        // Best effort: If we had the phone we would send it. 
-                                                        // Since we implemented the referral modal to capture phone, we might not have it stored permanently.
-                                                        // Let's assume for this iteration we just update the status, and if the user wants to re-notify they can use the "Reenviar Solicitud" 
-                                                        // button that appears in pending_resolution state.
+                                                            await supabase.functions.invoke('send-whatsapp', {
+                                                                body: {
+                                                                    number: botNumber,
+                                                                    message: `🛑 *Reporte Rechazado - Calidad*\n\nSu resolución para el caso *${selectedReport.tracking_id}* ha sido revisada y requiere correcciones.\n\n⚠️ *Motivo:* ${reason}\n\n👉 *Por favor, edite su respuesta aquí:* ${resolutionLink}`,
+                                                                    mediaUrl: "https://i.imgur.com/jgX2y4n.png" // Optional: Warning icon or similar
+                                                                }
+                                                            });
 
-                                                        // HOWEVER, to be proactive as requested:
-                                                        // If we have a stored number or if we want to prompt for it again.
-                                                        // The simplest valid flow is to return it to 'pending_resolution' (done above)
-                                                        // And then the UI will show "Esperando Resolución" which has a "Reenviar Solicitud" button.
-                                                        // But to automate it, we need the phone number.
+                                                            alert(`Notificación enviada a ${botNumber}`);
+                                                        }
 
-                                                        // Let's alert the user to re-send the notification.
-                                                        alert("Ticket devuelto. Por favor, utilice el botón 'Solicitar Gestión' o 'Reenviar' si desea notificar por WhatsApp inmediatamente.");
-
-                                                        // Update local state to reflect changes immediately
+                                                        // 3. Update local state
                                                         setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'pending_resolution', notes: note } : r));
                                                         setSelectedReport(null);
-                                                        setFeedbackModal({ isOpen: true, type: 'success', title: 'Devuelto', message: 'Ticket rechazado. Recuerde notificar al responsable nuevamente si es necesario.' });
+                                                        setFeedbackModal({ isOpen: true, type: 'success', title: 'Ticket Rechazado', message: 'El caso ha vuelto a estado pendiente de resolución.' });
                                                     }
                                                 }}
                                                 className="flex-1 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold text-sm hover:bg-red-50 transition-colors"
@@ -925,13 +921,28 @@ export const Dashboard = () => {
                                             </button>
                                             <button
                                                 onClick={async () => {
-                                                    const { error } = await supabase.from('reports').update({ status: 'resolved', resolved_at: new Date().toISOString() }).eq('id', selectedReport.id);
+                                                    // 1. Send WhatsApp to Reporter if contact exists
+                                                    if (selectedReport.contact_number && selectedReport.contact_number.length > 5) {
+                                                        const userNumber = `549${selectedReport.contact_number}`;
+                                                        await supabase.functions.invoke('send-whatsapp', {
+                                                            body: {
+                                                                number: userNumber,
+                                                                message: `✅ *Reporte Resuelto - Calidad*\n\nEstimado/a, su reporte *${selectedReport.tracking_id}* ha sido gestionado y cerrado exitosamente.\n\n📝 *Resolución:* "${selectedReport.resolution_notes || selectedReport.corrective_plan || 'Sin observaciones.'}"\n\nGracias por su compromiso con la mejora continua.`,
+                                                                mediaUrl: "https://i.imgur.com/rOkI8sA.png" // Success/Check icon
+                                                            }
+                                                        });
+                                                    }
+
+                                                    // 2. Update DB
+                                                    const { error } = await supabase.from('reports').update({
+                                                        status: 'resolved',
+                                                        resolved_at: new Date().toISOString()
+                                                    }).eq('id', selectedReport.id);
+
                                                     if (!error) {
                                                         setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'resolved' } : r));
                                                         setSelectedReport(null);
-                                                        setFeedbackModal({ isOpen: true, type: 'success', title: 'Aprobado', message: 'El ticket ha sido cerrado exitosamente.' });
-
-                                                        // Opcional: Notificar al usuario final aquí también
+                                                        setFeedbackModal({ isOpen: true, type: 'success', title: 'Aprobado', message: 'El ticket ha sido cerrado y el usuario notificado (si corresponde).' });
                                                     }
                                                 }}
                                                 className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 shadow-lg shadow-purple-500/20"

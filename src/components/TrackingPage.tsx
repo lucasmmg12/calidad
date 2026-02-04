@@ -142,13 +142,28 @@ export const TrackingPage = () => {
                                     </p>
                                 </div>
                             ) : (
-                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 flex items-start gap-3">
-                                    <Clock className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                                    <div>
-                                        <h3 className="text-blue-800 font-bold text-sm mb-1">En Proceso</h3>
-                                        <p className="text-blue-700 text-xs leading-relaxed">
-                                            Tu reporte está siendo analizado por nuestro equipo de Calidad. Te notificaremos cualquier novedad.
-                                        </p>
+                                <div className="space-y-4">
+                                    {/* Show Logs/Notes if available (e.g. Returned for info) */}
+                                    {report.notes && (
+                                        <div className="bg-amber-50 border border-amber-100 rounded-xl p-5 animate-pulse">
+                                            <h3 className="text-amber-800 font-bold flex items-center gap-2 mb-2">
+                                                <Activity className="w-5 h-5" />
+                                                Novedades
+                                            </h3>
+                                            <p className="text-amber-800 text-sm italic">
+                                                "{report.notes}"
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 flex items-start gap-3">
+                                        <Clock className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                                        <div>
+                                            <h3 className="text-blue-800 font-bold text-sm mb-1">En Proceso</h3>
+                                            <p className="text-blue-700 text-xs leading-relaxed">
+                                                Tu reporte está siendo analizado por nuestro equipo de Calidad. Te notificaremos cualquier novedad.
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             )}
