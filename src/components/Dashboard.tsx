@@ -615,16 +615,28 @@ export const Dashboard = () => {
                                     <h2 className="text-2xl font-bold text-sanatorio-primary">Ticket #{selectedReport.tracking_id}</h2>
                                     <p className="text-sm text-gray-400">{new Date(selectedReport.created_at).toLocaleString()}</p>
                                 </div>
-                                <div className="flex gap-2">
-                                    {/* Color tags */}
-                                    {['Verde', 'Amarillo', 'Rojo'].map(color => (
-                                        <button
-                                            key={color}
-                                            onClick={() => handleUpdateUrgency(color)}
-                                            className={`w - 6 h - 6 rounded - full border - 2 ${selectedReport.ai_urgency === color ? 'border-gray-600 scale-110' : 'border-transparent opacity-30 hover:opacity-100'} 
-                                                ${color === 'Rojo' ? 'bg-red-500' : color === 'Amarillo' ? 'bg-yellow-400' : 'bg-green-500'} `}
-                                        />
-                                    ))}
+                                <div className="flex flex-col items-end gap-1">
+                                    <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Prioridad</span>
+                                    <div className="flex gap-1.5 p-1 bg-gray-50 rounded-full border border-gray-100">
+                                        {['Verde', 'Amarillo', 'Rojo'].map(color => (
+                                            <button
+                                                key={color}
+                                                onClick={() => handleUpdateUrgency(color)}
+                                                title={`Cambiar prioridad a ${color}`}
+                                                className={`w-6 h-6 rounded-full transition-all duration-300 flex items-center justify-center relative group
+                                                    ${color === 'Rojo' ? 'bg-red-500 hover:bg-red-600' : color === 'Amarillo' ? 'bg-yellow-400 hover:bg-yellow-500' : 'bg-green-500 hover:bg-green-600'}
+                                                    ${selectedReport.ai_urgency === color
+                                                        ? 'scale-110 ring-2 ring-offset-1 ring-gray-200 shadow-sm opacity-100'
+                                                        : 'opacity-30 hover:opacity-100 grayscale hover:grayscale-0'
+                                                    }
+                                                `}
+                                            >
+                                                {selectedReport.ai_urgency === color && (
+                                                    <div className="w-1.5 h-1.5 bg-white rounded-full shadow-sm" />
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 
