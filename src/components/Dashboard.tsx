@@ -809,7 +809,7 @@ export const Dashboard = () => {
                                                             sector: selectedReport.sector
                                                         }}
                                                         // Hidden mode, just for generating PDF if needed or re-opening
-                                                        onClose={() => { }}
+                                                        onClose={() => setSelectedReport(null)}
                                                     />
                                                     <button
                                                         onClick={(e) => {

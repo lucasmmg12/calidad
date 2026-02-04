@@ -119,19 +119,40 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
             const sanitizeElement = (el: HTMLElement) => {
                 const computed = window.getComputedStyle(el); // Computed style of the CLONE (which is in DOM)
 
-                // Properties to check
-                const props = ['color', 'backgroundColor', 'borderColor', 'outlineColor'];
+                // Properties to check (kebab-case for getPropertyValue)
+                const props = [
+                    'color',
+                    'background-color',
+                    'border-color',
+                    'border-top-color',
+                    'border-bottom-color',
+                    'border-left-color',
+                    'border-right-color',
+                    'outline-color',
+                    'fill',
+                    'stroke',
+                    'text-decoration-color'
+                ];
 
+                // Handle simple color properties
                 props.forEach(prop => {
                     const val = computed.getPropertyValue(prop);
-                    if (val && (val.includes('oklch') || val.includes('lab'))) {
-                        // Convert
-                        (el.style as any)[prop] = convertColorToRgb(val);
+                    if (val && (val.includes('oklch') || val.includes('lab') || val.includes('display-p3'))) {
+                        // Convert direct colors
+                        el.style.setProperty(prop, convertColorToRgb(val), 'important');
                     }
                 });
 
+                // Handle complex properties like box-shadow (stripping if complex for now to avoid parsing errors)
+                const shadow = computed.getPropertyValue('box-shadow');
+                if (shadow && (shadow.includes('oklch') || shadow.includes('lab'))) {
+                    // It's hard to parse box-shadow string to replace color without a library. 
+                    // Safest fix for PDF export is to remove the shadow if it uses modern colors
+                    el.style.boxShadow = 'none';
+                }
+
                 Array.from(el.children).forEach(child => sanitizeElement(child as HTMLElement));
-            }
+            };
 
             // We need the clone to be rendered for getComputedStyle to yield values
             await new Promise(resolve => setTimeout(resolve, 100)); // Short wait for layout
