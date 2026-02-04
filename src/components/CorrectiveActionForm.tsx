@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import {
     FileText,
     Save,
-    Download,
     AlertTriangle,
     CheckCircle2,
     Calendar,
@@ -55,13 +54,11 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
         }
     });
 
-    const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const formRef = useRef<HTMLFormElement>(null);
 
     const generatePDF = async () => {
         if (!formRef.current) return;
-        setIsGeneratingPdf(true);
 
         try {
             // Create a dedicated container for print (off-screen)
@@ -155,7 +152,7 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
             // Non-blocking alert
             alert(`El documento se guardó, pero falló la descarga del PDF: ${error.message || error}`);
         } finally {
-            setIsGeneratingPdf(false);
+            // No loading state to toggle for PDF anymore, or use a new one if needed
         }
     };
 
@@ -180,15 +177,18 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                 if (error) throw error;
             }
 
-            // 2. GENERATE PDF (Wait for it, but don't fail the whole process if it breaks)
-            await generatePDF();
-
+            // 2. GENERATE PDF & TRIGGER SUCCESS
+            try {
+                await generatePDF();
+            } catch (pdfErr) {
+                console.error("Error generando PDF automático:", pdfErr);
+            }
             if (onSuccess) onSuccess();
             if (onClose) onClose();
 
         } catch (error: any) {
-            console.error('Error saving:', error);
-            alert(`Error al guardar: ${error.message}`);
+            console.error("Error submitting corrective action:", error);
+            alert("Error al registrar: " + error.message);
         } finally {
             setIsSubmitting(false);
         }
@@ -210,14 +210,6 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                     <div className="flex gap-2">
                         <button
                             type="button"
-                            onClick={() => generatePDF()}
-                            disabled={isGeneratingPdf}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-sanatorio-primary bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
-                        >
-                            <Download className="w-4 h-4" />
-                            {isGeneratingPdf ? 'Generando...' : 'Descargar PDF'}
-                        </button>
-                        <button
                             onClick={onClose}
                             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                         >
@@ -249,49 +241,51 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
 
                             {/* Section 1: Origen */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-gray-100">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                                        <Building2 className="w-3 h-3" /> Origen
-                                    </label>
-                                    <select
-                                        {...register('origin', { required: true })}
-                                        className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-sanatorio-primary focus:border-sanatorio-primary block p-2.5 outline-none"
-                                    >
-                                        <option value="reclamo">Reclamo / Queja</option>
-                                        <option value="auditoria">Hallazgo Auditoría</option>
-                                        <option value="seguridad">Ronda de Seguridad</option>
-                                        <option value="otro">Otro</option>
-                                    </select>
-                                </div>
+                                <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                                    <Building2 className="w-3 h-3" /> Origen
+                                </label>
+                                <select
+                                    {...register('origin', { required: true })}
+                                    disabled={true}
+                                    className="w-full bg-gray-100 border border-gray-200 text-gray-500 text-sm rounded-lg cursor-not-allowed focus:ring-0 block p-2.5 outline-none font-medium"
+                                >
+                                    <option value="reclamo">Reclamo / Queja</option>
+                                    <option value="auditoria">Hallazgo Auditoría</option>
+                                    <option value="seguridad">Ronda de Seguridad</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                                        <Search className="w-3 h-3" /> Tipo Hallazgo
-                                    </label>
-                                    <select
-                                        {...register('findingType', { required: true })}
-                                        className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-sanatorio-primary focus:border-sanatorio-primary block p-2.5 outline-none"
-                                    >
-                                        <option value="oportunidad_mejora">Oportunidad de mejora</option>
-                                        <option value="evento_adverso">Evento adverso</option>
-                                        <option value="cuasi_evento">Cuasi evento adverso</option>
-                                        <option value="felicitaciones">Felicitaciones</option>
-                                        <option value="reclamo">Reclamo</option>
-                                    </select>
-                                </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                                    <Search className="w-3 h-3" /> Tipo Hallazgo
+                                </label>
+                                <select
+                                    {...register('findingType', { required: true })}
+                                    disabled={true}
+                                    className="w-full bg-gray-100 border border-gray-200 text-gray-500 text-sm rounded-lg cursor-not-allowed focus:ring-0 block p-2.5 outline-none font-medium"
+                                >
+                                    <option value="oportunidad_mejora">Oportunidad de mejora</option>
+                                    <option value="evento_adverso">Evento adverso</option>
+                                    <option value="cuasi_evento">Cuasi evento adverso</option>
+                                    <option value="felicitaciones">Felicitaciones</option>
+                                    <option value="reclamo">Reclamo</option>
+                                </select>
+                            </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                                        <Building2 className="w-3 h-3" /> Sector Afectado
-                                    </label>
-                                    <input
-                                        type="text"
-                                        {...register('sector', { required: true })}
-                                        className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-sanatorio-primary focus:border-sanatorio-primary block p-2.5 outline-none"
-                                    />
-                                </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                                    <Building2 className="w-3 h-3" /> Sector Afectado
+                                </label>
+                                <input
+                                    type="text"
+                                    {...register('sector', { required: true })}
+                                    disabled={true}
+                                    className="w-full bg-gray-100 border border-gray-200 text-gray-500 text-sm rounded-lg cursor-not-allowed focus:ring-0 block p-2.5 outline-none font-medium"
+                                />
                             </div>
                         </div>
+
 
                         {/* Section 2: Detalle */}
                         <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 space-y-4">
@@ -366,13 +360,20 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                                     <input
                                         type="date"
                                         min={new Date().toISOString().split('T')[0]}
-                                        {...register('deadline', { required: true })}
+                                        {...register('deadline', {
+                                            required: true,
+                                            validate: (value) => {
+                                                const date = new Date(value);
+                                                const today = new Date();
+                                                today.setHours(0, 0, 0, 0);
+                                                return date >= today || "La fecha no puede ser anterior a hoy";
+                                            }
+                                        })}
                                         className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-green-200 focus:border-green-500 outline-none"
                                     />
                                 </div>
                             </div>
                         </div>
-
                     </form>
                 </div>
 
@@ -394,7 +395,6 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                             Guardar Borrador
                         </button>
                         <button
-                            // Trigger form submit via ref/external or putting this inside form (moved form tag out of scroll div ideally, or verify form id trigger)
                             onClick={handleSubmit(onSubmit)}
                             disabled={isSubmitting}
                             className="flex items-center gap-2 px-6 py-2.5 bg-sanatorio-primary text-white font-bold rounded-xl shadow-lg shadow-sanatorio-primary/30 hover:shadow-xl hover:-translate-y-0.5 transition-all text-sm"

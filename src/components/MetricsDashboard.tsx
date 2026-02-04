@@ -29,7 +29,8 @@ export const MetricsDashboard = () => {
         urgentCount: 0,
         avgResolutionTimeHours: 0,
         bySector: [] as { sector: string; count: number; percentage: number }[],
-        byUrgency: { Verdes: 0, Amarillos: 0, Rojos: 0 }
+        byUrgency: { Verdes: 0, Amarillos: 0, Rojos: 0 },
+        byStatus: { resolved: 0, pending: 0, waiting: 0, cancelled: 0 }
     });
     const [isExporting, setIsExporting] = useState(false);
     const [rawReports, setRawReports] = useState<any[]>([]);
@@ -89,6 +90,19 @@ export const MetricsDashboard = () => {
             Rojos: reports.filter(r => r.ai_urgency === 'Rojo').length
         };
 
+        // By Status (Detailed)
+        // Mapping:
+        // Resueltos -> resolved
+        // Pendientes -> pending, analyzed
+        // Esperando Solución -> pending_resolution, in_progress, quality_validation
+        // Cancelados -> cancelled
+        const byStatus = {
+            resolved: reports.filter(r => r.status === 'resolved').length,
+            pending: reports.filter(r => ['pending', 'analyzed'].includes(r.status)).length,
+            waiting: reports.filter(r => ['pending_resolution', 'in_progress', 'quality_validation'].includes(r.status)).length,
+            cancelled: reports.filter(r => r.status === 'cancelled').length
+        };
+
         setStats({
             total,
             resolved: resolved.length,
@@ -96,7 +110,8 @@ export const MetricsDashboard = () => {
             urgentCount: urgent.length,
             avgResolutionTimeHours: Number(avgHours),
             bySector,
-            byUrgency
+            byUrgency,
+            byStatus
         });
         setLoading(false);
     };
@@ -519,7 +534,66 @@ export const MetricsDashboard = () => {
                 </div>
             </div>
 
-            {/* AI Insights (Mock based on data) */}
+            {/* Status Breakdown Chart */}
+            <div className="bg-white p-8 rounded-3xl shadow-card border border-gray-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-gray-600" />
+                    Estado de Tickets
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {/* Resueltos */}
+                    <div className="p-4 rounded-2xl bg-green-50/50 border border-green-100 flex flex-col items-center justify-center gap-2 group hover:bg-green-50 transition-colors">
+                        <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
+                            <CheckCircle2 className="w-6 h-6" />
+                        </div>
+                        <span className="text-3xl font-black text-gray-800">{stats.byStatus.resolved}</span>
+                        <span className="text-xs font-bold text-green-700 uppercase tracking-wider">Resueltos</span>
+                    </div>
+
+                    {/* Pendientes */}
+                    <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-100 flex flex-col items-center justify-center gap-2 group hover:bg-blue-50 transition-colors">
+                        <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
+                            <Clock className="w-6 h-6" />
+                        </div>
+                        <span className="text-3xl font-black text-gray-800">{stats.byStatus.pending}</span>
+                        <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">Pendientes</span>
+                    </div>
+
+                    {/* Esperando Solución */}
+                    <div className="p-4 rounded-2xl bg-orange-50/50 border border-orange-100 flex flex-col items-center justify-center gap-2 group hover:bg-orange-50 transition-colors">
+                        <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
+                            <TrendingUp className="w-6 h-6" />
+                        </div>
+                        <span className="text-3xl font-black text-gray-800">{stats.byStatus.waiting}</span>
+                        <span className="text-xs font-bold text-orange-700 uppercase tracking-wider">Esperando Solución</span>
+                    </div>
+
+                    {/* Cancelados */}
+                    <div className="p-4 rounded-2xl bg-gray-50/50 border border-gray-200 flex flex-col items-center justify-center gap-2 group hover:bg-gray-100 transition-colors">
+                        <div className="w-12 h-12 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
+                            <FileDown className="w-6 h-6" />
+                        </div>
+                        <span className="text-3xl font-black text-gray-800">{stats.byStatus.cancelled}</span>
+                        <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">Cancelados</span>
+                    </div>
+                </div>
+
+                {/* Visual Bar Representation */}
+                <div className="mt-8">
+                    <div className="flex w-full h-4 rounded-full overflow-hidden">
+                        <div style={{ width: `${stats.total > 0 ? (stats.byStatus.resolved / stats.total) * 100 : 0}%` }} className="h-full bg-green-500 hover:opacity-90 transition-all tooltip" title="Resueltos"></div>
+                        <div style={{ width: `${stats.total > 0 ? (stats.byStatus.pending / stats.total) * 100 : 0}%` }} className="h-full bg-blue-500 hover:opacity-90 transition-all tooltip" title="Pendientes"></div>
+                        <div style={{ width: `${stats.total > 0 ? (stats.byStatus.waiting / stats.total) * 100 : 0}%` }} className="h-full bg-orange-500 hover:opacity-90 transition-all tooltip" title="Esperando Solución"></div>
+                        <div style={{ width: `${stats.total > 0 ? (stats.byStatus.cancelled / stats.total) * 100 : 0}%` }} className="h-full bg-gray-400 hover:opacity-90 transition-all tooltip" title="Cancelados"></div>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-400 mt-2 font-medium">
+                        <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500"></div> Resueltos</span>
+                        <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500"></div> Pendientes</span>
+                        <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500"></div> En Proceso</span>
+                        <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-gray-400"></div> Cancelados</span>
+                    </div>
+                </div>
+            </div>
             <div className="bg-gradient-to-r from-[#002b4d] to-[#004270] rounded-3xl p-8 text-white relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
 
