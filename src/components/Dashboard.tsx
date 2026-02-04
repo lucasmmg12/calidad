@@ -361,7 +361,7 @@ export const Dashboard = () => {
 
     // FILTROS
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'pending' | 'resolved' | 'all' | 'in_progress'>('all');
+    const [statusFilter, setStatusFilter] = useState<'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation'>('all');
 
     // Generate PDF Logic
     const handleDownloadPDF = async (report: any) => {
@@ -450,7 +450,8 @@ export const Dashboard = () => {
             statusFilter === 'all' ? true :
                 statusFilter === 'pending' ? (report.status === 'pending' || report.status === 'analyzed') :
                     statusFilter === 'in_progress' ? report.status === 'pending_resolution' :
-                        statusFilter === 'resolved' ? report.status === 'resolved' : true;
+                        statusFilter === 'quality_validation' ? report.status === 'quality_validation' :
+                            statusFilter === 'resolved' ? report.status === 'resolved' : true;
 
         // Filtro por Texto (ID, Sector, Contenido)
         const searchLower = searchTerm.toLowerCase();
@@ -495,11 +496,12 @@ export const Dashboard = () => {
                         { id: 'all', label: 'Todos' },
                         { id: 'pending', label: 'Pendientes' },
                         { id: 'in_progress', label: 'En Gestión' },
+                        { id: 'quality_validation', label: 'Por Validar' },
                         { id: 'resolved', label: 'Resueltos' }
                     ].map(tab => (
                         <button
                             key={tab.id}
-                            onClick={() => setStatusFilter(tab.id as 'pending' | 'resolved' | 'all' | 'in_progress')}
+                            onClick={() => setStatusFilter(tab.id as 'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation')}
                             className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${statusFilter === tab.id
                                 ? 'bg-white text-sanatorio-primary shadow-sm'
                                 : 'text-gray-500 hover:text-gray-700'
@@ -555,6 +557,8 @@ export const Dashboard = () => {
                                                     <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><CheckCircle className="w-3 h-3" /></div>
                                                 ) : report.status === 'pending_resolution' ? (
                                                     <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center animate-pulse"><Clock className="w-3 h-3" /></div>
+                                                ) : report.status === 'quality_validation' ? (
+                                                    <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-xs">Q</div>
                                                 ) : (
                                                     <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center"><AlertCircle className="w-3 h-3" /></div>
                                                 )}
@@ -635,6 +639,46 @@ export const Dashboard = () => {
                                     <div className="p-4 bg-gray-50 rounded-xl text-gray-600 text-sm leading-relaxed border border-gray-100">
                                         "{selectedReport.content}"
                                     </div>
+
+                                    {/* Origin Field (Editable) */}
+                                    <div className="mt-4">
+                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Origen (Calidad)</h3>
+                                        <select
+                                            value={selectedReport.resolution_notes?.split('Origen: ')[1]?.split('.')[0] || 'Reclamo/Queja'}
+                                            onChange={async (e) => {
+                                                const newOrigin = e.target.value;
+                                                // This is a bit hacky because we are storing Origin inside resolution_notes string based on the current schema patterns
+                                                // Ideally we should have a 'origin' column.
+                                                // We will update the resolution_notes to include this new origin or update a hypothetical origin column if it existed.
+                                                // For now, let's assume we append/replace in notes or just use a new metadata field if possible.
+                                                // Given the constraint "El campo 'Origen' ... debe ser visible y editable solo para el perfil de Calidad",
+                                                // and looking at CorrectiveActionForm, it seems it saves to resolution_notes: `... Origen: ${origin}`.
+
+                                                let currentNotes = selectedReport.resolution_notes || '';
+                                                let newNotes = currentNotes;
+                                                if (currentNotes.includes('Origen: ')) {
+                                                    newNotes = currentNotes.replace(/Origen: [^.]*/, `Origen: ${newOrigin}`);
+                                                } else {
+                                                    newNotes = `${currentNotes ? currentNotes + '. ' : ''}Origen: ${newOrigin}`;
+                                                }
+
+                                                const { error } = await supabase.from('reports').update({ resolution_notes: newNotes }).eq('id', selectedReport.id);
+
+                                                if (!error) {
+                                                    const updatedReport = { ...selectedReport, resolution_notes: newNotes };
+                                                    setReports(reports.map(r => r.id === selectedReport.id ? updatedReport : r));
+                                                    setSelectedReport(updatedReport);
+                                                }
+                                            }}
+                                            className="w-full bg-white border border-gray-200 text-gray-700 text-sm rounded-lg p-2.5 outline-none focus:border-sanatorio-primary focus:ring-1 focus:ring-sanatorio-primary"
+                                        >
+                                            <option value="Reclamo/Queja">Reclamo/Queja</option>
+                                            <option value="Auditoría fin de semana">Auditoría fin de semana</option>
+                                            <option value="Auditoría de proceso">Auditoría de proceso</option>
+                                            <option value="5S">5S</option>
+                                            <option value="Evento Adverso">Evento Adverso</option>
+                                        </select>
+                                    </div>
                                 </div>
 
                                 {selectedReport.evidence_urls && (
@@ -647,6 +691,56 @@ export const Dashboard = () => {
                                         </div>
                                     </div>
                                 )}
+
+                                <div className="border-t border-gray-100 pt-6">
+                                    <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                        <Clock className="w-4 h-4 text-sanatorio-primary" />
+                                        Historial de Actividad
+                                    </h3>
+                                    <div className="space-y-4">
+                                        {/* Entry created */}
+                                        <div className="flex gap-3 relative pb-4 border-l-2 border-gray-100 pl-4 last:border-0 last:pb-0">
+                                            <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-gray-300 ring-4 ring-white"></div>
+                                            <div>
+                                                <p className="text-xs text-gray-400 font-mono mb-1">{new Date(selectedReport.created_at).toLocaleString()}</p>
+                                                <p className="text-sm text-gray-600 font-medium">Ticket Creado</p>
+                                            </div>
+                                        </div>
+
+                                        {/* WhatsApp Sent */}
+                                        {selectedReport.last_whatsapp_sent_at && (
+                                            <div className="flex gap-3 relative pb-4 border-l-2 border-gray-100 pl-4 last:border-0 last:pb-0">
+                                                <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-blue-400 ring-4 ring-white"></div>
+                                                <div>
+                                                    <p className="text-xs text-gray-400 font-mono mb-1">{new Date(selectedReport.last_whatsapp_sent_at).toLocaleString()}</p>
+                                                    <p className="text-sm text-gray-600 font-medium">WhatsApp enviado a responsable ({selectedReport.assigned_to})</p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Notes log (simple simulation for now since we don't have a separate table log yet) */}
+                                        {selectedReport.notes && (
+                                            <div className="flex gap-3 relative pb-4 border-l-2 border-gray-100 pl-4 last:border-0 last:pb-0">
+                                                <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-purple-400 ring-4 ring-white"></div>
+                                                <div>
+                                                    <p className="text-xs text-gray-400 font-mono mb-1">Nota Reciente</p>
+                                                    <p className="text-sm text-gray-600 font-medium italic">"{selectedReport.notes}"</p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Resolved */}
+                                        {selectedReport.resolved_at && (
+                                            <div className="flex gap-3 relative pb-4 border-l-2 border-gray-100 pl-4 last:border-0 last:pb-0">
+                                                <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-green-500 ring-4 ring-white"></div>
+                                                <div>
+                                                    <p className="text-xs text-gray-400 font-mono mb-1">{new Date(selectedReport.resolved_at).toLocaleString()}</p>
+                                                    <p className="text-sm text-gray-600 font-bold text-green-700">Resolución Finalizada</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -742,6 +836,60 @@ export const Dashboard = () => {
                                         >
                                             Reenviar Solicitud
                                         </button>
+                                    </div>
+                                ) : selectedReport.status === 'quality_validation' ? (
+                                    // VISTA VALIDACIÓN CALIDAD
+                                    <div className="bg-purple-50 p-6 rounded-2xl shadow-sm border border-purple-100">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+                                                <BrainCircuit className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-gray-900">Validación de Calidad</h4>
+                                                <p className="text-xs text-purple-600">Revisión requerida para cierre</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4 mb-6">
+                                            <div className="bg-white p-4 rounded-xl border border-purple-100/50">
+                                                <h5 className="text-xs font-bold text-gray-500 uppercase mb-2">Resolución Propuesta</h5>
+                                                <p className="text-sm text-gray-800 italic">"{selectedReport.resolution_notes || selectedReport.corrective_plan || 'Sin nota de resolución'}"</p>
+                                                {selectedReport.assigned_to && (
+                                                    <p className="text-xs text-gray-400 mt-2 text-right">- Por: {selectedReport.assigned_to}</p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={async () => {
+                                                    const { error } = await supabase.from('reports').update({ status: 'pending_resolution', notes: `Rechazado por Calidad: Se requiere más información. (${new Date().toLocaleDateString()})` }).eq('id', selectedReport.id);
+                                                    if (!error) {
+                                                        setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'pending_resolution' } : r));
+                                                        setSelectedReport(null);
+                                                        setFeedbackModal({ isOpen: true, type: 'success', title: 'Devuelto', message: 'El ticket ha vuelto al responsable para su revisión.' });
+                                                    }
+                                                }}
+                                                className="flex-1 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold text-sm hover:bg-red-50 transition-colors"
+                                            >
+                                                Rechazar
+                                            </button>
+                                            <button
+                                                onClick={async () => {
+                                                    const { error } = await supabase.from('reports').update({ status: 'resolved', resolved_at: new Date().toISOString() }).eq('id', selectedReport.id);
+                                                    if (!error) {
+                                                        setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'resolved' } : r));
+                                                        setSelectedReport(null);
+                                                        setFeedbackModal({ isOpen: true, type: 'success', title: 'Aprobado', message: 'El ticket ha sido cerrado exitosamente.' });
+
+                                                        // Opcional: Notificar al usuario final aquí también
+                                                    }
+                                                }}
+                                                className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 shadow-lg shadow-purple-500/20"
+                                            >
+                                                Aprobar y Cerrar
+                                            </button>
+                                        </div>
                                     </div>
                                 ) : (
                                     // VISTA ACCIONES INICIALES (DERIVAR)

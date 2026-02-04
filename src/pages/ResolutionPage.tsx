@@ -64,7 +64,7 @@ export const ResolutionPage = () => {
                     implementation_date: formData.implementationDate || null,
                     resolution_evidence_urls: formData.evidenceUrls,
                     resolved_at: new Date().toISOString(),
-                    status: 'resolved'
+                    status: 'quality_validation'
                 })
                 .eq('id', reportData.id);
 

@@ -156,6 +156,13 @@ export const TrackingPage = () => {
                     </div>
                 </div>
             )}
+
+
+            <div className="mt-8 text-center">
+                <a href="/" className="inline-flex items-center gap-2 text-sm font-bold text-sanatorio-primary hover:text-[#004270] transition-colors bg-blue-50 px-6 py-3 rounded-xl hover:bg-blue-100">
+                    ← Volver al Inicio
+                </a>
+            </div>
         </div>
     );
 };

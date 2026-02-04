@@ -36,11 +36,13 @@ export const DoraAssistant = ({ message, className = '' }: DoraAssistantProps) =
 
             {/* Dora Avatar Image */}
             <div className="relative group cursor-pointer">
-                <img
-                    src="/dora_avatar.png"
-                    alt="Dora Asistente"
-                    className="h-48 w-auto object-contain drop-shadow-2xl transition-transform duration-300 hover:-translate-y-2"
-                />
+                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/20 shadow-lg">
+                    <img
+                        src="/dora (2).png"
+                        alt="Dora AI"
+                        className="w-full h-full object-cover"
+                    />
+                </div>
 
                 {/* Badge when minimized or active */}
                 <div className="absolute bottom-4 right-4 w-4 h-4 bg-green-400 border-2 border-white rounded-full animate-pulse"></div>

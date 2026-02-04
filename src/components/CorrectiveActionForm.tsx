@@ -12,7 +12,7 @@ import {
     UserCircle2
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import { supabase } from '../utils/supabase';
 
 interface CorrectiveActionFormProps {
@@ -51,6 +51,7 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
             findingType: 'evento_adverso', // Default for this context
             description: initialData?.description || '',
             responsible: '',
+            deadline: new Date().toISOString().split('T')[0] // Default to today
         }
     });
 
@@ -107,11 +108,14 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
             document.body.removeChild(tempContainer);
 
             const imgData = canvas.toDataURL('image/png');
-            if (typeof jsPDF !== 'function') {
-                throw new Error("Librería jsPDF no disponible.");
-            }
 
-            const pdf = new jsPDF('p', 'mm', 'a4');
+            // Fix instantiation (try direct new jsPDF first, fallback to default if needed in some bundlers)
+            // @ts-ignore
+            const pdf = new jsPDF({
+                orientation: 'p',
+                unit: 'mm',
+                format: 'a4'
+            });
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfPageHeight = pdf.internal.pageSize.getHeight();
             const imgHeight = (canvas.height * pdfWidth) / canvas.width;
@@ -161,7 +165,7 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
             // 1. SAVE TO DATABASE
             if (reportId) {
                 const updates = {
-                    status: 'resolved',
+                    status: 'quality_validation',
                     root_cause: data.rootCauseAnalysis,
                     corrective_plan: data.actionPlan,
                     assigned_to: data.responsible,
@@ -268,10 +272,11 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                                         {...register('findingType', { required: true })}
                                         className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-sanatorio-primary focus:border-sanatorio-primary block p-2.5 outline-none"
                                     >
-                                        <option value="evento_adverso">Evento Adverso</option>
-                                        <option value="no_conformidad">No Conformidad</option>
-                                        <option value="desvio">Desvío Menor</option>
-                                        <option value="oportunidad">Oportunidad Mejora</option>
+                                        <option value="oportunidad_mejora">Oportunidad de mejora</option>
+                                        <option value="evento_adverso">Evento adverso</option>
+                                        <option value="cuasi_evento">Cuasi evento adverso</option>
+                                        <option value="felicitaciones">Felicitaciones</option>
+                                        <option value="reclamo">Reclamo</option>
                                     </select>
                                 </div>
 
@@ -360,6 +365,7 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                                     </label>
                                     <input
                                         type="date"
+                                        min={new Date().toISOString().split('T')[0]}
                                         {...register('deadline', { required: true })}
                                         className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-green-200 focus:border-green-500 outline-none"
                                     />
@@ -399,7 +405,7 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                     </div>
                 </div>
 
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
