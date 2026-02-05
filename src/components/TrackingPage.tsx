@@ -128,46 +128,125 @@ export const TrackingPage = () => {
                                 </div>
                             </div>
 
-                            {report.status === 'resolved' ? (
-                                <div className="bg-green-50 border border-green-200 rounded-xl p-5 animate-in zoom-in-95 delay-300">
+                            {/* Activity History Log */}
+                            {report.notes && (
+                                <div className="mt-6 border-t border-gray-100 pt-6">
+                                    <h3 className="text-sm font-bold text-sanatorio-primary flex items-center gap-2 mb-4">
+                                        <Clock className="w-4 h-4" />
+                                        Historial de Actividad
+                                    </h3>
+
+                                    <div className="relative space-y-0 pl-2">
+                                        {/* Vertical Guide Line */}
+                                        <div className="absolute top-2 bottom-2 left-[19px] w-0.5 bg-gray-100 -z-10"></div>
+
+                                        {(() => {
+                                            // 1. Initial Creation Event
+                                            const events = [{
+                                                date: new Date(report.created_at).toLocaleString('es-AR', {
+                                                    timeZone: 'America/Argentina/Buenos_Aires',
+                                                    day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                                                }),
+                                                message: "Ticket Creado",
+                                                type: 'start'
+                                            }];
+
+                                            // 2. Parse Notes for Events
+                                            // Expected fomat: "[timestamp] message" e.g. "[2/5/2026, 08:30:00] 🔄 REOPENED..."
+                                            if (report.notes) {
+                                                const notes = report.notes.split('\n\n').filter((n: string) => n.trim().length > 0);
+                                                notes.forEach((note: string) => {
+                                                    const match = note.match(/^\[(.*?)\]\s?(.*)/);
+                                                    if (match) {
+                                                        events.push({
+                                                            date: match[1], // Keep original string or parse if needed
+                                                            message: match[2],
+                                                            type: note.includes('🔄') ? 'reopen' : note.includes('🛑') ? 'rejection' : 'info'
+                                                        });
+                                                    } else {
+                                                        // Legacy plain notes
+                                                        events.push({
+                                                            date: 'Nota Reciente',
+                                                            message: note,
+                                                            type: 'note'
+                                                        });
+                                                    }
+                                                });
+                                            }
+
+                                            // 3. Status Based Events
+                                            if (report.status === 'resolved') {
+                                                events.push({
+                                                    date: new Date(report.resolved_at || new Date()).toLocaleString('es-AR', {
+                                                        timeZone: 'America/Argentina/Buenos_Aires',
+                                                        day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                                                    }),
+                                                    message: "Resolución Finalizada",
+                                                    type: 'resolved'
+                                                });
+                                            }
+
+                                            return events.map((event, idx) => (
+                                                <div key={idx} className="flex gap-4 pb-6 last:pb-0 group">
+                                                    {/* Custom Icon/Dot based on type */}
+                                                    <div className={`
+                                                        w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-4 border-white shadow-sm z-10
+                                                        ${event.type === 'start' ? 'bg-gray-200 text-gray-500' :
+                                                            event.type === 'resolved' ? 'bg-green-100 text-green-600' :
+                                                                event.type === 'reopen' ? 'bg-blue-100 text-blue-600' :
+                                                                    'bg-white border-blue-50 text-sanatorio-primary'}
+                                                    `}>
+                                                        {event.type === 'start' && <div className="w-2.5 h-2.5 rounded-full bg-gray-400" />}
+                                                        {event.type === 'resolved' && <CheckCircle className="w-5 h-5" />}
+                                                        {event.type === 'reopen' && <Activity className="w-4 h-4" />}
+                                                        {(event.type === 'info' || event.type === 'note') && <div className="w-2.5 h-2.5 rounded-full bg-purple-400" />}
+                                                    </div>
+
+                                                    <div className="pt-1.5 w-full">
+                                                        <span className="text-xs text-gray-400 font-mono block mb-0.5">{event.date}</span>
+                                                        <div className={`text-sm ${event.type === 'resolved' ? 'font-bold text-green-700' : 'text-gray-700'}`}>
+                                                            {event.message}
+                                                        </div>
+                                                        {/* If resolved, show resolution note */}
+                                                        {event.type === 'resolved' && report.resolution_notes && (
+                                                            <div className="mt-2 text-xs text-green-600 bg-green-50 p-3 rounded-lg border border-green-100 italic">
+                                                                "{report.resolution_notes}"
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ));
+                                        })()}
+                                    </div>
+                                </div>
+                            )}
+
+                            {report.status === 'resolved' && (
+                                <div className="bg-green-50 border border-green-200 rounded-xl p-5 mt-6 animate-in zoom-in-95 delay-300">
                                     <h3 className="text-green-800 font-bold flex items-center gap-2 mb-2">
                                         <CheckCircle className="w-5 h-5" />
                                         Resolución
                                     </h3>
                                     <p className="text-green-700 text-sm mb-3">
-                                        {report.resolution_notes || 'El caso ha sido gestionado y cerrado exitosamente por el equipo de calidad.'}
+                                        {report.resolution_notes?.split("Origen:")[0] || 'El caso ha sido gestionado con éxito.'}
                                     </p>
-                                    <p className="text-xs text-green-600/70 border-t border-green-200 pt-2">
-                                        Resuelto el: {new Date(report.resolved_at).toLocaleDateString()}
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {/* Show Logs/Notes if available (e.g. Returned for info) */}
-                                    {report.notes && (
-                                        <div className="bg-amber-50 border border-amber-100 rounded-xl p-5 animate-pulse">
-                                            <h3 className="text-amber-800 font-bold flex items-center gap-2 mb-3">
-                                                <Activity className="w-5 h-5" />
-                                                Historial de Novedades
-                                            </h3>
-                                            <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                                                {report.notes.split('\n\n').map((note: string, index: number) => (
-                                                    <div key={index} className="bg-white/60 p-3 rounded-lg border border-amber-100/50 text-amber-900 text-xs font-medium">
-                                                        {note}
-                                                    </div>
-                                                ))}
-                                            </div>
+                                    {report.corrective_plan && (
+                                        <div className="mt-3 pt-3 border-t border-green-200/50">
+                                            <p className="text-xs font-bold text-green-800 uppercase mb-1">Acción Tomada:</p>
+                                            <p className="text-xs text-green-700">{report.corrective_plan}</p>
                                         </div>
                                     )}
+                                </div>
+                            )}
 
-                                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 flex items-start gap-3">
-                                        <Clock className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                                        <div>
-                                            <h3 className="text-blue-800 font-bold text-sm mb-1">En Proceso</h3>
-                                            <p className="text-blue-700 text-xs leading-relaxed">
-                                                Tu reporte está siendo analizado por nuestro equipo de Calidad. Te notificaremos cualquier novedad.
-                                            </p>
-                                        </div>
+                            {report.status !== 'resolved' && !report.notes && (
+                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 flex items-start gap-3 mt-6">
+                                    <Clock className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                                    <div>
+                                        <h3 className="text-blue-800 font-bold text-sm mb-1">En Proceso de Análisis</h3>
+                                        <p className="text-blue-700 text-xs leading-relaxed">
+                                            Tu reporte ha entrado en la cola de gestión de calidad. Pronto verás actualizaciones aquí.
+                                        </p>
                                     </div>
                                 </div>
                             )}

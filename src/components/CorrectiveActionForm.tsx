@@ -54,6 +54,7 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
     });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     const onSubmit = async (data: CorrectiveActionFormData) => {
         setIsSubmitting(true);
@@ -77,9 +78,8 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
             }
 
             // 2. TRIGGER SUCCESS
-            alert("Acción Correctiva registrada exitosamente.");
-            if (onSuccess) onSuccess();
-            if (onClose) onClose();
+            // 2. TRIGGER SUCCESS
+            setShowSuccessModal(true);
 
         } catch (error: any) {
             console.error("Error submitting corrective action:", error);
@@ -250,8 +250,13 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                                        <Calendar className="w-3 h-3" /> Fecha Límite
+                                    <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 flex-wrap">
+                                        <div className="flex items-center gap-1">
+                                            <Calendar className="w-3 h-3" /> Fecha Límite
+                                        </div>
+                                        <span className="text-[10px] text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 normal-case font-medium">
+                                            ⚠️ Importante: define el plazo de cumplimiento
+                                        </span>
                                     </label>
                                     <input
                                         type="date"
@@ -302,6 +307,33 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                 </div>
 
             </div>
+
+            {/* SUCCESS MODAL */}
+            {showSuccessModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 transform transition-all scale-100 animate-in zoom-in-95 text-center">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <CheckCircle2 className="w-8 h-8 text-green-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">
+                            Acción Registrada
+                        </h3>
+                        <p className="text-sm text-gray-500 mb-6">
+                            La acción correctiva se ha guardado exitosamente en el sistema.
+                        </p>
+                        <button
+                            onClick={() => {
+                                setShowSuccessModal(false);
+                                if (onSuccess) onSuccess();
+                                if (onClose) onClose();
+                            }}
+                            className="w-full py-3 px-4 bg-sanatorio-primary text-white font-bold rounded-xl hover:bg-sanatorio-primary/90 transition-all shadow-lg shadow-sanatorio-primary/30"
+                        >
+                            Aceptar
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
