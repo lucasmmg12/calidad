@@ -1,4 +1,4 @@
-
+﻿
 import { useEffect, useState } from 'react';
 import { supabase } from '../utils/supabase';
 import {
@@ -205,6 +205,90 @@ const FeedbackModal = ({
     );
 };
 
+// Reopen Case Modal Component
+const ReopenModal = ({
+    isOpen,
+    onClose,
+    onConfirm,
+    initialPhone,
+    isSubmitting
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: (reason: string, phone: string) => void;
+    initialPhone: string;
+    isSubmitting: boolean;
+}) => {
+    const [reason, setReason] = useState('');
+    const [phone, setPhone] = useState(initialPhone || '');
+
+    useEffect(() => {
+        if (isOpen) {
+            setReason('');
+            setPhone(initialPhone || '');
+        }
+    }, [isOpen, initialPhone]);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 transform transition-all scale-100 animate-in zoom-in-95">
+                <h3 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+                    <span className="p-2 bg-red-100 rounded-lg text-red-600"><AlertCircle className="w-5 h-5" /></span>
+                    Reapertura de Caso
+                </h3>
+                <p className="text-sm text-gray-500 mb-6">
+                    Indique el motivo de la corrección. El caso volverá a estado pendiente.
+                </p>
+
+                <div className="space-y-4 mb-6">
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">Motivo de Corrección</label>
+                        <textarea
+                            className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-sanatorio-primary/50 transition-all text-sm min-h-[100px] bg-gray-50 focus:bg-white"
+                            placeholder="Ej: La evidencia adjunta no es suficiente..."
+                            value={reason}
+                            autoFocus
+                            onChange={(e) => setReason(e.target.value)}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">WhatsApp Responsable</label>
+                        <input
+                            type="tel"
+                            className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-sanatorio-primary/50 transition-all font-mono text-sm bg-gray-50 focus:bg-white"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="Ej: 341..."
+                        />
+                        <p className="text-[10px] text-gray-400 mt-1">Se notificará la reapertura a este número.</p>
+                    </div>
+                </div>
+
+                <div className="flex gap-3 w-full">
+                    <button
+                        onClick={onClose}
+                        disabled={isSubmitting}
+                        className="flex-1 py-2.5 px-4 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={() => onConfirm(reason, phone)}
+                        disabled={!reason.trim() || isSubmitting}
+                        className="flex-1 py-2.5 px-4 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-500/30 flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
+                        Confirmar Reubertura
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export const Dashboard = () => {
     const [reports, setReports] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -214,8 +298,10 @@ export const Dashboard = () => {
     // Modals
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showReferralModal, setShowReferralModal] = useState(false);
+    const [showReopenModal, setShowReopenModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSendingReferral, setIsSendingReferral] = useState(false);
+    const [isReopening, setIsReopening] = useState(false);
 
     // Feedback Modal State
     const [feedbackModal, setFeedbackModal] = useState<{
@@ -311,6 +397,52 @@ export const Dashboard = () => {
         }
 
         setIsSendingReferral(false);
+    };
+
+    const handleReopenCase = async (reason: string, phoneTarget: string) => {
+        if (!selectedReport) return;
+        setIsReopening(true);
+
+        const timestamp = new Date().toLocaleString();
+        const logEntry = `[${timestamp}] 🔄 APELADO/REABIERTO: ${reason}`;
+        const currentNotes = selectedReport.notes || '';
+        const updatedNotes = currentNotes ? `${currentNotes}\n\n${logEntry}` : logEntry;
+
+        // 1. Update Database
+        const { error } = await supabase
+            .from('reports')
+            .update({
+                status: 'pending_resolution',
+                notes: updatedNotes
+            })
+            .eq('id', selectedReport.id);
+
+        if (!error) {
+            // 2. Send WhatsApp if phone provided
+            if (phoneTarget && phoneTarget.length > 5) {
+                const botNumber = `549${phoneTarget.replace(/\D/g, '').replace(/^549/, '')}`;
+                const resolutionLink = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}`;
+
+                const { error: waError } = await supabase.functions.invoke('send-whatsapp', {
+                    body: {
+                        number: botNumber,
+                        message: `🛑 *Solución Insuficiente - Caso Reabierto*\n\nSe ha reabierto el caso *${selectedReport.tracking_id}* tras revisión de Calidad.\n\n⚠️ *Motivo:* ${reason}\n\n👉 *Se requiere una nueva gestión del caso:* ${resolutionLink}`,
+                        mediaUrl: "https://i.imgur.com/jgX2y4n.png"
+                    }
+                });
+
+                if (waError) console.error("Error sending WA rejection:", waError);
+            }
+
+            // 3. Update local state
+            setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'pending_resolution', notes: updatedNotes } : r));
+            setSelectedReport(null);
+            setShowReopenModal(false);
+            setFeedbackModal({ isOpen: true, type: 'success', title: 'Caso Reabierto', message: 'El ticket ha vuelto a estado pendiente para corrección.' });
+        } else {
+            setFeedbackModal({ isOpen: true, type: 'error', title: 'Error', message: 'No se pudo reabrir el caso: ' + error.message });
+        }
+        setIsReopening(false);
     };
 
     // ... (Mantener funciones handleDeleteClick, confirmDelete, handleUpdateUrgency del código original)
@@ -842,54 +974,9 @@ export const Dashboard = () => {
                                             </button>
 
                                             <button
-                                                onClick={async (e) => {
+                                                onClick={(e) => {
                                                     e.stopPropagation();
-                                                    const reason = window.prompt('⚠️ REAPERTURA DE CASO\n\nIndique el motivo por el cual solicita una corrección al responsable:');
-                                                    if (!reason) return;
-
-                                                    // Try to get phone from assigned_to if it looks like a phone, otherwise ask
-                                                    let phoneTarget = selectedReport.assigned_to;
-                                                    if (!phoneTarget || phoneTarget.length < 8 || isNaN(Number(phoneTarget))) {
-                                                        phoneTarget = window.prompt('Confirme el número de WhatsApp del responsable para notificar:', '') || '';
-                                                    }
-
-                                                    const timestamp = new Date().toLocaleString();
-                                                    const logEntry = `[${timestamp}] 🔄 APELADO/REABIERTO: ${reason}`;
-                                                    const currentNotes = selectedReport.notes || '';
-                                                    const updatedNotes = currentNotes ? `${currentNotes}\n\n${logEntry}` : logEntry;
-
-                                                    // 1. Update Database
-                                                    const { error } = await supabase
-                                                        .from('reports')
-                                                        .update({
-                                                            status: 'pending_resolution',
-                                                            notes: updatedNotes
-                                                        })
-                                                        .eq('id', selectedReport.id);
-
-                                                    if (!error) {
-                                                        // 2. Send WhatsApp if phone provided
-                                                        if (phoneTarget && phoneTarget.length > 5) {
-                                                            const botNumber = `549${phoneTarget.replace(/\D/g, '').replace(/^549/, '')}`;
-                                                            const resolutionLink = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}`;
-
-                                                            await supabase.functions.invoke('send-whatsapp', {
-                                                                body: {
-                                                                    number: botNumber,
-                                                                    message: `🛑 *Solución Insuficiente - Caso Reabierto*\n\nSe ha reabierto el caso *${selectedReport.tracking_id}* tras revisión de Calidad.\n\n⚠️ *Motivo:* ${reason}\n\n👉 *Se requiere una nueva gestión del caso:* ${resolutionLink}`,
-                                                                    mediaUrl: "https://i.imgur.com/jgX2y4n.png"
-                                                                }
-                                                            });
-                                                            alert(`Notificación de reapertura enviada a ${botNumber}`);
-                                                        }
-
-                                                        // 3. Update local state
-                                                        setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'pending_resolution', notes: updatedNotes } : r));
-                                                        setSelectedReport(null);
-                                                        setFeedbackModal({ isOpen: true, type: 'success', title: 'Caso Reabierto', message: 'El ticket ha vuelto a estado pendiente para corrección.' });
-                                                    } else {
-                                                        alert('Error al reabrir el caso: ' + error.message);
-                                                    }
+                                                    setShowReopenModal(true);
                                                 }}
                                                 className="w-full py-3 px-4 bg-red-50 border border-red-100 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-all flex items-center justify-center gap-2"
                                             >
@@ -1070,6 +1157,14 @@ export const Dashboard = () => {
                 isSending={isSendingReferral}
             />
 
+            <ReopenModal
+                isOpen={showReopenModal}
+                onClose={() => setShowReopenModal(false)}
+                onConfirm={handleReopenCase}
+                initialPhone={selectedReport?.assigned_to || ''}
+                isSubmitting={isReopening}
+            />
+
             <DeleteConfirmationModal
                 isOpen={showDeleteModal}
                 onClose={() => setShowDeleteModal(false)}
@@ -1087,3 +1182,4 @@ export const Dashboard = () => {
         </div>
     );
 };
+
