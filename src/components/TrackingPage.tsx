@@ -146,13 +146,17 @@ export const TrackingPage = () => {
                                     {/* Show Logs/Notes if available (e.g. Returned for info) */}
                                     {report.notes && (
                                         <div className="bg-amber-50 border border-amber-100 rounded-xl p-5 animate-pulse">
-                                            <h3 className="text-amber-800 font-bold flex items-center gap-2 mb-2">
+                                            <h3 className="text-amber-800 font-bold flex items-center gap-2 mb-3">
                                                 <Activity className="w-5 h-5" />
-                                                Novedades
+                                                Historial de Novedades
                                             </h3>
-                                            <p className="text-amber-800 text-sm italic">
-                                                "{report.notes}"
-                                            </p>
+                                            <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                                                {report.notes.split('\n\n').map((note: string, index: number) => (
+                                                    <div key={index} className="bg-white/60 p-3 rounded-lg border border-amber-100/50 text-amber-900 text-xs font-medium">
+                                                        {note}
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
 

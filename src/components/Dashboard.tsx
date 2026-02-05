@@ -829,8 +829,7 @@ export const Dashboard = () => {
                                             </div>
                                         </div>
 
-                                        {/* Download Button Area */}
-                                        <div className="mt-6 pt-4 border-t border-gray-100">
+                                        <div className="mt-6 pt-4 border-t border-gray-100 flex flex-col gap-3">
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
@@ -840,6 +839,62 @@ export const Dashboard = () => {
                                             >
                                                 <Download className="w-5 h-5 text-gray-400 group-hover:text-sanatorio-primary transition-colors" />
                                                 Descargar Informe Completo (PDF)
+                                            </button>
+
+                                            <button
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    const reason = window.prompt('⚠️ REAPERTURA DE CASO\n\nIndique el motivo por el cual solicita una corrección al responsable:');
+                                                    if (!reason) return;
+
+                                                    // Try to get phone from assigned_to if it looks like a phone, otherwise ask
+                                                    let phoneTarget = selectedReport.assigned_to;
+                                                    if (!phoneTarget || phoneTarget.length < 8 || isNaN(Number(phoneTarget))) {
+                                                        phoneTarget = window.prompt('Confirme el número de WhatsApp del responsable para notificar:', '') || '';
+                                                    }
+
+                                                    const timestamp = new Date().toLocaleString();
+                                                    const logEntry = `[${timestamp}] 🔄 APELADO/REABIERTO: ${reason}`;
+                                                    const currentNotes = selectedReport.notes || '';
+                                                    const updatedNotes = currentNotes ? `${currentNotes}\n\n${logEntry}` : logEntry;
+
+                                                    // 1. Update Database
+                                                    const { error } = await supabase
+                                                        .from('reports')
+                                                        .update({
+                                                            status: 'pending_resolution',
+                                                            notes: updatedNotes
+                                                        })
+                                                        .eq('id', selectedReport.id);
+
+                                                    if (!error) {
+                                                        // 2. Send WhatsApp if phone provided
+                                                        if (phoneTarget && phoneTarget.length > 5) {
+                                                            const botNumber = `549${phoneTarget.replace(/\D/g, '').replace(/^549/, '')}`;
+                                                            const resolutionLink = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}`;
+
+                                                            await supabase.functions.invoke('send-whatsapp', {
+                                                                body: {
+                                                                    number: botNumber,
+                                                                    message: `🛑 *Solución Insuficiente - Caso Reabierto*\n\nSe ha reabierto el caso *${selectedReport.tracking_id}* tras revisión de Calidad.\n\n⚠️ *Motivo:* ${reason}\n\n👉 *Se requiere una nueva gestión del caso:* ${resolutionLink}`,
+                                                                    mediaUrl: "https://i.imgur.com/jgX2y4n.png"
+                                                                }
+                                                            });
+                                                            alert(`Notificación de reapertura enviada a ${botNumber}`);
+                                                        }
+
+                                                        // 3. Update local state
+                                                        setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'pending_resolution', notes: updatedNotes } : r));
+                                                        setSelectedReport(null);
+                                                        setFeedbackModal({ isOpen: true, type: 'success', title: 'Caso Reabierto', message: 'El ticket ha vuelto a estado pendiente para corrección.' });
+                                                    } else {
+                                                        alert('Error al reabrir el caso: ' + error.message);
+                                                    }
+                                                }}
+                                                className="w-full py-3 px-4 bg-red-50 border border-red-100 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-all flex items-center justify-center gap-2"
+                                            >
+                                                <BrainCircuit className="w-5 h-5" />
+                                                Apelar / Solicitar Corrección
                                             </button>
                                         </div>
                                     </div>
@@ -891,19 +946,23 @@ export const Dashboard = () => {
                                                     const phoneInput = window.prompt('Ingrese el número de WhatsApp del responsable para notificar (ej: 351...)', '');
                                                     // If no phone provided, we proceed but don't send WA
 
-                                                    const note = `Rechazado por Calidad: ${reason} (${new Date().toLocaleDateString()})`;
+                                                    // 1. Prepare Data
+                                                    const timestamp = new Date().toLocaleString();
+                                                    const logEntry = `[${timestamp}] ⚠️ RECHAZADO POR CALIDAD: ${reason}`;
+                                                    const currentNotes = selectedReport.notes || '';
+                                                    const updatedNotes = currentNotes ? `${currentNotes}\n\n${logEntry}` : logEntry;
 
-                                                    // 1. Update Database
+                                                    // 2. Update Database (Append logs)
                                                     const { error } = await supabase
                                                         .from('reports')
                                                         .update({
                                                             status: 'pending_resolution',
-                                                            notes: note
+                                                            notes: updatedNotes
                                                         })
                                                         .eq('id', selectedReport.id);
 
                                                     if (!error) {
-                                                        // 2. Send WhatsApp if phone provided
+                                                        // 3. Send WhatsApp if phone provided
                                                         if (phoneInput && phoneInput.length > 5) {
                                                             const botNumber = `549${phoneInput.replace(/\D/g, '').replace(/^549/, '')}`;
                                                             const resolutionLink = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}`;
@@ -911,18 +970,18 @@ export const Dashboard = () => {
                                                             await supabase.functions.invoke('send-whatsapp', {
                                                                 body: {
                                                                     number: botNumber,
-                                                                    message: `🛑 *Reporte Rechazado - Calidad*\n\nSu resolución para el caso *${selectedReport.tracking_id}* ha sido revisada y requiere correcciones.\n\n⚠️ *Motivo:* ${reason}\n\n👉 *Por favor, edite su respuesta aquí:* ${resolutionLink}`,
-                                                                    mediaUrl: "https://i.imgur.com/jgX2y4n.png" // Optional: Warning icon or similar
+                                                                    message: `🛑 *Solución Insuficiente - Calidad*\n\nLa solución propuesta para el caso *${selectedReport.tracking_id}* ha sido rechazada por considerarse insuficiente.\n\n⚠️ *Motivo:* ${reason}\n\n👉 *Por favor, gestione nuevamente el caso e ingrese un nuevo plan de acción:* ${resolutionLink}`,
+                                                                    mediaUrl: "https://i.imgur.com/jgX2y4n.png"
                                                                 }
                                                             });
 
-                                                            alert(`Notificación enviada a ${botNumber}`);
+                                                            alert(`Notificación de rechazo enviada a ${botNumber}`);
                                                         }
 
-                                                        // 3. Update local state
-                                                        setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'pending_resolution', notes: note } : r));
+                                                        // 4. Update local state
+                                                        setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'pending_resolution', notes: updatedNotes } : r));
                                                         setSelectedReport(null);
-                                                        setFeedbackModal({ isOpen: true, type: 'success', title: 'Ticket Rechazado', message: 'El caso ha vuelto a estado pendiente de resolución.' });
+                                                        setFeedbackModal({ isOpen: true, type: 'success', title: 'Ticket Rechazado', message: 'El caso ha vuelto a estado pendiente y se ha notificado al responsable.' });
                                                     }
                                                 }}
                                                 className="flex-1 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold text-sm hover:bg-red-50 transition-colors"
