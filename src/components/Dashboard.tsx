@@ -106,13 +106,13 @@ const ReferralModal = ({
                                 onClick={() => setIsAdverse(false)}
                                 className={`flex-1 p-3 rounded-lg text-sm font-medium transition-all border ${!isAdverse ? 'bg-white border-blue-500 text-blue-700 shadow-sm ring-1 ring-blue-500' : 'border-transparent text-gray-500 hover:bg-gray-100'}`}
                             >
-                                🛠️ Solución Simple
+                                🛠️ Desvío / Simple
                             </button>
                             <button
                                 onClick={() => setIsAdverse(true)}
                                 className={`flex-1 p-3 rounded-lg text-sm font-medium transition-all border ${isAdverse ? 'bg-white border-amber-500 text-amber-700 shadow-sm ring-1 ring-amber-500' : 'border-transparent text-gray-500 hover:bg-gray-100'}`}
                             >
-                                ⚠️ Análisis Causa
+                                ⚠️ Evento Adverso
                             </button>
                         </div>
 
@@ -621,6 +621,12 @@ export const Dashboard = () => {
                                                     } `}>
                                                     {report.ai_urgency || 'Normal'}
                                                 </span>
+                                                {/* Expiration Alert */}
+                                                {(report.implementation_date && new Date(report.implementation_date) < new Date() && report.status !== 'resolved') && (
+                                                    <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-red-50 text-red-600 border border-red-100 animate-pulse" title={`Vencido el ${new Date(report.implementation_date).toLocaleDateString()}`}>
+                                                        <Clock className="w-3 h-3 mr-1" /> Vencido
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 {report.last_whatsapp_status === 'sent' && (

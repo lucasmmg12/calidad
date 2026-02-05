@@ -30,6 +30,7 @@ interface CorrectiveActionFormData {
     sector: string;
     findingType: 'desvio' | 'oportunidad' | 'no_conformidad' | 'evento_adverso';
     description: string;
+    immediateAction: string;
     rootCauseAnalysis: string;
     actionPlan: string;
     responsible: string;
@@ -48,6 +49,7 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
             sector: initialData?.sector || '',
             findingType: 'evento_adverso', // Default for this context
             description: initialData?.description || '',
+            immediateAction: '',
             responsible: '',
             deadline: new Date().toISOString().split('T')[0] // Default to today
         }
@@ -63,6 +65,7 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
             if (reportId) {
                 const updates = {
                     status: 'quality_validation',
+                    immediate_action: data.immediateAction,
                     root_cause: data.rootCauseAnalysis,
                     corrective_plan: data.actionPlan,
                     assigned_to: data.responsible,
@@ -193,11 +196,31 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                             </div>
                             <textarea
                                 {...register('description', { required: true })}
+                                readOnly={true}
                                 rows={4}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all resize-none"
+                                className="w-full bg-gray-100 border border-gray-200 rounded-xl p-4 text-sm text-gray-600 cursor-not-allowed resize-none"
                                 placeholder="Describa detalladamente qué sucedió, dónde y quiénes estuvieron involucrados (sin nombres de pacientes)..."
                             ></textarea>
                             {errors.description && <span className="text-xs text-red-500 font-medium">Este campo es requerido.</span>}
+                            {errors.description && <span className="text-xs text-red-500 font-medium">Este campo es requerido.</span>}
+                        </div>
+
+                        {/* Section 2.5: Acción Inmediata */}
+                        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 space-y-4 border-l-4 border-l-blue-400">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                                    <CheckCircle2 className="w-5 h-5" />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-800">Acción Correctiva Inmediata</h3>
+                            </div>
+                            <p className="text-xs text-gray-500">¿Qué medida se tomó en el momento para contener el incidente?</p>
+                            <textarea
+                                {...register('immediateAction', { required: true })}
+                                rows={3}
+                                className="w-full bg-blue-50/30 border border-gray-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none transition-all resize-none"
+                                placeholder="Ej: Se aisló el lote afectado, se contuvo al paciente, se llamó a mantenimiento..."
+                            ></textarea>
+                            {errors.immediateAction && <span className="text-xs text-red-500 font-medium">Debe detallar qué hizo en el momento.</span>}
                         </div>
 
                         {/* Section 3: Causa Raíz */}
@@ -210,7 +233,10 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                             </div>
                             <p className="text-xs text-gray-500">Utilice metodología de los 5 Porqués o Diagrama de Ishikawa.</p>
                             <textarea
-                                {...register('rootCauseAnalysis', { required: true })}
+                                {...register('rootCauseAnalysis', {
+                                    required: true,
+                                    minLength: { value: 20, message: "Por favor, profundice en la causa raíz (mínimo 20 caracteres)." }
+                                })}
                                 rows={5}
                                 className="w-full bg-orange-50/30 border border-gray-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all resize-none"
                                 placeholder="1. ¿Por qué ocurrió? ... 2. ¿Por qué? ... Identifique la causa sistémica, no solo el error humano."

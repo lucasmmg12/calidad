@@ -336,7 +336,6 @@ export const ReportingForm = () => {
                                     <option value="Oportunidad de mejora">Oportunidad de mejora</option>
                                     <option value="Evento adverso">Evento adverso</option>
                                     <option value="Cuasi evento adverso">Cuasi evento adverso</option>
-                                    <option value="Felicitaciones">Felicitaciones</option>
                                     <option value="Reclamo">Reclamo</option>
                                 </select>
                                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none group-focus-within:text-sanatorio-primary transition-colors" />
