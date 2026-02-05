@@ -13,14 +13,9 @@ import {
     Send,
     Eye,
     BrainCircuit,
-    UserCog,
-    Download
+    UserCog
 } from 'lucide-react';
 
-import { createRoot } from 'react-dom/client';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-import { PrintableReport } from './PrintableReport';
 
 // Delete Confirmation Modal Component
 const DeleteConfirmationModal = ({
@@ -495,86 +490,7 @@ export const Dashboard = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation'>('all');
 
-    // Generate PDF Logic
-    const handleDownloadPDF = async (report: any) => {
-        try {
-            // 1. Create container
-            const tempContainer = document.createElement('div');
-            tempContainer.style.position = 'absolute';
-            tempContainer.style.top = '-9999px';
-            tempContainer.style.left = '0';
-            tempContainer.style.zIndex = '9999';
-            document.body.appendChild(tempContainer);
 
-            // 2. Render PrintableReport into it
-            // We need to map 'report' fields to PrintableReport props
-            const reportData = {
-                trackingId: report.tracking_id,
-                date: report.created_at,
-                sector: report.sector,
-                description: report.content,
-                origin: report.resolution_notes?.split('Origen: ')[1]?.split('.')[0] || 'Gestión Calidad', // Try to parse or default
-                findingType: report.is_adverse_event ? 'Evento Adverso' : 'Desvío / Reclamo',
-                rootCause: report.root_cause,
-                actionPlan: report.corrective_plan,
-                responsible: report.assigned_to,
-                deadline: report.implementation_date
-            };
-
-            const root = createRoot(tempContainer);
-            root.render(<PrintableReport data={reportData} />);
-
-            // 3. Wait for render
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // 4. Capture
-            const canvas = await html2canvas(tempContainer.querySelector('div') as HTMLElement, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#ffffff'
-            });
-
-            // 5. Cleanup
-            root.unmount();
-            document.body.removeChild(tempContainer);
-
-            // 6. Generate PDF
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfPageHeight = pdf.internal.pageSize.getHeight();
-            const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-
-            let finalHeight = imgHeight;
-            let finalWidth = pdfWidth;
-
-            if (imgHeight > (pdfPageHeight - 30)) {
-                const ratio = (pdfPageHeight - 30) / imgHeight;
-                finalHeight = imgHeight * ratio;
-            }
-
-            pdf.setFillColor(6, 46, 112);
-            pdf.rect(0, 0, pdfWidth, 20, 'F');
-            pdf.setTextColor(255, 255, 255);
-            pdf.setFontSize(16);
-            pdf.text('REGISTRO DE ACCIÓN CORRECTIVA', 10, 13);
-            pdf.setFontSize(10);
-            pdf.text(`ID: ${report.tracking_id}`, pdfWidth - 40, 13);
-
-            pdf.addImage(imgData, 'PNG', 0, 25, finalWidth, finalHeight);
-
-            const today = new Date().toLocaleDateString();
-            pdf.setFontSize(8);
-            pdf.setTextColor(100);
-            pdf.text(`Generado el: ${today} - Sistema de Gestión de Calidad Sanatorio Argentino`, 10, pdfPageHeight - 10);
-
-            pdf.save(`Reporte_${report.tracking_id}.pdf`);
-
-        } catch (error) {
-            console.error('Error generando PDF:', error);
-            alert('No se pudo generar el PDF automáticamente. Intente nuevamente.');
-        }
-    };
 
     const filteredReports = reports.filter(report => {
         // Filtro por Estado (Mapeo de UI a valores BD)
@@ -962,16 +878,7 @@ export const Dashboard = () => {
                                         </div>
 
                                         <div className="mt-6 pt-4 border-t border-gray-100 flex flex-col gap-3">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDownloadPDF(selectedReport);
-                                                }}
-                                                className="w-full py-3 px-4 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm flex items-center justify-center gap-2 group"
-                                            >
-                                                <Download className="w-5 h-5 text-gray-400 group-hover:text-sanatorio-primary transition-colors" />
-                                                Descargar Informe Completo (PDF)
-                                            </button>
+
 
                                             <button
                                                 onClick={(e) => {

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
     FileText,
@@ -10,8 +10,7 @@ import {
     Search,
     UserCircle2
 } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+
 import { supabase } from '../utils/supabase';
 
 interface CorrectiveActionFormProps {
@@ -55,170 +54,6 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
     });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const formRef = useRef<HTMLFormElement>(null);
-
-    const generatePDF = async () => {
-        if (!formRef.current) return;
-
-        try {
-            // Create a dedicated container for print (off-screen)
-            // This isolates the form from modal styles, scrollbars, and backdrops
-            const tempContainer = document.createElement('div');
-            tempContainer.style.position = 'absolute';
-            tempContainer.style.top = '-9999px';
-            tempContainer.style.left = '0';
-            tempContainer.style.width = '210mm'; // A4 width approx
-            tempContainer.style.backgroundColor = '#ffffff';
-            tempContainer.style.zIndex = '9999';
-            document.body.appendChild(tempContainer);
-
-            // Clone the form
-            // We use cloneNode to copy the exact state of inputs
-            const clone = formRef.current.cloneNode(true) as HTMLElement;
-
-            // Cleanup the clone styles for printing
-            clone.style.transform = 'none';
-            clone.style.boxShadow = 'none';
-            clone.style.margin = '0';
-            clone.style.padding = '20px';
-            clone.style.width = '100%';
-            clone.style.height = 'auto';
-            clone.style.overflow = 'visible';
-
-            // Remove "no-print" elements from clone
-            const noPrintElements = clone.querySelectorAll('.no-print');
-            noPrintElements.forEach(el => el.remove());
-
-            tempContainer.appendChild(clone);
-
-            // COLOR SANITIZATION (Fix for html2canvas + Tailwind v4/Modern Browsers)
-            // Recursively walk the clone and convert computed oklch/lab colors to rgb
-            const ctx = document.createElement('canvas').getContext('2d');
-            const convertColorToRgb = (colorString: string) => {
-                if (!colorString || !ctx) return colorString;
-                if (!colorString.includes('oklch') && !colorString.includes('lab') && !colorString.includes('color(')) {
-                    return colorString;
-                }
-                ctx.fillStyle = colorString;
-                // Setting fillStyle forces valid CSS color parsing; if invalid it keeps old value
-                // querying standard color often returns rgb
-                // To be safe we can use fillRect and px manipulation but just getting valid assignment is usually enough for browsers if they support it
-                // BUT html2canvas fails on the *string* value in CSS.
-                // We must format it to RGB string.
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = 1;
-                tempCanvas.height = 1;
-                const tCtx = tempCanvas.getContext('2d');
-                if (!tCtx) return colorString;
-                tCtx.fillStyle = colorString;
-                tCtx.fillRect(0, 0, 1, 1);
-                const [r, g, b, a] = tCtx.getImageData(0, 0, 1, 1).data;
-                return `rgba(${r}, ${g}, ${b}, ${a / 255})`;
-            };
-
-            const sanitizeElement = (el: HTMLElement) => {
-                const computed = window.getComputedStyle(el); // Computed style of the CLONE (which is in DOM)
-
-                // Properties to check (kebab-case for getPropertyValue)
-                const props = [
-                    'color',
-                    'background-color',
-                    'border-color',
-                    'border-top-color',
-                    'border-bottom-color',
-                    'border-left-color',
-                    'border-right-color',
-                    'outline-color',
-                    'fill',
-                    'stroke',
-                    'text-decoration-color'
-                ];
-
-                // Handle simple color properties
-                props.forEach(prop => {
-                    const val = computed.getPropertyValue(prop);
-                    if (val && (val.includes('oklch') || val.includes('lab') || val.includes('display-p3'))) {
-                        // Convert direct colors
-                        el.style.setProperty(prop, convertColorToRgb(val), 'important');
-                    }
-                });
-
-                // Handle complex properties like box-shadow (stripping if complex for now to avoid parsing errors)
-                const shadow = computed.getPropertyValue('box-shadow');
-                if (shadow && (shadow.includes('oklch') || shadow.includes('lab'))) {
-                    // It's hard to parse box-shadow string to replace color without a library. 
-                    // Safest fix for PDF export is to remove the shadow if it uses modern colors
-                    el.style.boxShadow = 'none';
-                }
-
-                Array.from(el.children).forEach(child => sanitizeElement(child as HTMLElement));
-            };
-
-            // We need the clone to be rendered for getComputedStyle to yield values
-            await new Promise(resolve => setTimeout(resolve, 100)); // Short wait for layout
-            sanitizeElement(clone);
-
-            const canvas = await html2canvas(tempContainer, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff'
-            });
-
-            // Cleanup
-            document.body.removeChild(tempContainer);
-
-            const imgData = canvas.toDataURL('image/png');
-
-            // Fix instantiation (try direct new jsPDF first, fallback to default if needed in some bundlers)
-            // @ts-ignore
-            const pdf = new jsPDF({
-                orientation: 'p',
-                unit: 'mm',
-                format: 'a4'
-            });
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfPageHeight = pdf.internal.pageSize.getHeight();
-            const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-
-            // Add Header
-            pdf.setFillColor(6, 46, 112);
-            pdf.rect(0, 0, pdfWidth, 20, 'F');
-            pdf.setTextColor(255, 255, 255);
-            pdf.setFontSize(16);
-            pdf.text('REGISTRO DE ACCIÓN CORRECTIVA', 10, 13);
-            pdf.setFontSize(10);
-            pdf.text(`ID: ${initialData?.trackingId || 'N/A'}`, pdfWidth - 40, 13);
-
-            // Determine if we need to scale down to fit one page or split
-            // For now, simple scaling to avoid complexity
-            let finalHeight = imgHeight;
-            let finalWidth = pdfWidth;
-
-            if (imgHeight > (pdfPageHeight - 30)) {
-                // Scale to fit
-                const ratio = (pdfPageHeight - 30) / imgHeight;
-                finalHeight = imgHeight * ratio;
-            }
-
-            pdf.addImage(imgData, 'PNG', 0, 25, finalWidth, finalHeight);
-
-            // Footer
-            const today = new Date().toLocaleDateString();
-            pdf.setFontSize(8);
-            pdf.setTextColor(100);
-            pdf.text(`Generado el: ${today} - Sistema de Gestión de Calidad Sanatorio Argentino`, 10, pdfPageHeight - 10);
-
-            pdf.save(`RCA_${initialData?.trackingId || 'doc'}.pdf`);
-
-        } catch (error: any) {
-            console.error('Error generating PDF:', error);
-            // Non-blocking alert
-            alert(`El documento se guardó, pero falló la descarga del PDF: ${error.message || error}`);
-        } finally {
-            // No loading state to toggle for PDF anymore, or use a new one if needed
-        }
-    };
 
     const onSubmit = async (data: CorrectiveActionFormData) => {
         setIsSubmitting(true);
@@ -241,12 +76,8 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                 if (error) throw error;
             }
 
-            // 2. GENERATE PDF & TRIGGER SUCCESS
-            try {
-                await generatePDF();
-            } catch (pdfErr) {
-                console.error("Error generando PDF automático:", pdfErr);
-            }
+            // 2. TRIGGER SUCCESS
+            alert("Acción Correctiva registrada exitosamente.");
             if (onSuccess) onSuccess();
             if (onClose) onClose();
 
@@ -284,7 +115,8 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
 
                 {/* Scrollable Form Content */}
                 <div className="overflow-y-auto p-8 bg-slate-50 custom-scrollbar" >
-                    <form id="corrective-form" ref={formRef} onSubmit={handleSubmit(onSubmit)} className="space-y-8 max-w-3xl mx-auto pb-10">
+
+                    <form id="corrective-form" onSubmit={handleSubmit(onSubmit)} className="space-y-8 max-w-3xl mx-auto pb-10">
 
                         {/* Title Wrapper for PDF Capture Context */}
                         <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 space-y-6 relative overflow-hidden">
@@ -469,7 +301,7 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                     </div>
                 </div>
 
-            </div >
-        </div >
+            </div>
+        </div>
     );
 };
