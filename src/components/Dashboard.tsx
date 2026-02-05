@@ -16,7 +16,7 @@ import {
     UserCog,
     Download
 } from 'lucide-react';
-import { CorrectiveActionForm } from './CorrectiveActionForm';
+
 import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -766,71 +766,81 @@ export const Dashboard = () => {
                             <div className="flex-1 overflow-y-auto pr-2">
                                 {selectedReport.status === 'resolved' ? (
                                     // VISTA RESOLUCIÓN COMPLETADA
-                                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-green-100">
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <div className="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+                                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-green-100 flex flex-col h-full">
+                                        <div className="flex items-center gap-3 mb-6 bg-green-50 p-4 rounded-xl border border-green-100">
+                                            <div className="w-12 h-12 rounded-full bg-white text-green-600 flex items-center justify-center shadow-sm">
                                                 <CheckCircle className="w-6 h-6" />
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-gray-900">Caso Resuelto</h4>
-                                                <p className="text-xs text-green-600">Gestión finalizada con éxito</p>
+                                                <h4 className="font-bold text-gray-900 text-lg">Caso Cerrado</h4>
+                                                <p className="text-sm text-green-700 font-medium">Gestión completada exitosamente</p>
                                             </div>
                                         </div>
 
-                                        <div className="space-y-4">
+                                        <div className="space-y-6 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                                            {/* Responsable */}
                                             {selectedReport.assigned_to && (
-                                                <div className="mb-4 bg-gray-50 p-2 rounded-lg flex items-center gap-2">
-                                                    <div className="w-6 h-6 rounded-full bg-sanatorio-primary/10 flex items-center justify-center text-sanatorio-primary">
-                                                        <UserCog className="w-3 h-3" />
+                                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                                                        <UserCog className="w-4 h-4" />
                                                     </div>
-                                                    <p className="text-xs text-gray-600 font-medium">Resuelto por: <span className="text-gray-900 font-bold">{selectedReport.assigned_to}</span></p>
-                                                </div>
-                                            )}
-                                            <div>
-                                                <label className="text-xs font-bold text-gray-400 uppercase">Acción Inmediata</label>
-                                                <p className="text-sm text-gray-700 mt-1">{selectedReport.resolution_notes || "Sin detalles registrados."}</p>
-                                            </div>
-                                            {selectedReport.corrective_plan && (
-                                                <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center group">
                                                     <div>
-                                                        <span className="text-xs font-bold text-orange-500 flex items-center gap-1 mb-1">
-                                                            <BrainCircuit className="w-3 h-3" /> ANÁLISIS CAUSA RAÍZ
-                                                        </span>
-                                                        <p className="text-sm text-gray-700 line-clamp-2">{selectedReport.root_cause}</p>
+                                                        <p className="text-xs text-gray-400 font-bold uppercase">Resuelto por</p>
+                                                        <p className="text-sm font-bold text-gray-700">{selectedReport.assigned_to}</p>
                                                     </div>
+                                                </div>
+                                            )}
 
-                                                    {/* NEW: PDF Download Button for Admins */}
-                                                    <CorrectiveActionForm
-                                                        reportId={selectedReport.id}
-                                                        initialData={{
-                                                            trackingId: selectedReport.tracking_id,
-                                                            description: selectedReport.content,
-                                                            date: selectedReport.created_at,
-                                                            sector: selectedReport.sector
-                                                        }}
-                                                        // Hidden mode, just for generating PDF if needed or re-opening
-                                                        onClose={() => setSelectedReport(null)}
-                                                    />
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDownloadPDF(selectedReport);
-                                                        }}
-                                                        className="p-2 text-gray-400 hover:text-sanatorio-primary transition-colors hover:bg-blue-50 rounded-lg group-hover:opacity-100"
-                                                        title="Descargar Informe PDF"
-                                                    >
-                                                        <Download className="w-5 h-5" />
-                                                    </button>
+                                            {/* Detalles de Resolución */}
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <h5 className="text-xs font-bold text-gray-400 uppercase mb-1 flex items-center gap-2">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-sanatorio-primary"></span>
+                                                        Notas de Resolución
+                                                    </h5>
+                                                    <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                        {selectedReport.resolution_notes || "Sin notas registradas."}
+                                                    </p>
                                                 </div>
-                                            )}
-                                            {selectedReport.root_cause && (
-                                                <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
-                                                    <label className="text-xs font-bold text-amber-700 uppercase flex items-center gap-1">
-                                                        <BrainCircuit className="w-3 h-3" /> Análisis Causa Raíz
-                                                    </label>
-                                                    <p className="text-sm text-amber-900 mt-1">{selectedReport.root_cause}</p>
-                                                </div>
-                                            )}
+
+                                                {selectedReport.root_cause && (
+                                                    <div>
+                                                        <h5 className="text-xs font-bold text-amber-600 uppercase mb-1 flex items-center gap-2">
+                                                            <BrainCircuit className="w-3 h-3" />
+                                                            Causa Raíz
+                                                        </h5>
+                                                        <p className="text-sm text-gray-700 bg-amber-50 p-3 rounded-lg border border-amber-100">
+                                                            {selectedReport.root_cause}
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                {selectedReport.corrective_plan && (
+                                                    <div>
+                                                        <h5 className="text-xs font-bold text-green-600 uppercase mb-1 flex items-center gap-2">
+                                                            <CheckCircle className="w-3 h-3" />
+                                                            Plan de Acción
+                                                        </h5>
+                                                        <p className="text-sm text-gray-700 bg-green-50 p-3 rounded-lg border border-green-100">
+                                                            {selectedReport.corrective_plan}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Download Button Area */}
+                                        <div className="mt-6 pt-4 border-t border-gray-100">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDownloadPDF(selectedReport);
+                                                }}
+                                                className="w-full py-3 px-4 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm flex items-center justify-center gap-2 group"
+                                            >
+                                                <Download className="w-5 h-5 text-gray-400 group-hover:text-sanatorio-primary transition-colors" />
+                                                Descargar Informe Completo (PDF)
+                                            </button>
                                         </div>
                                     </div>
                                 ) : selectedReport.status === 'pending_resolution' ? (
