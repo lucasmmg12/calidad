@@ -73,17 +73,9 @@ export const ResolutionPage = () => {
             console.log("Resolución guardada exitosamente");
 
             // NOTIFICAR AL REPORTANTE (Si existe contacto)
+            // UPDATE: Se ha eliminado el envío automático. Ahora se envía desde el Dashboard de Calidad al aprobar.
             if (reportData.contactNumber) {
-                // Asumimos que el número en DB viene limpio (ej: 264xxxxxxx) y agregamos el prefijo de país 549
-                const botNumber = `549${reportData.contactNumber}`;
-
-                supabase.functions.invoke('send-whatsapp', {
-                    body: {
-                        number: botNumber,
-                        message: `✅ *¡Buenas noticias!* \n\nTe informamos que el reporte con código *${reportData.trackingId}* ha sido gestionado y resuelto exitosamente por nuestro equipo.\n\nGracias por comprometerte con la calidad y seguridad de nuestra institución. 🙌`,
-                        mediaUrl: "https://i.imgur.com/PnVTbEd.jpeg" // Imagen de 'Caso Resuelto'
-                    }
-                }).catch(err => console.error('Error enviando notificación de resolución:', err));
+                console.log("Resolución guardada. Pendiente de validación de Calidad para enviar notificación.");
             }
         } catch (err: any) {
             console.error("Error saving resolution:", err);
@@ -129,14 +121,7 @@ export const ResolutionPage = () => {
                     // But we might want to trigger the WhatsApp notification here too.
 
                     if (reportData.contactNumber) {
-                        const botNumber = `549${reportData.contactNumber}`;
-                        supabase.functions.invoke('send-whatsapp', {
-                            body: {
-                                number: botNumber,
-                                message: `✅ *Caso Resuelto (Acción Correctiva)* \n\nEl evento código *${reportData.trackingId}* ha sido analizado y cerrado con un plan de mejora.\n\nGracias por tu compromiso con la seguridad del paciente. 🙌`,
-                                mediaUrl: "https://i.imgur.com/PnVTbEd.jpeg"
-                            }
-                        }).catch(console.error);
+                        console.log("Acción Correctiva registrada. Pendiente de validación de Calidad.");
                     }
 
                     // Generate PDF immediately after success

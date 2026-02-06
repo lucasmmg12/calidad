@@ -69,6 +69,7 @@ const DeleteConfirmationModal = ({
 
 
 // Referral Modal Component
+// Referral Modal Component
 const ReferralModal = ({
     isOpen,
     onClose,
@@ -77,10 +78,10 @@ const ReferralModal = ({
 }: {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: (isAdverseEvent: boolean, responsiblePhone: string) => void;
+    onConfirm: (type: 'simple' | 'desvio' | 'adverse', responsiblePhone: string) => void;
     isSending: boolean;
 }) => {
-    const [isAdverse, setIsAdverse] = useState(false);
+    const [managementType, setManagementType] = useState<'simple' | 'desvio' | 'adverse'>('simple');
     const [phone, setPhone] = useState('');
 
     if (!isOpen) return null;
@@ -101,26 +102,56 @@ const ReferralModal = ({
                     <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                         <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Tipo de Gestión Requerida</label>
 
-                        <div className="flex gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                             <button
-                                onClick={() => setIsAdverse(false)}
-                                className={`flex-1 p-3 rounded-lg text-sm font-medium transition-all border ${!isAdverse ? 'bg-white border-blue-500 text-blue-700 shadow-sm ring-1 ring-blue-500' : 'border-transparent text-gray-500 hover:bg-gray-100'}`}
+                                onClick={() => setManagementType('simple')}
+                                className={`p-2 rounded-lg text-xs font-bold transition-all border ${managementType === 'simple'
+                                    ? 'bg-white border-blue-500 text-blue-700 shadow-sm ring-1 ring-blue-500'
+                                    : 'border-transparent text-gray-500 hover:bg-gray-100'
+                                    }`}
                             >
-                                🛠️ Desvío / Simple
+                                ⚡ Simple
                             </button>
                             <button
-                                onClick={() => setIsAdverse(true)}
-                                className={`flex-1 p-3 rounded-lg text-sm font-medium transition-all border ${isAdverse ? 'bg-white border-amber-500 text-amber-700 shadow-sm ring-1 ring-amber-500' : 'border-transparent text-gray-500 hover:bg-gray-100'}`}
+                                onClick={() => setManagementType('desvio')}
+                                className={`p-2 rounded-lg text-xs font-bold transition-all border ${managementType === 'desvio'
+                                    ? 'bg-white border-orange-500 text-orange-700 shadow-sm ring-1 ring-orange-500'
+                                    : 'border-transparent text-gray-500 hover:bg-gray-100'
+                                    }`}
                             >
-                                ⚠️ Evento Adverso
+                                🔧 Desvío
+                            </button>
+                            <button
+                                onClick={() => setManagementType('adverse')}
+                                className={`p-2 rounded-lg text-xs font-bold transition-all border ${managementType === 'adverse'
+                                    ? 'bg-white border-red-500 text-red-700 shadow-sm ring-1 ring-red-500'
+                                    : 'border-transparent text-gray-500 hover:bg-gray-100'
+                                    }`}
+                            >
+                                ⚠️ Evento A.
                             </button>
                         </div>
 
-                        <p className="text-xs text-gray-400 mt-2 min-h-[20px]">
-                            {isAdverse
-                                ? "Se solicitará 'Análisis de Causa Raíz' y 'Plan de Acción'."
-                                : "Solo se solicitará 'Acción Inmediata'."}
-                        </p>
+                        <div className="mt-3 p-3 bg-white rounded-lg border border-gray-100 text-xs text-gray-600">
+                            {managementType === 'simple' && (
+                                <p className="flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                    Solo solicita <strong>Acción Inmediata</strong>.
+                                </p>
+                            )}
+                            {managementType === 'desvio' && (
+                                <p className="flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                                    Solicita <strong>Acción Inmediata + RCA + Plan</strong>.
+                                </p>
+                            )}
+                            {managementType === 'adverse' && (
+                                <p className="flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                    Solicita <strong>Acción Inmediata + RCA + Plan</strong> (Crítico).
+                                </p>
+                            )}
+                        </div>
                     </div>
 
                     {/* Input Teléfono */}
@@ -146,7 +177,7 @@ const ReferralModal = ({
                         Cancelar
                     </button>
                     <button
-                        onClick={() => onConfirm(isAdverse, phone)}
+                        onClick={() => onConfirm(managementType, phone)}
                         disabled={isSending || phone.length < 8}
                         className="flex-1 py-2.5 px-4 bg-sanatorio-primary text-white font-bold rounded-xl hover:opacity-90 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
                     >
@@ -284,6 +315,137 @@ const ReopenModal = ({
     );
 };
 
+// Quality Return Modal (Rechazo)
+const QualityReturnModal = ({
+    isOpen,
+    onClose,
+    onConfirm,
+    initialPhone,
+    isSubmitting
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: (reason: string, phone: string) => void;
+    initialPhone: string;
+    isSubmitting: boolean;
+}) => {
+    const [reason, setReason] = useState('');
+    const [phone, setPhone] = useState(initialPhone || '');
+
+    useEffect(() => {
+        if (isOpen) {
+            setReason('');
+            setPhone(initialPhone || '');
+        }
+    }, [isOpen, initialPhone]);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 transform transition-all scale-100 animate-in zoom-in-95">
+                <h3 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+                    <span className="p-2 bg-purple-100 rounded-lg text-purple-600"><BrainCircuit className="w-5 h-5" /></span>
+                    Devolver a Responsable
+                </h3>
+                <p className="text-sm text-gray-500 mb-6">
+                    El caso volverá a estado "En Gestión" para que el responsable realice correcciones.
+                </p>
+
+                <div className="space-y-4 mb-6">
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">Motivo de Devolución</label>
+                        <textarea
+                            className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all text-sm min-h-[100px] bg-gray-50 focus:bg-white"
+                            placeholder="Ej: El plan de acción es insuficiente..."
+                            value={reason}
+                            autoFocus
+                            onChange={(e) => setReason(e.target.value)}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">WhatsApp Responsable</label>
+                        <input
+                            type="tel"
+                            className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all font-mono text-sm bg-gray-50 focus:bg-white"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="Ej: 341..."
+                        />
+                        <p className="text-[10px] text-gray-400 mt-1">Se notificará la devolución a este número.</p>
+                    </div>
+                </div>
+
+                <div className="flex gap-3 w-full">
+                    <button
+                        onClick={onClose}
+                        disabled={isSubmitting}
+                        className="flex-1 py-2.5 px-4 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={() => onConfirm(reason, phone)}
+                        disabled={!reason.trim() || isSubmitting}
+                        className="flex-1 py-2.5 px-4 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-colors shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                        Confirmar Devolución
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Quality Approve Modal
+const QualityApproveModal = ({
+    isOpen,
+    onClose,
+    onConfirm,
+    isSubmitting
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    isSubmitting: boolean;
+}) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 transform transition-all scale-100 animate-in zoom-in-95 text-center">
+                <div className="w-16 h-16 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-4 mx-auto">
+                    <CheckCircle className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">¿Aprobar y Cerrar Caso?</h3>
+                <p className="text-sm text-gray-500 mb-6">
+                    Esta acción finalizará el reporte y notificará al usuario original (si corresponde).
+                </p>
+
+                <div className="flex gap-3 w-full">
+                    <button
+                        onClick={onClose}
+                        disabled={isSubmitting}
+                        className="flex-1 py-2.5 px-4 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={isSubmitting}
+                        className="flex-1 py-2.5 px-4 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors shadow-lg shadow-green-500/30 flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                        Aprobar
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export const Dashboard = () => {
     const [reports, setReports] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -295,10 +457,92 @@ export const Dashboard = () => {
     const [showReferralModal, setShowReferralModal] = useState(false);
     const [showReopenModal, setShowReopenModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [isSendingReferral, setIsSendingReferral] = useState(false);
     const [isReopening, setIsReopening] = useState(false);
+    const [isSendingReferral, setIsSendingReferral] = useState(false);
+    const [showQualityReturnModal, setShowQualityReturnModal] = useState(false);
+    const [showQualityApproveModal, setShowQualityApproveModal] = useState(false);
+    const [isProcessingQuality, setIsProcessingQuality] = useState(false);
 
-    // Feedback Modal State
+    // ... (Feedback Modal State)
+
+    // ... (useEffect, fetchReports, handleSendReferral, handleReopenCase)
+
+    const handleQualityReturn = async (reason: string, phoneTarget: string) => {
+        if (!selectedReport) return;
+        setIsProcessingQuality(true);
+
+        const timestamp = new Date().toLocaleString();
+        const logEntry = `[${timestamp}] ⚠️ RECHAZADO POR CALIDAD: ${reason}`;
+        const currentNotes = selectedReport.notes || '';
+        const updatedNotes = currentNotes ? `${currentNotes}\n\n${logEntry}` : logEntry;
+
+        // 1. Update Database
+        const { error } = await supabase
+            .from('reports')
+            .update({
+                status: 'pending_resolution',
+                notes: updatedNotes
+            })
+            .eq('id', selectedReport.id);
+
+        if (!error) {
+            // 2. Send WhatsApp if phone provided
+            if (phoneTarget && phoneTarget.length > 5) {
+                const botNumber = `549${phoneTarget.replace(/\D/g, '').replace(/^549/, '')}`;
+                const resolutionLink = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}`;
+
+                await supabase.functions.invoke('send-whatsapp', {
+                    body: {
+                        number: botNumber,
+                        message: `🛑 *Solución Insuficiente - Calidad*\n\nLa solución propuesta para el caso *${selectedReport.tracking_id}* ha sido rechazada por considerarse insuficiente.\n\n⚠️ *Motivo:* ${reason}\n\n👉 *Por favor, gestione nuevamente el caso e ingrese un nuevo plan de acción:* ${resolutionLink}`,
+                        mediaUrl: "https://i.imgur.com/jgX2y4n.png"
+                    }
+                });
+            }
+
+            // 3. Update local state
+            setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'pending_resolution', notes: updatedNotes } : r));
+            setSelectedReport(null);
+            setShowQualityReturnModal(false);
+            setFeedbackModal({ isOpen: true, type: 'success', title: 'Ticket Devuelto', message: 'El caso ha vuelto a estado pendiente y se ha notificado al responsable.' });
+        } else {
+            setFeedbackModal({ isOpen: true, type: 'error', title: 'Error', message: 'No se pudo devolver el caso: ' + error.message });
+        }
+        setIsProcessingQuality(false);
+    };
+
+    const handleQualityApprove = async () => {
+        if (!selectedReport) return;
+        setIsProcessingQuality(true);
+
+        // 1. Send WhatsApp to Reporter if contact exists
+        if (selectedReport.contact_number && selectedReport.contact_number.length > 5) {
+            const userNumber = `549${selectedReport.contact_number}`;
+            await supabase.functions.invoke('send-whatsapp', {
+                body: {
+                    number: userNumber,
+                    message: `✅ *Reporte Resuelto - Calidad*\n\nEstimado/a, su reporte *${selectedReport.tracking_id}* ha sido gestionado y cerrado exitosamente.\n\n📝 *Resolución:* "${selectedReport.resolution_notes || selectedReport.corrective_plan || 'Sin observaciones.'}"\n\nGracias por su compromiso con la mejora continua.`,
+                    mediaUrl: "https://i.imgur.com/rOkI8sA.png"
+                }
+            });
+        }
+
+        // 2. Update DB
+        const { error } = await supabase.from('reports').update({
+            status: 'resolved',
+            resolved_at: new Date().toISOString()
+        }).eq('id', selectedReport.id);
+
+        if (!error) {
+            setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'resolved' } : r));
+            setSelectedReport(null);
+            setShowQualityApproveModal(false);
+            setFeedbackModal({ isOpen: true, type: 'success', title: 'Caso Aprobado', message: 'El ticket ha sido cerrado correctamente.' });
+        } else {
+            setFeedbackModal({ isOpen: true, type: 'error', title: 'Error', message: 'Hubo un error al cerrar el caso.' });
+        }
+        setIsProcessingQuality(false);
+    };
     const [feedbackModal, setFeedbackModal] = useState<{
         isOpen: boolean;
         type: 'success' | 'error';
@@ -322,22 +566,37 @@ export const Dashboard = () => {
         setLoading(false);
     };
 
-    const handleSendReferral = async (isAdverse: boolean, responsiblePhone: string) => {
+    const handleSendReferral = async (managementType: 'simple' | 'desvio' | 'adverse', responsiblePhone: string) => {
         if (!selectedReport) return;
         setIsSendingReferral(true);
+
+        const isAdverse = managementType !== 'simple'; // Desvio and Adverse both require RCA
+        const typeLabel = managementType === 'simple' ? 'Simple' : managementType === 'desvio' ? 'Desvío' : 'Evento Adverso';
 
         // 1. Generar Link Único
         const resolutionLink = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}`;
         const botNumber = `549${responsiblePhone}`;
 
         // 2. Enviar WhatsApp
-        console.log(`[Referral] Enviando a ${botNumber}. Link: ${resolutionLink}. Adverse: ${isAdverse}`);
+        console.log(`[Referral] Enviando a ${botNumber}. Link: ${resolutionLink}. Type: ${managementType}`);
+
+        let messageBody = `👋 *Solicitud de Gestión - Calidad*\n\nSe requiere su intervención para el caso: *${selectedReport.tracking_id}*\n📂 Sector: ${selectedReport.sector}\n\n📝 *Reporte:* "${selectedReport.ai_summary || selectedReport.content}"\n\n`;
+
+        if (managementType === 'simple') {
+            messageBody += `🛠️ *Tipo: Simple*\nSe solicita: *Contención / Acción Inmediata*.`;
+        } else if (managementType === 'desvio') {
+            messageBody += `🔧 *Tipo: Desvío*\nSe solicita: *Acción Inmediata + Análisis de Causa + Plan de Acción*.`;
+        } else {
+            messageBody += `⚠️ *Tipo: Evento Adverso*\nSe solicita: *Acción Inmediata + Análisis de Causa + Plan de Acción*.`;
+        }
+
+        messageBody += `\n\n👉 *Gestione el caso aquí:* ${resolutionLink}`;
 
         const { error } = await supabase.functions.invoke('send-whatsapp', {
             body: {
                 number: botNumber,
-                message: `👋 *Solicitud de Gestión - Calidad*\n\nSe requiere su intervención para el caso: *${selectedReport.tracking_id}*\n📂 Sector: ${selectedReport.sector}\n\n📝 *Reporte:* "${selectedReport.ai_summary || selectedReport.content}"\n\n${isAdverse ? '⚠️ *Este caso requiere Análisis de Causa Raíz*' : '🛠️ Se solicita solución inmediata.'}\n\n👉 *Gestione el caso aquí:* ${resolutionLink}`,
-                mediaUrl: "https://i.imgur.com/JGQlbiJ.jpeg"
+                message: messageBody,
+                mediaUrl: managementType === 'adverse' ? "https://i.imgur.com/jgX2y4n.png" : "https://i.imgur.com/JGQlbiJ.jpeg"
             }
         });
 
@@ -345,7 +604,7 @@ export const Dashboard = () => {
         const whatsappStatus = error ? 'failed' : 'sent';
         const notes = error
             ? `Error al enviar WhatsApp a ${responsiblePhone}. (${new Date().toLocaleTimeString()})`
-            : `Derivado a ${responsiblePhone} (${isAdverse ? 'Análisis Causa' : 'Simple'}).`;
+            : `Derivado a ${responsiblePhone} como [${typeLabel}].`;
 
         if (error) {
             console.error("Error al enviar WhatsApp:", error);
@@ -360,7 +619,7 @@ export const Dashboard = () => {
                 isOpen: true,
                 type: 'success',
                 title: 'Solicitud Enviada',
-                message: 'El mensaje de WhatsApp ha sido entregado correctamente al responsable.'
+                message: `Solicitud de gestión (${typeLabel}) enviada correctamente.`
             });
         }
 
@@ -370,7 +629,7 @@ export const Dashboard = () => {
             .update({
                 status: 'pending_resolution',
                 notes: notes,
-                is_adverse_event: isAdverse,
+                is_adverse_event: isAdverse, // This triggers the correct form type (Simple vs RCA)
                 assigned_to: responsiblePhone,
                 last_whatsapp_status: whatsappStatus,
                 last_whatsapp_sent_at: new Date().toISOString()
@@ -939,81 +1198,13 @@ export const Dashboard = () => {
 
                                         <div className="flex gap-3">
                                             <button
-                                                onClick={async () => {
-                                                    const reason = window.prompt('Indique el motivo del rechazo para el responsable:');
-                                                    if (!reason) return;
-
-                                                    const phoneInput = window.prompt('Ingrese el número de WhatsApp del responsable para notificar (ej: 351...)', '');
-                                                    // If no phone provided, we proceed but don't send WA
-
-                                                    // 1. Prepare Data
-                                                    const timestamp = new Date().toLocaleString();
-                                                    const logEntry = `[${timestamp}] ⚠️ RECHAZADO POR CALIDAD: ${reason}`;
-                                                    const currentNotes = selectedReport.notes || '';
-                                                    const updatedNotes = currentNotes ? `${currentNotes}\n\n${logEntry}` : logEntry;
-
-                                                    // 2. Update Database (Append logs)
-                                                    const { error } = await supabase
-                                                        .from('reports')
-                                                        .update({
-                                                            status: 'pending_resolution',
-                                                            notes: updatedNotes
-                                                        })
-                                                        .eq('id', selectedReport.id);
-
-                                                    if (!error) {
-                                                        // 3. Send WhatsApp if phone provided
-                                                        if (phoneInput && phoneInput.length > 5) {
-                                                            const botNumber = `549${phoneInput.replace(/\D/g, '').replace(/^549/, '')}`;
-                                                            const resolutionLink = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}`;
-
-                                                            await supabase.functions.invoke('send-whatsapp', {
-                                                                body: {
-                                                                    number: botNumber,
-                                                                    message: `🛑 *Solución Insuficiente - Calidad*\n\nLa solución propuesta para el caso *${selectedReport.tracking_id}* ha sido rechazada por considerarse insuficiente.\n\n⚠️ *Motivo:* ${reason}\n\n👉 *Por favor, gestione nuevamente el caso e ingrese un nuevo plan de acción:* ${resolutionLink}`,
-                                                                    mediaUrl: "https://i.imgur.com/jgX2y4n.png"
-                                                                }
-                                                            });
-
-                                                            alert(`Notificación de rechazo enviada a ${botNumber}`);
-                                                        }
-
-                                                        // 4. Update local state
-                                                        setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'pending_resolution', notes: updatedNotes } : r));
-                                                        setSelectedReport(null);
-                                                        setFeedbackModal({ isOpen: true, type: 'success', title: 'Ticket Rechazado', message: 'El caso ha vuelto a estado pendiente y se ha notificado al responsable.' });
-                                                    }
-                                                }}
+                                                onClick={() => setShowQualityReturnModal(true)}
                                                 className="flex-1 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold text-sm hover:bg-red-50 transition-colors"
                                             >
-                                                Rechazar
+                                                Devolver (Rechazo)
                                             </button>
                                             <button
-                                                onClick={async () => {
-                                                    // 1. Send WhatsApp to Reporter if contact exists
-                                                    if (selectedReport.contact_number && selectedReport.contact_number.length > 5) {
-                                                        const userNumber = `549${selectedReport.contact_number}`;
-                                                        await supabase.functions.invoke('send-whatsapp', {
-                                                            body: {
-                                                                number: userNumber,
-                                                                message: `✅ *Reporte Resuelto - Calidad*\n\nEstimado/a, su reporte *${selectedReport.tracking_id}* ha sido gestionado y cerrado exitosamente.\n\n📝 *Resolución:* "${selectedReport.resolution_notes || selectedReport.corrective_plan || 'Sin observaciones.'}"\n\nGracias por su compromiso con la mejora continua.`,
-                                                                mediaUrl: "https://i.imgur.com/rOkI8sA.png" // Success/Check icon
-                                                            }
-                                                        });
-                                                    }
-
-                                                    // 2. Update DB
-                                                    const { error } = await supabase.from('reports').update({
-                                                        status: 'resolved',
-                                                        resolved_at: new Date().toISOString()
-                                                    }).eq('id', selectedReport.id);
-
-                                                    if (!error) {
-                                                        setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'resolved' } : r));
-                                                        setSelectedReport(null);
-                                                        setFeedbackModal({ isOpen: true, type: 'success', title: 'Aprobado', message: 'El ticket ha sido cerrado y el usuario notificado (si corresponde).' });
-                                                    }
-                                                }}
+                                                onClick={() => setShowQualityApproveModal(true)}
                                                 className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 shadow-lg shadow-purple-500/20"
                                             >
                                                 Aprobar y Cerrar
@@ -1076,6 +1267,21 @@ export const Dashboard = () => {
                 onConfirm={handleReopenCase}
                 initialPhone={selectedReport?.assigned_to || ''}
                 isSubmitting={isReopening}
+            />
+
+            <QualityReturnModal
+                isOpen={showQualityReturnModal}
+                onClose={() => setShowQualityReturnModal(false)}
+                onConfirm={handleQualityReturn}
+                initialPhone={selectedReport?.assigned_to || ''}
+                isSubmitting={isProcessingQuality}
+            />
+
+            <QualityApproveModal
+                isOpen={showQualityApproveModal}
+                onClose={() => setShowQualityApproveModal(false)}
+                onConfirm={handleQualityApprove}
+                isSubmitting={isProcessingQuality}
             />
 
             <DeleteConfirmationModal
