@@ -130,7 +130,7 @@ export const ResolutionPage = () => {
                     // However, the user wants "after clicking register".
                     // CorrectiveActionForm calls onSuccess correctly.
 
-                    alert("Acción Correctiva Registrada. descargando comprobante...");
+
                     // We don't have access to generatePDF here easily unless we refactor.
                     // Instead, we should rely on CorrectiveActionForm doing the work.
 

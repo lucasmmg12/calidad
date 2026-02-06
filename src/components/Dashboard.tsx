@@ -8,26 +8,26 @@ import {
     ShieldAlert,
     X,
     Loader2,
-    Trash2,
     AlertCircle,
     Send,
     Eye,
     BrainCircuit,
-    UserCog
+    UserCog,
+    Camera,
+    Archive
 } from 'lucide-react';
 
-
-// Delete Confirmation Modal Component
-const DeleteConfirmationModal = ({
+// Discard Confirmation Modal Component
+const DiscardConfirmationModal = ({
     isOpen,
     onClose,
     onConfirm,
-    isDeleting
+    isDiscarding
 }: {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: () => void;
-    isDeleting: boolean;
+    isDiscarding: boolean;
 }) => {
     if (!isOpen) return null;
 
@@ -35,30 +35,29 @@ const DeleteConfirmationModal = ({
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 transform transition-all scale-100 animate-in zoom-in-95">
                 <div className="flex flex-col items-center text-center">
-                    <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                        <AlertCircle className="w-6 h-6 text-red-600" />
+                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <Archive className="w-6 h-6 text-gray-600" />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">¿Eliminar Reporte?</h3>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">¿Descartar Reporte?</h3>
                     <p className="text-sm text-gray-500 mb-6">
-                        Esta acción eliminará el reporte permanentemente. <br />
-                        <span className="font-bold text-red-500">No se puede deshacer.</span>
+                        El reporte se moverá a la bandeja de <span className="font-bold">Descartados</span> y no será visible en el tablero principal.
                     </p>
 
                     <div className="flex gap-3 w-full">
                         <button
                             onClick={onClose}
-                            disabled={isDeleting}
+                            disabled={isDiscarding}
                             className="flex-1 py-2.5 px-4 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
                         >
                             Cancelar
                         </button>
                         <button
                             onClick={onConfirm}
-                            disabled={isDeleting}
-                            className="flex-1 py-2.5 px-4 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-500/30 flex items-center justify-center gap-2 disabled:opacity-50"
+                            disabled={isDiscarding}
+                            className="flex-1 py-2.5 px-4 bg-gray-800 text-white font-bold rounded-xl hover:bg-gray-900 transition-colors shadow-lg shadow-gray-500/30 flex items-center justify-center gap-2 disabled:opacity-50"
                         >
-                            {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                            Eliminar
+                            {isDiscarding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
+                            Descartar
                         </button>
                     </div>
                 </div>
@@ -453,10 +452,10 @@ export const Dashboard = () => {
     const [, setUpdatingColor] = useState(false);
 
     // Modals
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showDiscardModal, setShowDiscardModal] = useState(false);
     const [showReferralModal, setShowReferralModal] = useState(false);
     const [showReopenModal, setShowReopenModal] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
+    const [isDiscarding, setIsDiscarding] = useState(false);
     const [isReopening, setIsReopening] = useState(false);
     const [isSendingReferral, setIsSendingReferral] = useState(false);
     const [showQualityReturnModal, setShowQualityReturnModal] = useState(false);
@@ -703,27 +702,31 @@ export const Dashboard = () => {
     // Para brevedad del reemplazo, asumo que existen o se mantienen. 
     // RE-IMPLEMENTANDO LAS FUNCIONES CRÍTICAS PARA QUE NO SE PIERDAN AL REEMPLAZAR EL COMPONENTE COMPLETO
 
-    const handleDeleteClick = () => {
-        setShowDeleteModal(true);
+    const handleDiscardClick = () => {
+        setShowDiscardModal(true);
     };
 
-    const confirmDelete = async () => {
+    const confirmDiscard = async () => {
         if (!selectedReport) return;
-        setIsDeleting(true);
+        setIsDiscarding(true);
 
+        // Update status to 'discarded' instead of deleting
         const { error } = await supabase
             .from('reports')
-            .delete()
+            .update({ status: 'discarded' })
             .eq('id', selectedReport.id);
 
         if (error) {
-            alert('Error al eliminar: ' + error.message);
+            alert('Error al descartar: ' + error.message);
         } else {
-            setReports(reports.filter(r => r.id !== selectedReport.id));
+            // Update local state: Update the status or remove from view depending on filter
+            const updatedReport = { ...selectedReport, status: 'discarded' };
+            setReports(reports.map(r => r.id === selectedReport.id ? updatedReport : r));
             setSelectedReport(null);
-            setShowDeleteModal(false);
+            setShowDiscardModal(false);
+            setFeedbackModal({ isOpen: true, type: 'success', title: 'Caso Descartado', message: 'El reporte se ha movido a la bandeja de descartados.' });
         }
-        setIsDeleting(false);
+        setIsDiscarding(false);
     };
 
     const handleUpdateUrgency = async (newColor: string) => {
@@ -747,18 +750,19 @@ export const Dashboard = () => {
 
     // FILTROS
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation'>('all');
+    const [statusFilter, setStatusFilter] = useState<'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation' | 'discarded'>('all');
 
 
 
     const filteredReports = reports.filter(report => {
         // Filtro por Estado (Mapeo de UI a valores BD)
         const matchesStatus =
-            statusFilter === 'all' ? true :
+            statusFilter === 'all' ? report.status !== 'discarded' :
                 statusFilter === 'pending' ? (report.status === 'pending' || report.status === 'analyzed') :
                     statusFilter === 'in_progress' ? report.status === 'pending_resolution' :
                         statusFilter === 'quality_validation' ? report.status === 'quality_validation' :
-                            statusFilter === 'resolved' ? report.status === 'resolved' : true;
+                            statusFilter === 'resolved' ? report.status === 'resolved' :
+                                statusFilter === 'discarded' ? report.status === 'discarded' : true;
 
         // Filtro por Texto (ID, Sector, Contenido)
         const searchLower = searchTerm.toLowerCase();
@@ -804,11 +808,12 @@ export const Dashboard = () => {
                         { id: 'pending', label: 'Pendientes' },
                         { id: 'in_progress', label: 'En Gestión' },
                         { id: 'quality_validation', label: 'Por Validar' },
-                        { id: 'resolved', label: 'Resueltos' }
+                        { id: 'resolved', label: 'Resueltos' },
+                        { id: 'discarded', label: 'Descartados' }
                     ].map(tab => (
                         <button
                             key={tab.id}
-                            onClick={() => setStatusFilter(tab.id as 'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation')}
+                            onClick={() => setStatusFilter(tab.id as 'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation' | 'discarded')}
                             className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${statusFilter === tab.id
                                 ? 'bg-white text-sanatorio-primary shadow-sm'
                                 : 'text-gray-500 hover:text-gray-700'
@@ -866,6 +871,8 @@ export const Dashboard = () => {
                                                     <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center animate-pulse"><Clock className="w-3 h-3" /></div>
                                                 ) : report.status === 'quality_validation' ? (
                                                     <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-xs">Q</div>
+                                                ) : report.status === 'discarded' ? (
+                                                    <div className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"><Archive className="w-3 h-3" /></div>
                                                 ) : (
                                                     <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center"><AlertCircle className="w-3 h-3" /></div>
                                                 )}
@@ -1128,15 +1135,39 @@ export const Dashboard = () => {
                                                     </div>
                                                 )}
 
+                                                {/* Plan de Acción */}
                                                 {selectedReport.corrective_plan && (
                                                     <div>
                                                         <h5 className="text-xs font-bold text-green-600 uppercase mb-1 flex items-center gap-2">
                                                             <CheckCircle className="w-3 h-3" />
                                                             Plan de Acción
                                                         </h5>
-                                                        <p className="text-sm text-gray-700 bg-green-50 p-3 rounded-lg border border-green-100">
-                                                            {selectedReport.corrective_plan}
-                                                        </p>
+                                                        <div className="bg-green-50 p-3 rounded-lg border border-green-100 space-y-2">
+                                                            <p className="text-sm text-gray-700 leading-relaxed">
+                                                                {selectedReport.corrective_plan}
+                                                            </p>
+                                                            {selectedReport.implementation_date && (
+                                                                <div className="flex items-center gap-2 text-xs font-bold text-green-700 pt-2 border-t border-green-200/50">
+                                                                    <Clock className="w-3 h-3" />
+                                                                    Fecha Implementación: {new Date(selectedReport.implementation_date).toLocaleDateString()}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Evidencia de Resolución */}
+                                                {selectedReport.resolution_evidence_urls && selectedReport.resolution_evidence_urls.length > 0 && (
+                                                    <div>
+                                                        <h5 className="text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-2">
+                                                            <Camera className="w-3 h-3" />
+                                                            Evidencia de Resolución
+                                                        </h5>
+                                                        <div className="flex gap-2 overflow-x-auto pb-2">
+                                                            {selectedReport.resolution_evidence_urls.map((url: string, i: number) => (
+                                                                <a key={i} href={url} target="_blank" className="w-16 h-16 rounded-lg bg-gray-100 bg-cover bg-center border border-gray-200 flex-shrink-0 hover:ring-2 ring-blue-400 transition-all" style={{ backgroundImage: `url(${url})` }} />
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
@@ -1175,8 +1206,9 @@ export const Dashboard = () => {
                                     </div>
                                 ) : selectedReport.status === 'quality_validation' ? (
                                     // VISTA VALIDACIÓN CALIDAD
-                                    <div className="bg-purple-50 p-6 rounded-2xl shadow-sm border border-purple-100">
-                                        <div className="flex items-center gap-3 mb-4">
+                                    // VISTA VALIDACIÓN CALIDAD
+                                    <div className="bg-purple-50 p-6 rounded-2xl shadow-sm border border-purple-100 flex flex-col h-full overflow-hidden">
+                                        <div className="flex items-center gap-3 mb-4 flex-shrink-0">
                                             <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
                                                 <BrainCircuit className="w-6 h-6" />
                                             </div>
@@ -1186,17 +1218,84 @@ export const Dashboard = () => {
                                             </div>
                                         </div>
 
-                                        <div className="space-y-4 mb-6">
-                                            <div className="bg-white p-4 rounded-xl border border-purple-100/50">
-                                                <h5 className="text-xs font-bold text-gray-500 uppercase mb-2">Resolución Propuesta</h5>
-                                                <p className="text-sm text-gray-800 italic">"{selectedReport.resolution_notes || selectedReport.corrective_plan || 'Sin nota de resolución'}"</p>
-                                                {selectedReport.assigned_to && (
-                                                    <p className="text-xs text-gray-400 mt-2 text-right">- Por: {selectedReport.assigned_to}</p>
-                                                )}
+                                        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 mb-6">
+                                            {/* 1. Acción Inmediata (Siempre visible) */}
+                                            <div className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm">
+                                                <h5 className="text-xs font-bold text-blue-600 uppercase mb-2 flex items-center gap-2">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                                    Acción Inmediata
+                                                </h5>
+                                                <p className="text-sm text-gray-700 leading-relaxed">
+                                                    {selectedReport.resolution_notes || <span className="text-gray-400 italic">Sin datos registrados.</span>}
+                                                </p>
                                             </div>
+
+                                            {/* 2. Causa Raíz (Condicional) */}
+                                            {selectedReport.root_cause && (
+                                                <div className="bg-white p-4 rounded-xl border border-amber-100 shadow-sm relative overflow-hidden">
+                                                    <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>
+                                                    <h5 className="text-xs font-bold text-amber-700 uppercase mb-2 flex items-center gap-2">
+                                                        <BrainCircuit className="w-3 h-3" />
+                                                        Causa Raíz Identificada
+                                                    </h5>
+                                                    <p className="text-sm text-gray-700 leading-relaxed">
+                                                        {selectedReport.root_cause}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {/* 3. Plan de Acción (Condicional) */}
+                                            {selectedReport.corrective_plan && (
+                                                <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm relative overflow-hidden">
+                                                    <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
+                                                    <h5 className="text-xs font-bold text-green-700 uppercase mb-2 flex items-center gap-2">
+                                                        <CheckCircle className="w-3 h-3" />
+                                                        Plan de Acción
+                                                    </h5>
+                                                    <p className="text-sm text-gray-700 leading-relaxed mb-3">
+                                                        {selectedReport.corrective_plan}
+                                                    </p>
+                                                    {selectedReport.implementation_date && (
+                                                        <div className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-lg w-fit">
+                                                            <Clock className="w-3 h-3" />
+                                                            Implementación: {new Date(selectedReport.implementation_date).toLocaleDateString()}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* 4. Evidencia de Resolución */}
+                                            {selectedReport.resolution_evidence_urls && selectedReport.resolution_evidence_urls.length > 0 && (
+                                                <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                                    <h5 className="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
+                                                        <Camera className="w-3 h-3" />
+                                                        Evidencia Adjunta
+                                                    </h5>
+                                                    <div className="grid grid-cols-3 gap-2">
+                                                        {selectedReport.resolution_evidence_urls.map((url: string, i: number) => (
+                                                            <a
+                                                                key={i}
+                                                                href={url}
+                                                                target="_blank"
+                                                                className="aspect-square rounded-lg bg-gray-100 bg-cover bg-center border border-gray-200 hover:ring-2 ring-purple-500 transition-all cursor-zoom-in"
+                                                                style={{ backgroundImage: `url(${url})` }}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Info del Responsable */}
+                                            {selectedReport.assigned_to && (
+                                                <div className="text-right">
+                                                    <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
+                                                        Responsable: {selectedReport.assigned_to}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
 
-                                        <div className="flex gap-3">
+                                        <div className="flex gap-3 flex-shrink-0 pt-2 border-t border-purple-100">
                                             <button
                                                 onClick={() => setShowQualityReturnModal(true)}
                                                 className="flex-1 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold text-sm hover:bg-red-50 transition-colors"
@@ -1240,10 +1339,10 @@ export const Dashboard = () => {
                                         <div className="text-center py-4 border-t border-gray-100">
                                             <p className="text-xs text-gray-400 mb-2">Otras acciones</p>
                                             <button
-                                                onClick={handleDeleteClick}
-                                                className="text-red-400 hover:text-red-600 text-xs font-bold transition-colors flex items-center justify-center gap-1 mx-auto"
+                                                onClick={handleDiscardClick}
+                                                className="text-gray-400 hover:text-gray-600 text-xs font-bold transition-colors flex items-center justify-center gap-1 mx-auto"
                                             >
-                                                <Trash2 className="w-3 h-3" /> Eliminar Caso
+                                                <Archive className="w-3 h-3" /> Descartar Caso
                                             </button>
                                         </div>
                                     </div>
@@ -1284,11 +1383,11 @@ export const Dashboard = () => {
                 isSubmitting={isProcessingQuality}
             />
 
-            <DeleteConfirmationModal
-                isOpen={showDeleteModal}
-                onClose={() => setShowDeleteModal(false)}
-                onConfirm={confirmDelete}
-                isDeleting={isDeleting}
+            <DiscardConfirmationModal
+                isOpen={showDiscardModal}
+                onClose={() => setShowDiscardModal(false)}
+                onConfirm={confirmDiscard}
+                isDiscarding={isDiscarding}
             />
 
             <FeedbackModal
