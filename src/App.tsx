@@ -43,12 +43,13 @@ function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full px-4 py-3">
       <div className="max-w-7xl mx-auto glass-panel rounded-2xl md:rounded-3xl px-4 md:px-8 py-3 flex justify-between items-center transition-all duration-300">
-        <Link to="/" className="flex items-center group focus:outline-none">
+        <Link to="/" className="flex items-center gap-3 group focus:outline-none">
           <img
             src="/logosanatorio.png"
             alt="Sanatorio Argentino"
             className="h-10 md:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
           />
+          <span className="font-display font-bold text-slate-700 text-lg group-hover:text-sanatorio-primary transition-colors hidden sm:block">Inicio</span>
         </Link>
 
         <nav className="flex items-center gap-1">
