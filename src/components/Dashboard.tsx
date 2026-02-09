@@ -14,8 +14,10 @@ import {
     BrainCircuit,
     UserCog,
     Camera,
-    Archive
+    Archive,
+    Bell
 } from 'lucide-react';
+import { useMemo } from 'react';
 
 // Discard Confirmation Modal Component
 const DiscardConfirmationModal = ({
@@ -158,12 +160,13 @@ const ReferralModal = ({
                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">WhatsApp del Responsable</label>
                         <input
                             type="tel"
-                            placeholder="Ej: 3415555555"
+                            maxLength={10}
+                            placeholder="Ej: 2645438114"
                             className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-sanatorio-primary transition-all font-mono text-sm"
                             value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
+                            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                         />
-                        <p className="text-[10px] text-gray-400 mt-1">Sin 0 ni 15. Incluir código de área.</p>
+                        <p className="text-[10px] text-gray-400 mt-1">10 dígitos sin 0 ni 15. Incluir código de área.</p>
                     </div>
                 </div>
 
@@ -283,12 +286,13 @@ const ReopenModal = ({
                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">WhatsApp Responsable</label>
                         <input
                             type="tel"
+                            maxLength={10}
                             className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-sanatorio-primary/50 transition-all font-mono text-sm bg-gray-50 focus:bg-white"
                             value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            placeholder="Ej: 341..."
+                            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                            placeholder="Ej: 2645438114"
                         />
-                        <p className="text-[10px] text-gray-400 mt-1">Se notificará la reapertura a este número.</p>
+                        <p className="text-[10px] text-gray-400 mt-1">10 dígitos sin 0 ni 15. Se notificará la reapertura a este número.</p>
                     </div>
                 </div>
 
@@ -367,12 +371,13 @@ const QualityReturnModal = ({
                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">WhatsApp Responsable</label>
                         <input
                             type="tel"
+                            maxLength={10}
                             className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all font-mono text-sm bg-gray-50 focus:bg-white"
                             value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            placeholder="Ej: 341..."
+                            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                            placeholder="Ej: 2645438114"
                         />
-                        <p className="text-[10px] text-gray-400 mt-1">Se notificará la devolución a este número.</p>
+                        <p className="text-[10px] text-gray-400 mt-1">10 dígitos sin 0 ni 15. Se notificará la devolución a este número.</p>
                     </div>
                 </div>
 
@@ -455,6 +460,7 @@ export const Dashboard = () => {
     const [showDiscardModal, setShowDiscardModal] = useState(false);
     const [showReferralModal, setShowReferralModal] = useState(false);
     const [showReopenModal, setShowReopenModal] = useState(false);
+    const [showNotifications, setShowNotifications] = useState(false); // Toggle Notification Panel
     const [isDiscarding, setIsDiscarding] = useState(false);
     const [isReopening, setIsReopening] = useState(false);
     const [isSendingReferral, setIsSendingReferral] = useState(false);
@@ -775,6 +781,33 @@ export const Dashboard = () => {
         return matchesStatus && matchesSearch;
     });
 
+
+
+    // Calculate Expiration Alerts
+    const expirationAlerts = useMemo(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const warningThreshold = new Date();
+        warningThreshold.setDate(today.getDate() + 5); // Warn 5 days in advance
+
+        return reports.filter(r => {
+            if (!r.implementation_date || r.status === 'resolved' || r.status === 'discarded') return false;
+            const implDate = new Date(r.implementation_date);
+            // Check if date is valid
+            if (isNaN(implDate.getTime())) return false;
+
+            return implDate <= warningThreshold;
+        }).sort((a, b) => new Date(a.implementation_date).getTime() - new Date(b.implementation_date).getTime());
+    }, [reports]);
+
+    // Auto-open notifications if urgency exists (initially)
+    useEffect(() => {
+        if (expirationAlerts.length > 0) {
+            setShowNotifications(true);
+        }
+    }, [expirationAlerts.length]);
+
     return (
         <div className="max-w-7xl mx-auto p-6">
 
@@ -788,7 +821,22 @@ export const Dashboard = () => {
                     <p className="text-gray-500">Gestión de Calidad y Seguridad del Paciente</p>
                 </div>
                 {/* Stats Summary */}
-                <div className="flex gap-2">
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => setShowNotifications(!showNotifications)}
+                        className={`bg-white px-4 py-2 rounded-lg border border-gray-200 flex items-center gap-2 text-sm font-medium shadow-sm transition-all hover:bg-gray-50
+                            ${showNotifications ? 'ring-2 ring-orange-100 border-orange-200' : ''}
+                        `}
+                    >
+                        <Bell className={`w-4 h-4 ${expirationAlerts.length > 0 ? 'text-orange-600 animate-pulse' : 'text-gray-400'}`} />
+                        <span className="text-gray-700">Notificaciones</span>
+                        {expirationAlerts.length > 0 && (
+                            <span className="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                {expirationAlerts.length}
+                            </span>
+                        )}
+                    </button>
+
                     <div className="bg-white px-4 py-2 rounded-lg border border-gray-200 flex items-center gap-4 text-sm font-medium shadow-sm">
                         <span className="flex items-center gap-1 text-red-600 font-bold">
                             <ShieldAlert className="w-4 h-4" />
@@ -797,6 +845,70 @@ export const Dashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Notifications Panel */}
+            {showNotifications && (
+                <div className="mb-8 animate-in slide-in-from-top-4 duration-500">
+                    <div className="bg-white rounded-2xl shadow-sm border border-orange-100 overflow-hidden">
+                        <div className="bg-orange-50/50 p-4 border-b border-orange-100 flex items-center justify-between">
+                            <h3 className="text-sm font-bold text-orange-800 flex items-center gap-2">
+                                <Bell className="w-4 h-4" />
+                                Alertas de Vencimiento
+                            </h3>
+                            <button onClick={() => setShowNotifications(false)} className="text-orange-400 hover:text-orange-600">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {expirationAlerts.length > 0 ? (
+                            <div className="p-2 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                                {expirationAlerts.map(alert => {
+                                    const implDate = new Date(alert.implementation_date);
+                                    const today = new Date();
+                                    const isOverdue = implDate < today;
+                                    const daysDiff = Math.ceil((implDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+
+                                    return (
+                                        <button
+                                            key={alert.id}
+                                            onClick={() => setSelectedReport(alert)}
+                                            className={`text-left p-3 rounded-xl border transition-all hover:shadow-md flex items-start gap-3 group
+                                            ${isOverdue
+                                                    ? 'bg-red-50 border-red-100 hover:border-red-200'
+                                                    : 'bg-orange-50/30 border-orange-100 hover:border-orange-200'
+                                                }`}
+                                        >
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isOverdue ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
+                                                <Clock className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <span className="font-bold text-gray-800 text-xs">#{alert.tracking_id}</span>
+                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isOverdue ? 'bg-red-200 text-red-800' : 'bg-orange-200 text-orange-800'}`}>
+                                                        {isOverdue ? 'Vencido' : `${daysDiff} días`}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-gray-600 line-clamp-1 mb-1">{alert.sector}</p>
+                                                <p className="text-[10px] text-gray-400 font-medium">
+                                                    Vence: {implDate.toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="p-8 text-center flex flex-col items-center justify-center text-gray-400">
+                                <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                                    <CheckCircle className="w-6 h-6 text-green-500/50" />
+                                </div>
+                                <p className="text-sm font-medium text-gray-600">Todo al día</p>
+                                <p className="text-xs">No hay acciones correctivas próximas a vencer.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Barra de Filtros */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
@@ -970,6 +1082,20 @@ export const Dashboard = () => {
                                     <h3 className="text-sm font-bold text-gray-900 mb-2">Descripción Original</h3>
                                     <div className="p-4 bg-gray-50 rounded-xl text-gray-600 text-sm leading-relaxed border border-gray-100">
                                         "{selectedReport.content}"
+                                    </div>
+
+                                    {/* Sector Info */}
+                                    <div className="mt-4 flex gap-4">
+                                        <div className="flex-1">
+                                            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Sector Destino</h3>
+                                            <p className="text-sm font-bold text-gray-700">{selectedReport.sector}</p>
+                                        </div>
+                                        {selectedReport.origin_sector && (
+                                            <div className="flex-1">
+                                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Sector Origen</h3>
+                                                <p className="text-sm font-bold text-gray-700">{selectedReport.origin_sector}</p>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Origin Field (Editable) */}

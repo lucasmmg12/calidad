@@ -3,6 +3,48 @@ import { supabase } from '../utils/supabase';
 import { Send, ShieldAlert, Loader2, ChevronDown, User, Lock, Info, AlertTriangle, Lightbulb, Paperclip, X, Phone } from 'lucide-react';
 import { DoraAssistant } from './DoraAssistant';
 
+const SECTOR_OPTIONS = [
+    { value: "ADM-Administración", label: "🗃️ ADM-Administración" },
+    { value: "ANST-Anestesia", label: "💉 ANST-Anestesia" },
+    { value: "APS-Asistencia-Psicológica", label: "🤲 APS-Asistencia-Psicológica" },
+    { value: "AUX-Auxiliares-de-Hoteleria", label: "🏨 AUX-Auxiliares-de-Hoteleria" },
+    { value: "CDD-Control-de-Dispositivos", label: "📏 CDD-Control-de-Dispositivos" },
+    { value: "CDI-Control-de-Infecciones", label: "🦠 CDI-Control-de-Infecciones" },
+    { value: "CIT-Citologia", label: "🧫 CIT-Citologia" },
+    { value: "COM-Comunicacion", label: "💬 COM-Comunicacion" },
+    { value: "CYS-Compras-y-Suministros", label: "💲 CYS-Compras-y-Suministros" },
+    { value: "DIR-Direccion", label: "📍 DIR-Direccion" },
+    { value: "DXI-Diagnostico-por-Imágenes", label: "☢️ DXI-Diagnostico-por-Imágenes" },
+    { value: "EST-Estadísticas", label: "📊 EST-Estadísticas" },
+    { value: "FACT-Facturacion", label: "💰 FACT-Facturacion" },
+    { value: "FAR-Farmacia", label: "💊 FAR-Farmacia" },
+    { value: "FER-Fertilidad", label: "🤰 FER-Fertilidad" },
+    { value: "FUN-Fundacion-Sanatorio-Argentino", label: "🏥 FUN-Fundacion-Sanatorio-Argentino" },
+    { value: "GCM-Guardia-Clinica-Medica", label: "🗺️ GCM-Guardia-Clinica-Medica" },
+    { value: "GGO-Guardia-Gineco-Obstetricia", label: "🤱 GGO-Guardia-Gineco-Obstetricia" },
+    { value: "GPE-Guardia-de-Pediatria", label: "👧 GPE-Guardia-de-Pediatria" },
+    { value: "HDD-Hospital-de-dia", label: "🏢 HDD-Hospital-de-dia" },
+    { value: "HDM-Hemodinamia", label: "🩸 HDM-Hemodinamia" },
+    { value: "HEM-Hemoterapia", label: "❤️ HEM-Hemoterapia" },
+    { value: "HYS-Higiene-y-Seguridad", label: "🧹 HYS-Higiene-y-Seguridad" },
+    { value: "INT-Internado", label: "🛏️ INT-Internado" },
+    { value: "IPE-Internacion-Pediatrica", label: "👶 IPE-Internacion-Pediatrica" },
+    { value: "KIN-Kinesiología", label: "🦴 KIN-Kinesiología" },
+    { value: "LAB-Laboratorio", label: "🔬 LAB-Laboratorio" },
+    { value: "LYC-Liquidación-y-Convenio", label: "✉️ LYC-Liquidación-y-Convenio" },
+    { value: "MAN-Mantenimiento", label: "🔨 MAN-Mantenimiento" },
+    { value: "MEM-Mantenimiento-Equipamiento-Medico", label: "🥼 MEM-Mantenimiento-Equipamiento-Medico" },
+    { value: "NEO-Neonatologia", label: "👶 NEO-Neonatologia" },
+    { value: "QUI-Quirofano", label: "👨‍⚕️ QUI-Quirofano" },
+    { value: "REC-Recepcion-de-Pacientes", label: "🤒 REC-Recepcion-de-Pacientes" },
+    { value: "RES-Residencias-Medicas", label: "🩺 RES-Residencias-Medicas" },
+    { value: "RH-Recursos-Humanos", label: "👩‍💼 RH-Recursos-Humanos" },
+    { value: "SGC-Gestion-de-la-Calidad", label: "✅ SGC-Gestion-de-la-Calidad" },
+    { value: "TYS-Tecnologia-y-sistemas", label: "💻 TYS-Tecnologia-y-sistemas" },
+    { value: "UCI-Unidad-Cuidados-Intensivos", label: "💓 UCI-Unidad-Cuidados-Intensivos" },
+    { value: "VAC-Vacunatorio", label: "🩹 VAC-Vacunatorio" },
+];
+
 export const ReportingForm = () => {
     const [loading, setLoading] = useState(false);
     const [successId, setSuccessId] = useState<string | null>(null);
@@ -10,6 +52,7 @@ export const ReportingForm = () => {
     const [files, setFiles] = useState<File[]>([]);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
     const [formData, setFormData] = useState({
+        originSector: '',
         sector: '',
         content: '',
         contactNumber: ''
@@ -64,6 +107,13 @@ export const ReportingForm = () => {
         // Formatting Phone Number
         // DB: 2645438114 (Clean digits only)
         const rawNumber = formData.contactNumber.replace(/\D/g, '');
+
+        if (!isAnonymous && rawNumber.length !== 10) {
+            alert("El número de teléfono debe tener exactamente 10 dígitos (cod. área + número), sin 0 ni 15. Ej: 2645438114");
+            setLoading(false);
+            return;
+        }
+
         const dbNumber = isAnonymous ? null : (rawNumber || null);
 
         // Bot: 549 + Number (e.g. 5492645438114)
@@ -95,6 +145,7 @@ export const ReportingForm = () => {
                 .insert({
                     tracking_id: trackingId,
                     sector: formData.sector,
+                    origin_sector: formData.originSector || null,
                     content: formData.content,
                     is_anonymous: isAnonymous,
                     contact_number: dbNumber,
@@ -155,7 +206,7 @@ export const ReportingForm = () => {
                     <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-widest">Guarda este código para consultas futuras</p>
                 </div>
                 <button
-                    onClick={() => { setSuccessId(null); setFormData({ sector: '', content: '', contactNumber: '' }); setFiles([]); setPreviewUrls([]); }}
+                    onClick={() => { setSuccessId(null); setFormData({ originSector: '', sector: '', content: '', contactNumber: '' }); setFiles([]); setPreviewUrls([]); }}
                     className="btn-primary w-full"
                 >
                     Enviar Nuevo Reporte
@@ -250,7 +301,35 @@ export const ReportingForm = () => {
                     </div>
 
                     <div className="space-y-8">
-                        {/* Selector de Sector */}
+                        {/* Selector de Sector Origen (Opcional) */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                Sector al que perteneces (Opcional)
+                                <div className="group relative">
+                                    <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
+                                        Si lo deseas, indícanos a qué sector perteneces. Esto es opcional para mantener el anonimato.
+                                    </div>
+                                </div>
+                            </label>
+                            <div className="relative group">
+                                <select
+                                    className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-sanatorio-primary focus:ring-sanatorio-primary transition-all bg-gray-50 focus:bg-white appearance-none cursor-pointer pr-12 text-gray-700"
+                                    value={formData.originSector}
+                                    onChange={(e) => setFormData({ ...formData, originSector: e.target.value })}
+                                >
+                                    <option value="">Selecciona tu sector (Opcional)...</option>
+                                    {SECTOR_OPTIONS.map((option) => (
+                                        <option key={`origin-${option.value}`} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none group-focus-within:text-sanatorio-primary transition-colors" />
+                            </div>
+                        </div>
+
+                        {/* Selector de Sector Destino */}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                                 Sector al cual va dirigido su reclamo
@@ -264,50 +343,16 @@ export const ReportingForm = () => {
                             <div className="relative group">
                                 <select
                                     required
-                                    className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-sanatorio-primary focus:ring-sanatorio-primary transition-all bg-gray-50 focus:bg-white appearance-none cursor-pointer pr-12"
+                                    className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-sanatorio-primary focus:ring-sanatorio-primary transition-all bg-gray-50 focus:bg-white appearance-none cursor-pointer pr-12 text-gray-700"
                                     value={formData.sector}
                                     onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
                                 >
                                     <option value="">Selecciona el área relacionada...</option>
-                                    <option value="ADM-Administración">🗃️ ADM-Administración</option>
-                                    <option value="ANST-Anestesia">💉 ANST-Anestesia</option>
-                                    <option value="APS-Asistencia-Psicológica">🤲 APS-Asistencia-Psicológica</option>
-                                    <option value="AUX-Auxiliares-de-Hoteleria">🏨 AUX-Auxiliares-de-Hoteleria</option>
-                                    <option value="CDD-Control-de-Dispositivos">📏 CDD-Control-de-Dispositivos</option>
-                                    <option value="CDI-Control-de-Infecciones">🦠 CDI-Control-de-Infecciones</option>
-                                    <option value="CIT-Citologia">🧫 CIT-Citologia</option>
-                                    <option value="COM-Comunicacion">💬 COM-Comunicacion</option>
-                                    <option value="CYS-Compras-y-Suministros">💲 CYS-Compras-y-Suministros</option>
-                                    <option value="DIR-Direccion">📍 DIR-Direccion</option>
-                                    <option value="DXI-Diagnostico-por-Imágenes">☢️ DXI-Diagnostico-por-Imágenes</option>
-                                    <option value="EST-Estadísticas">📊 EST-Estadísticas</option>
-                                    <option value="FACT-Facturacion">💰 FACT-Facturacion</option>
-                                    <option value="FAR-Farmacia">💊 FAR-Farmacia</option>
-                                    <option value="FER-Fertilidad">🤰 FER-Fertilidad</option>
-                                    <option value="FUN-Fundacion-Sanatorio-Argentino">🏥 FUN-Fundacion-Sanatorio-Argentino</option>
-                                    <option value="GCM-Guardia-Clinica-Medica">🗺️ GCM-Guardia-Clinica-Medica</option>
-                                    <option value="GGO-Guardia-Gineco-Obstetricia">🤱 GGO-Guardia-Gineco-Obstetricia</option>
-                                    <option value="GPE-Guardia-de-Pediatria">👧 GPE-Guardia-de-Pediatria</option>
-                                    <option value="HDD-Hospital-de-dia">🏢 HDD-Hospital-de-dia</option>
-                                    <option value="HDM-Hemodinamia">🩸 HDM-Hemodinamia</option>
-                                    <option value="HEM-Hemoterapia">❤️ HEM-Hemoterapia</option>
-                                    <option value="HYS-Higiene-y-Seguridad">🧹 HYS-Higiene-y-Seguridad</option>
-                                    <option value="INT-Internado">🛏️ INT-Internado</option>
-                                    <option value="IPE-Internacion-Pediatrica">👶 IPE-Internacion-Pediatrica</option>
-                                    <option value="KIN-Kinesiología">🦴 KIN-Kinesiología</option>
-                                    <option value="LAB-Laboratorio">🔬 LAB-Laboratorio</option>
-                                    <option value="LYC-Liquidación-y-Convenio">✉️ LYC-Liquidación-y-Convenio</option>
-                                    <option value="MAN-Mantenimiento">🔨 MAN-Mantenimiento</option>
-                                    <option value="MEM-Mantenimiento-Equipamiento-Medico">🥼 MEM-Mantenimiento-Equipamiento-Medico</option>
-                                    <option value="NEO-Neonatologia">👶 NEO-Neonatologia</option>
-                                    <option value="QUI-Quirofano">👨‍⚕️ QUI-Quirofano</option>
-                                    <option value="REC-Recepcion-de-Pacientes">🤒 REC-Recepcion-de-Pacientes</option>
-                                    <option value="RES-Residencias-Medicas">🩺 RES-Residencias-Medicas</option>
-                                    <option value="RH-Recursos-Humanos">👩‍💼 RH-Recursos-Humanos</option>
-                                    <option value="SGC-Gestion-de-la-Calidad">✅ SGC-Gestion-de-la-Calidad</option>
-                                    <option value="TYS-Tecnologia-y-sistemas">💻 TYS-Tecnologia-y-sistemas</option>
-                                    <option value="UCI-Unidad-Cuidados-Intensivos">💓 UCI-Unidad-Cuidados-Intensivos</option>
-                                    <option value="VAC-Vacunatorio">🩹 VAC-Vacunatorio</option>
+                                    {SECTOR_OPTIONS.map((option) => (
+                                        <option key={`dest-${option.value}`} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
                                 </select>
                                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none group-focus-within:text-sanatorio-primary transition-colors" />
                             </div>
@@ -381,13 +426,16 @@ export const ReportingForm = () => {
                                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 group-focus-within:text-sanatorio-primary transition-colors" />
                                     <input
                                         type="tel"
-                                        placeholder="Ej: 264 543 8114"
+                                        placeholder="Ej: 2645438114"
                                         className="input-field pl-12"
                                         value={formData.contactNumber}
                                         onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+                                        maxLength={10}
                                     />
                                 </div>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider ml-1">Para recibir notificaciones del estado del reporte</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider ml-1">
+                                    Ingresa 10 dígitos sin 0 ni 15. Ej: 2645438114
+                                </p>
                             </div>
                         )}
                     </div>

@@ -43,6 +43,9 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
     onClose,
     onSuccess
 }) => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
     const { register, handleSubmit, formState: { errors } } = useForm<CorrectiveActionFormData>({
         defaultValues: {
             origin: 'reclamo',
@@ -51,7 +54,7 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
             description: initialData?.description || '',
             immediateAction: '',
             responsible: '',
-            deadline: new Date().toISOString().split('T')[0] // Default to today
+            deadline: tomorrow.toISOString().split('T')[0] // Default to tomorrow
         }
     });
 
@@ -231,7 +234,7 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                                 </div>
                                 <h3 className="text-lg font-bold text-gray-800">Análisis Causa Raíz (RCA)</h3>
                             </div>
-                            <p className="text-xs text-gray-500">Utilice metodología de los 5 Porqués o Diagrama de Ishikawa.</p>
+                            <p className="text-xs text-gray-500">Utilice metodología de los 5 Porqués o Diagrama de Ishikawa. <span className="font-semibold text-orange-600">(Mínimo 20 caracteres)</span></p>
                             <textarea
                                 {...register('rootCauseAnalysis', {
                                     required: true,
