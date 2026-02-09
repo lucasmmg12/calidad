@@ -349,6 +349,9 @@ const Presentation = () => {
                         <div className="flex items-center justify-center relative">
                             <div className="w-[700px] h-[700px] bg-sanatorio-secondary/10 rounded-full absolute blur-3xl"></div>
 
+                            <div className="relative z-10 w-[600px] h-[600px] rounded-full bg-gradient-to-b from-white/80 to-white/40 shadow-2xl border-4 border-white backdrop-blur-sm flex items-end justify-center overflow-hidden">
+                                <img src="/dora (2).png" className="h-[95%] w-auto object-contain drop-shadow-xl" alt="Dora" />
+                            </div>
                         </div>
                         <div className="flex flex-col justify-center p-24 space-y-10">
                             <div>
