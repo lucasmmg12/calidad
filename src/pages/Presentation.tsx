@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
 
 const Presentation = () => {
     useEffect(() => {
@@ -167,6 +168,12 @@ const Presentation = () => {
       `}</style>
 
             <div className="fixed bottom-8 right-8 z-50 flex flex-col gap-4 no-print">
+                <Link to="/" className="group flex items-center gap-3 bg-white text-sanatorio-primary px-6 py-4 rounded-full shadow-lg hover:bg-slate-50 transition-all hover:scale-105 active:scale-95 font-display font-bold text-lg border-2 border-sanatorio-primary/10 backdrop-blur-md cursor-pointer justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    Inicio
+                </Link>
                 <button id="download-btn" onClick={downloadPDF} className="group flex items-center gap-3 bg-sanatorio-primary text-white px-6 py-4 rounded-full shadow-lg hover:bg-[#004270] transition-all hover:scale-105 active:scale-95 font-display font-bold text-lg border-2 border-white/20 backdrop-blur-md cursor-pointer">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 group-hover:animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
