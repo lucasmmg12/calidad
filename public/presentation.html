@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentación Calidad - Sanatorio Argentino</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;700;800&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        sanatorio: {
+                            primary: '#00548B',
+                            secondary: '#00A99D',
+                            white: '#FFFFFF',
+                            neutral: '#F8FAFC',
+                            text: '#1E293B',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'glass': '0 8px 32px 0 rgba(0, 84, 139, 0.08)',
+                        'premium': '0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 20px rgba(0, 169, 157, 0.3)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            /* A4 Landscape Dimensions: 297mm x 210mm */
+            /* We use a high pixel scaling for quality: 1920px width */
+            /* Height = 1920 * (210/297) ≈ 1357.57px */
+            --slide-width: 1920px;
+            --slide-height: 1358px;
+        }
+
+        body {
+            background-color: #525252;
+            margin: 0;
+            padding: 0;
+        }
+
+        .presentation-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+            padding: 60px;
+            transition: all 0.3s ease;
+        }
+
+        .slide-page {
+            width: var(--slide-width);
+            height: var(--slide-height);
+            background-color: #F8FAFC;
+            background-image:
+                radial-gradient(circle at 0% 0%, rgba(0, 84, 139, 0.08) 0px, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(0, 169, 157, 0.08) 0px, transparent 50%);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.5);
+            /* Important for PDF generation */
+            page-break-inside: avoid;
+            page-break-after: always;
+        }
+
+        /* Responsive scaling for previewing on smaller screens */
+        @media screen and (max-width: 1950px) {
+            .presentation-wrapper {
+                zoom: 0.4;
+            }
+        }
+
+        /* PDF GENERATION MODE - ZERO GAPS */
+        body.pdf-mode {
+            background-color: white;
+        }
+
+        body.pdf-mode .presentation-wrapper {
+            padding: 0;
+            gap: 0;
+            width: var(--slide-width);
+        }
+
+        body.pdf-mode .slide-page {
+            box-shadow: none;
+            border-radius: 0;
+        }
+
+        /* Utilities */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 32px 0 rgba(0, 84, 139, 0.1);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .grid-bg {
+            background-image: linear-gradient(#00548B 1px, transparent 1px), linear-gradient(90deg, #00548B 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.03;
+        }
+
+        .text-gradient {
+            background: linear-gradient(to right, #00548B, #00A99D);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .slide-number {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            color: #CBD5E1;
+            font-weight: 700;
+        }
+
+        .no-print {
+            display: block;
+        }
+
+        /* Floating Animation */
+        .floating-element {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-15px);
+            }
+
+            100% {
+                transform: translateY(0px);
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: white;
+            }
+
+            .presentation-wrapper {
+                zoom: 1;
+                padding: 0;
+                gap: 0;
+            }
+
+            .slide-page {
+                box-shadow: none;
+                margin: 0;
+                page-break-after: always;
+                width: 100%;
+                height: 100%;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            @page {
+                size: A4 landscape;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Download Controls -->
+    <div class="fixed bottom-8 right-8 z-50 flex flex-col gap-4 no-print">
+        <button onclick="downloadPDF()"
+            class="group flex items-center gap-3 bg-sanatorio-primary text-white px-6 py-4 rounded-full shadow-lg hover:bg-[#004270] transition-all hover:scale-105 active:scale-95 font-display font-bold text-lg border-2 border-white/20 backdrop-blur-md">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 group-hover:animate-bounce" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Descargar PDF A4 (Corregido)
+        </button>
+    </div>
+
+    <div class="presentation-wrapper" id="presentation-content">
+
+        <!-- SLIDE 1: TITLE -->
+        <div class="slide-page relative flex items-center justify-center">
+            <!-- Background Elements -->
+            <div class="absolute inset-0 z-0 grid-bg"></div>
+            <div
+                class="absolute top-0 right-0 w-[800px] h-[800px] bg-sanatorio-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3">
+            </div>
+            <div
+                class="absolute bottom-0 left-0 w-[600px] h-[600px] bg-sanatorio-secondary/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4">
+            </div>
+
+            <div class="relative z-10 grid grid-cols-12 h-full w-full p-24 gap-12 items-center">
+                <div class="col-span-7 flex flex-col justify-center space-y-10">
+                    <div class="mb-4">
+                        <img src="./logosanatorio.png" alt="Sanatorio Argentino"
+                            class="h-20 w-auto object-contain bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-white/60 shadow-sm">
+                    </div>
+                    <div class="space-y-4">
+                        <div
+                            class="inline-flex items-center space-x-3 bg-sanatorio-primary/10 px-5 py-2 rounded-full border border-sanatorio-primary/10 w-fit">
+                            <span class="w-2 h-2 rounded-full bg-sanatorio-secondary animate-pulse"></span>
+                            <span class="text-sanatorio-primary font-bold tracking-wider text-sm uppercase">Proyecto
+                                Estratégico 2026</span>
+                        </div>
+                        <h1
+                            class="font-display font-black text-9xl text-sanatorio-primary leading-tight tracking-tight drop-shadow-sm">
+                            CALIDAD
+                        </h1>
+                        <h2
+                            class="font-display font-medium text-5xl text-slate-500 max-w-2xl border-l-4 border-sanatorio-secondary pl-8 py-2">
+                            Gestión Inteligente & <br>
+                            <span class="text-sanatorio-secondary font-bold">Seguridad del Paciente</span>
+                        </h2>
+                    </div>
+                </div>
+                <div class="col-span-5 relative h-full flex items-center justify-center">
+                    <div class="relative z-20 h-full flex items-end justify-center pb-12">
+                        <!-- URL Encoded image to prevent load errors -->
+                        <img src="./dora%20(2).png" alt="Dora"
+                            class="h-[85%] w-auto object-contain drop-shadow-2xl floating-element"
+                            style="filter: contrast(1.05) saturate(1.05);">
+                    </div>
+                </div>
+            </div>
+            <span class="slide-number">01</span>
+        </div>
+
+        <!-- SLIDE 2: VISION -->
+        <div class="slide-page relative flex flex-col p-24 justify-center">
+            <div class="absolute inset-0 z-0 grid-bg"></div>
+
+            <div class="absolute top-24 left-24 right-24 flex justify-between items-start">
+                <h3 class="font-display text-sanatorio-primary text-xl font-bold tracking-widest uppercase">Nuestra
+                    Visión</h3>
+                <img src="./logosanatorio.png" class="h-10 opacity-50">
+            </div>
+
+            <div class="flex flex-col justify-center max-w-5xl mx-auto text-center space-y-16">
+                <h2 class="font-display text-7xl font-bold text-slate-800 leading-tight">
+                    "Lo que no se mide,<br>
+                    <span class="text-gradient">no se puede mejorar."</span>
+                </h2>
+                <div class="glass-panel p-12 rounded-3xl border-l-8 border-sanatorio-secondary">
+                    <p class="font-sans text-3xl font-light text-slate-600 leading-relaxed">
+                        Transformar la gestión de calidad en un ecosistema vivo, donde cada dato se convierte en una
+                        oportunidad para elevar el estándar de seguridad y excelencia médica.
+                    </p>
+                </div>
+            </div>
+            <div class="absolute bottom-0 right-0 z-20 h-[500px] w-auto flex items-end justify-end pointer-events-none">
+                <img src="./dora%20(2).png" class="h-full object-contain drop-shadow-2xl opacity-90" alt="Dora">
+            </div>
+            <span class="slide-number">02</span>
+        </div>
+
+        <!-- SLIDE 3: EL PROBLEMA -->
+        <div class="slide-page relative flex flex-col p-24">
+            <div class="absolute inset-0 z-0 grid-bg"></div>
+            <div class="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-slate-100 to-transparent"></div>
+
+            <div class="relative z-10 h-full flex flex-col justify-center">
+                <div class="absolute top-0 left-0 w-full flex justify-between items-start mb-16">
+                    <h3 class="font-display text-sanatorio-primary text-xl font-bold tracking-widest uppercase">El
+                        Desafío Actual</h3>
+                    <img src="./logosanatorio.png" class="h-10 opacity-50">
+                </div>
+
+                <div class="grid grid-cols-2 gap-20 items-center h-full mt-10">
+                    <div class="space-y-12">
+                        <h2 class="font-display text-6xl font-bold text-slate-800">Silos de <br><span
+                                class="text-sanatorio-primary">Información</span></h2>
+                        <p class="font-sans text-2xl text-slate-500 leading-relaxed">
+                            Los procesos manuales y desconectados generan puntos ciegos en la atención. La falta de
+                            trazabilidad inmediata impide una respuesta ágil ante incidentes críticos.
+                        </p>
+                    </div>
+                    <div class="grid grid-cols-1 gap-8">
+                        <div class="glass-card p-8 rounded-2xl flex items-center space-x-6">
+                            <div class="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center text-red-500">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="font-display text-2xl font-bold text-slate-700">Fragmentación</h4>
+                                <p class="text-slate-500">Datos dispersos en múltiples canales.</p>
+                            </div>
+                        </div>
+                        <div class="glass-card p-8 rounded-2xl flex items-center space-x-6">
+                            <div
+                                class="h-16 w-16 bg-orange-50 rounded-full flex items-center justify-center text-orange-500">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="font-display text-2xl font-bold text-slate-700">Lentitud</h4>
+                                <p class="text-slate-500">Tiempos de respuesta inconsistentes.</p>
+                            </div>
+                        </div>
+                        <div class="glass-card p-8 rounded-2xl flex items-center space-x-6">
+                            <div
+                                class="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-500">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="font-display text-2xl font-bold text-slate-700">Burocracia</h4>
+                                <p class="text-slate-500">Gestión documental excesiva.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute bottom-0 right-0 z-20 h-[450px] w-auto flex items-end justify-end pointer-events-none">
+                <img src="./dora%20(2).png" class="h-full object-contain drop-shadow-2xl opacity-90" alt="Dora">
+            </div>
+            <span class="slide-number">03</span>
+        </div>
+
+        <!-- SLIDE 4: LA SOLUCION -->
+        <div class="slide-page relative flex flex-col p-24">
+            <div class="absolute inset-0 z-0 bg-gradient-to-br from-[#F8FAFC] to-[#EFF6FF]"></div>
+            <div class="absolute inset-0 z-0 grid-bg"></div>
+
+            <div class="relative z-10 h-full flex flex-col items-center justify-center">
+                <div class="text-center mb-16">
+                    <h2 class="font-display text-6xl font-bold text-slate-800 mb-6">El Ecosistema Calidad</h2>
+                    <p class="font-sans text-2xl text-slate-500 max-w-3xl mx-auto">Una plataforma unificada que conecta
+                        personas, procesos y datos.</p>
+                </div>
+
+                <div class="relative w-[800px] h-[600px] scale-125 origin-center mt-10">
+                    <!-- Central Hub -->
+                    <div
+                        class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-sanatorio-primary rounded-full flex items-center justify-center shadow-glass z-20">
+                        <div class="text-center text-white">
+                            <span class="block font-display text-3xl font-bold">CORE</span>
+                            <span class="block text-sm opacity-80">Centralizado</span>
+                        </div>
+                    </div>
+                    <!-- Orbiting Satellites -->
+                    <div
+                        class="absolute top-0 left-1/2 transform -translate-x-1/2 glass-card px-8 py-4 rounded-full shadow-lg">
+                        <span class="font-bold text-sanatorio-primary text-xl">Gestión de Incidentes</span>
+                    </div>
+                    <div
+                        class="absolute bottom-0 left-1/2 transform -translate-x-1/2 glass-card px-8 py-4 rounded-full shadow-lg">
+                        <span class="font-bold text-sanatorio-primary text-xl">Auditoría Clínica</span>
+                    </div>
+                    <div
+                        class="absolute top-1/2 left-0 transform -translate-y-1/2 glass-card px-8 py-4 rounded-full shadow-lg">
+                        <span class="font-bold text-sanatorio-primary text-xl">Analytics</span>
+                    </div>
+                    <div
+                        class="absolute top-1/2 right-0 transform -translate-y-1/2 glass-card px-8 py-4 rounded-full shadow-lg">
+                        <span class="font-bold text-sanatorio-primary text-xl">Seguridad</span>
+                    </div>
+
+                    <!-- Connecting Lines (SVG) -->
+                    <svg class="absolute inset-0 w-full h-full z-10 pointer-events-none" style="overflow: visible;">
+                        <circle cx="400" cy="300" r="200" fill="none" stroke="#00548B" stroke-width="2"
+                            stroke-dasharray="10 10" class="opacity-20"></circle>
+                    </svg>
+                </div>
+            </div>
+            <!-- Branding -->
+            <div class="absolute top-12 right-12 z-30">
+                <img src="./logosanatorio.png" class="h-12 opacity-60">
+            </div>
+            <div
+                class="absolute bottom-0 right-0 z-0 h-[400px] w-auto flex items-end justify-end pointer-events-none opacity-40">
+                <img src="./dora%20(2).png" class="h-full object-contain drop-shadow-xl" alt="Dora">
+            </div>
+            <span class="slide-number">04</span>
+        </div>
+
+        <!-- SLIDE 5: DASHBOARD -->
+        <div class="slide-page relative flex flex-col p-24">
+            <div class="absolute inset-0 z-0 grid-bg"></div>
+
+            <div class="flex justify-between items-start mb-12">
+                <div>
+                    <h3 class="font-display text-sanatorio-primary text-xl font-bold tracking-widest uppercase mb-2">
+                        Interface</h3>
+                    <h2 class="font-display text-5xl font-bold text-slate-800">Dashboard Inteligente</h2>
+                </div>
+                <img src="./logosanatorio.png" class="h-10 opacity-50">
+            </div>
+
+            <div class="flex-1 glass-panel rounded-3xl p-8 shadow-2xl overflow-hidden relative border border-slate-200">
+                <!-- Mockup of Dashboard -->
+                <div class="flex gap-8 h-full">
+                    <!-- Sidebar Mockup -->
+                    <div class="w-64 bg-slate-50 rounded-2xl p-6 flex flex-col gap-4">
+                        <div class="h-12 w-12 bg-sanatorio-primary rounded-xl mb-4"></div>
+                        <div class="h-4 bg-slate-200 rounded w-3/4"></div>
+                        <div class="h-4 bg-slate-200 rounded w-1/2"></div>
+                        <div class="h-4 bg-slate-200 rounded w-4/5 mt-8"></div>
+                        <div class="h-4 bg-slate-200 rounded w-4/5"></div>
+                    </div>
+                    <!-- Main Content Mockup -->
+                    <div class="flex-1 flex flex-col gap-6">
+                        <div class="flex gap-6">
+                            <div class="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-32">
+                                <span class="text-sm font-bold text-slate-400 uppercase">Casos Abiertos</span>
+                                <div class="text-4xl font-bold text-sanatorio-primary mt-2">24</div>
+                            </div>
+                            <div class="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-32">
+                                <span class="text-sm font-bold text-slate-400 uppercase">Resueltos</span>
+                                <div class="text-4xl font-bold text-sanatorio-secondary mt-2">156</div>
+                            </div>
+                            <div class="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-32">
+                                <span class="text-sm font-bold text-slate-400 uppercase">Tiempo Promedio</span>
+                                <div class="text-4xl font-bold text-slate-700 mt-2">48h</div>
+                            </div>
+                        </div>
+                        <div class="flex-1 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                            <div class="flex justify-between items-center mb-6">
+                                <div class="h-6 bg-slate-200 rounded w-1/4"></div>
+                                <div class="h-8 bg-sanatorio-primary rounded px-4"></div>
+                            </div>
+                            <!-- Table Rows -->
+                            <div class="space-y-4">
+                                <div class="h-12 bg-slate-50 rounded-lg w-full"></div>
+                                <div class="h-12 bg-white border border-slate-100 rounded-lg w-full"></div>
+                                <div class="h-12 bg-white border border-slate-100 rounded-lg w-full"></div>
+                                <div class="h-12 bg-white border border-slate-100 rounded-lg w-full"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute bottom-0 right-0 z-20 h-[400px] w-auto flex items-end justify-end pointer-events-none">
+                <img src="./dora%20(2).png" class="h-full object-contain drop-shadow-2xl" alt="Dora">
+            </div>
+            <span class="slide-number">05</span>
+        </div>
+
+        <!-- SLIDE 6: DORA -->
+        <div class="slide-page relative flex items-center bg-[#F0F9FA]">
+            <div class="absolute inset-0 z-0 grid-bg opacity-10"></div>
+            <!-- Logo -->
+            <div class="absolute top-12 right-12 z-30">
+                <img src="./logosanatorio.png" class="h-12 opacity-60">
+            </div>
+
+            <div class="grid grid-cols-2 w-full h-full">
+                <div class="flex items-center justify-center relative">
+                    <div class="w-[700px] h-[700px] bg-sanatorio-secondary/10 rounded-full absolute blur-3xl"></div>
+                    <img src="./dora%20(2).png" class="relative z-10 h-[80%] object-contain drop-shadow-2xl">
+                </div>
+                <div class="flex flex-col justify-center p-24 space-y-10">
+                    <div>
+                        <span
+                            class="bg-white/80 backdrop-blur px-4 py-2 rounded-full text-sanatorio-secondary font-bold text-sm uppercase tracking-wider shadow-sm border border-sanatorio-secondary/20">Asistente
+                            IA</span>
+                    </div>
+                    <h2 class="font-display text-8xl font-black text-sanatorio-primary">DORA</h2>
+                    <h3 class="font-display text-4xl text-slate-600">Tu copiloto experto en calidad.</h3>
+                    <p class="font-sans text-xl text-slate-500 leading-relaxed max-w-xl">
+                        Dora no solo responde preguntas; analiza patrones, sugiere clasificaciones de incidentes y guía
+                        a los usuarios a través de protocolos complejos con lenguaje natural.
+                    </p>
+                    <div class="flex gap-4">
+                        <div
+                            class="px-6 py-3 bg-white rounded-xl shadow-sm border border-slate-200 text-slate-600 font-medium">
+                            ✨ Análisis Predictivo</div>
+                        <div
+                            class="px-6 py-3 bg-white rounded-xl shadow-sm border border-slate-200 text-slate-600 font-medium">
+                            💬 Chat Interactivo</div>
+                    </div>
+                </div>
+            </div>
+            <span class="slide-number">06</span>
+        </div>
+
+        <!-- SLIDE 7: INCIDENT WORKFLOW -->
+        <div class="slide-page relative flex flex-col p-24 justify-center">
+            <div class="absolute inset-0 z-0 grid-bg"></div>
+
+            <!-- Branding -->
+            <div class="absolute top-12 right-12 z-30">
+                <img src="./logosanatorio.png" class="h-12 opacity-60">
+            </div>
+
+            <div class="absolute top-24 left-24 right-24 flex justify-between items-start">
+                <h3 class="font-display text-sanatorio-primary text-xl font-bold tracking-widest uppercase">Flujo de
+                    Trabajo</h3>
+                <h2 class="font-display text-5xl font-bold text-slate-800">Gestión de Incidentes</h2>
+            </div>
+
+            <div class="flex items-center justify-between w-full mt-24 px-12">
+                <!-- Step 1 -->
+                <div class="relative flex flex-col items-center group">
+                    <div
+                        class="w-40 h-40 bg-white rounded-full shadow-lg border-4 border-sanatorio-primary flex items-center justify-center z-10 group-hover:scale-110 transition-transform">
+                        <span class="font-display text-6xl font-bold text-sanatorio-primary">1</span>
+                    </div>
+                    <h4 class="mt-8 font-display text-3xl font-bold text-slate-700">Reporte</h4>
+                    <p class="text-center text-slate-500 mt-2 max-w-xs text-xl">Notificación inmediata del evento
+                        adverso.</p>
+                </div>
+
+                <!-- Connector -->
+                <div class="h-2 bg-slate-200 flex-1 mx-4 rounded-full relative overflow-hidden">
+                    <div class="absolute inset-0 bg-sanatorio-primary/20 w-full animate-pulse"></div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="relative flex flex-col items-center group">
+                    <div
+                        class="w-40 h-40 bg-white rounded-full shadow-lg border-4 border-sanatorio-secondary flex items-center justify-center z-10 group-hover:scale-110 transition-transform">
+                        <span class="font-display text-6xl font-bold text-sanatorio-secondary">2</span>
+                    </div>
+                    <h4 class="mt-8 font-display text-3xl font-bold text-slate-700">Análisis</h4>
+                    <p class="text-center text-slate-500 mt-2 max-w-xs text-xl">Clasificación y evaluación del riesgo.
+                    </p>
+                </div>
+
+                <!-- Connector -->
+                <div class="h-2 bg-slate-200 flex-1 mx-4 rounded-full"></div>
+
+                <!-- Step 3 -->
+                <div class="relative flex flex-col items-center group">
+                    <div
+                        class="w-40 h-40 bg-white rounded-full shadow-lg border-4 border-slate-300 flex items-center justify-center z-10 group-hover:scale-110 transition-transform">
+                        <span class="font-display text-6xl font-bold text-slate-300">3</span>
+                    </div>
+                    <h4 class="mt-8 font-display text-3xl font-bold text-slate-700">Resolución</h4>
+                    <p class="text-center text-slate-500 mt-2 max-w-xs text-xl">Implementación de mejoras y cierre.</p>
+                </div>
+            </div>
+            <div class="absolute bottom-0 right-0 z-20 h-[400px] w-auto flex items-end justify-end pointer-events-none">
+                <img src="./dora%20(2).png" class="h-full object-contain drop-shadow-2xl opacity-90" alt="Dora">
+            </div>
+            <span class="slide-number">07</span>
+        </div>
+
+        <!-- SLIDE 8: RCA & ACTIONS -->
+        <div class="slide-page relative flex flex-col p-24 bg-slate-900 overflow-hidden justify-center">
+            <!-- Dark Mode Variant for this slide -->
+            <div
+                class="absolute top-0 right-0 w-[1000px] h-[1000px] bg-sanatorio-primary/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2">
+            </div>
+
+            <!-- Branding -->
+            <div class="absolute top-12 right-12 z-30">
+                <img src="./logosanatorio.png" class="h-12 opacity-80 brightness-0 invert">
+            </div>
+            <div class="absolute bottom-0 right-0 z-20 h-[450px] w-auto flex items-end justify-end pointer-events-none">
+                <img src="./dora%20(2).png" class="h-full object-contain drop-shadow-2xl opacity-80"
+                    style="filter: brightness(0.9);" alt="Dora">
+            </div>
+
+            <div class="relative z-10 grid grid-cols-2 gap-20 items-center h-full">
+                <div class="space-y-8">
+                    <h2 class="font-display text-6xl font-bold text-white leading-tight">Causa Raíz &<br><span
+                            class="text-sanatorio-secondary">Acción Correctiva</span></h2>
+                    <p class="font-sans text-2xl text-slate-300 leading-relaxed font-light">
+                        El sistema fuerza un análisis profundo. No basta con registrar el problema; exigimos entender el
+                        "por qué" y documentar el plan de acción concreto para evitar la recurrencia.
+                    </p>
+                    <ul class="space-y-6 mt-8">
+                        <li class="flex items-center text-xl text-white">
+                            <span
+                                class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center mr-4 text-xs font-bold text-white">✓</span>
+                            Validación de Planes de Acción
+                        </li>
+                        <li class="flex items-center text-xl text-white">
+                            <span
+                                class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center mr-4 text-xs font-bold text-white">✓</span>
+                            Seguimiento de Eficacia
+                        </li>
+                        <li class="flex items-center text-xl text-white">
+                            <span
+                                class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center mr-4 text-xs font-bold text-white">✓</span>
+                            Evidencia Documental Obligatoria
+                        </li>
+                    </ul>
+                </div>
+                <div class="glass-panel bg-white/10 border-white/10 p-10 rounded-3xl">
+                    <!-- Stylized Graph/Chart -->
+                    <div class="flex flex-col gap-6">
+                        <div class="text-white font-bold text-xl mb-4">Eficacia de las Medidas</div>
+                        <div class="flex items-end gap-4 h-64 border-b border-white/20 pb-4">
+                            <div
+                                class="flex-1 bg-sanatorio-secondary/30 rounded-t-lg h-[40%] relative group cursor-pointer hover:bg-sanatorio-secondary/50 transition-all">
+                                <div
+                                    class="absolute bottom-full mb-2 text-white text-center w-full opacity-0 group-hover:opacity-100">
+                                    Q1</div>
+                            </div>
+                            <div
+                                class="flex-1 bg-sanatorio-secondary/50 rounded-t-lg h-[60%] relative group cursor-pointer hover:bg-sanatorio-secondary/70 transition-all">
+                            </div>
+                            <div
+                                class="flex-1 bg-sanatorio-secondary/70 rounded-t-lg h-[75%] relative group cursor-pointer hover:bg-sanatorio-secondary/90 transition-all">
+                            </div>
+                            <div
+                                class="flex-1 bg-sanatorio-secondary rounded-t-lg h-[90%] relative group cursor-pointer hover:bg-white transition-all">
+                                <div class="absolute top-4 w-full text-center text-white font-bold text-xs">ACTUAL</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <span class="slide-number">08</span>
+        </div>
+
+        <!-- SLIDE 9: ANALYTICS -->
+        <div class="slide-page relative flex flex-col p-24 justify-center">
+            <div class="absolute inset-0 z-0 grid-bg"></div>
+            <!-- Branding -->
+            <div class="absolute top-12 right-12 z-30">
+                <img src="./logosanatorio.png" class="h-12 opacity-60">
+            </div>
+            <div
+                class="absolute bottom-0 right-0 z-0 h-[400px] w-auto flex items-end justify-end pointer-events-none opacity-20">
+                <img src="./dora%20(2).png" class="h-full object-contain drop-shadow-xl" alt="Dora">
+            </div>
+
+            <div class="text-center mb-16">
+                <h2 class="font-display text-5xl font-bold text-slate-800">Cultura de Datos</h2>
+                <p class="text-xl text-slate-500 mt-4">Transformando registros en inteligencia institucional.</p>
+            </div>
+
+            <div class="grid grid-cols-3 gap-8">
+                <div class="glass-card p-10 rounded-3xl text-center hover:-translate-y-2 transition-transform">
+                    <div class="text-6xl font-display font-black text-sanatorio-primary mb-4">40%</div>
+                    <div class="h-2 w-20 bg-slate-200 mx-auto rounded-full mb-4"></div>
+                    <h4 class="text-xl font-bold text-slate-700">Reducción en Tiempos de Respuesta</h4>
+                </div>
+                <div class="glass-card p-10 rounded-3xl text-center hover:-translate-y-2 transition-transform">
+                    <div class="text-6xl font-display font-black text-sanatorio-secondary mb-4">100%</div>
+                    <div class="h-2 w-20 bg-slate-200 mx-auto rounded-full mb-4"></div>
+                    <h4 class="text-xl font-bold text-slate-700">Trazabilidad Digital de Casos</h4>
+                </div>
+                <div class="glass-card p-10 rounded-3xl text-center hover:-translate-y-2 transition-transform">
+                    <div class="text-6xl font-display font-black text-slate-800 mb-4">24/7</div>
+                    <div class="h-2 w-20 bg-slate-200 mx-auto rounded-full mb-4"></div>
+                    <h4 class="text-xl font-bold text-slate-700">Disponibilidad del Sistema</h4>
+                </div>
+            </div>
+            <span class="slide-number">09</span>
+        </div>
+
+        <!-- SLIDE 10: FUTURE -->
+        <div class="slide-page relative flex items-center justify-center overflow-hidden">
+            <div class="absolute inset-0 bg-sanatorio-primary"></div>
+            <div class="absolute inset-0 z-0 opacity-20"
+                style="background-image: radial-gradient(#ffffff 2px, transparent 2px); background-size: 50px 50px;">
+            </div>
+            <!-- Branding -->
+            <div class="absolute top-12 right-12 z-30">
+                <img src="./logosanatorio.png" class="h-12 brightness-0 invert opacity-80">
+            </div>
+            <div class="absolute bottom-0 right-0 z-20 h-[500px] w-auto flex items-end justify-end pointer-events-none">
+                <img src="./dora%20(2).png" class="h-full object-contain drop-shadow-2xl" alt="Dora">
+            </div>
+
+            <div class="relative z-10 text-center text-white space-y-8 p-12 max-w-4xl">
+                <div
+                    class="inline-block border border-white/30 bg-white/10 backdrop-blur px-6 py-2 rounded-full font-mono text-sm tracking-widest mb-4">
+                    ROADMAP 2026</div>
+                <h2 class="font-display text-7xl font-bold leading-tight">El estándar de oro en<br>salud digital.</h2>
+                <p class="font-sans text-2xl text-white/80 font-light">
+                    Sanatorio Argentino lidera el camino hacia un futuro donde la tecnología y el cuidado humano son
+                    indisolubles.
+                </p>
+                <div class="pt-12">
+                    <h3 class="font-display text-4xl font-bold">Gracias.</h3>
+                    <div class="mt-8 flex justify-center gap-8 text-white/60">
+                        <span>www.sanatorioargentino.com.ar</span>
+                        <span>•</span>
+                        <span>Departamento de Calidad</span>
+                    </div>
+                </div>
+            </div>
+            <span class="slide-number">10</span>
+        </div>
+
+    </div>
+
+    <!-- HTML2PDF Library & Logic -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        function downloadPDF() {
+            const btn = document.querySelector('button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `Generando PDF...`;
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+
+            // Toggle PDF mode to remove gaps for clean cutting
+            document.body.classList.add('pdf-mode');
+
+            // Wait for partial re-render if necessary
+            setTimeout(() => {
+                const element = document.getElementById('presentation-content');
+
+                const opt = {
+                    margin: 0,
+                    filename: 'Presentacion_Calidad_Sanatorio_Argentino.pdf',
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: {
+                        scale: 1.5,
+                        useCORS: true,
+                        letterRendering: true,
+                        backgroundColor: '#ffffff',
+                    },
+                    // Use A4 landscape logic (297mm x 210mm)
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape', hotfixes: ['px_scaling'] },
+                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                };
+
+                html2pdf().set(opt).from(element).save().then(() => {
+                    // Restore original view
+                    document.body.classList.remove('pdf-mode');
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                }).catch(err => {
+                    console.error(err);
+                    document.body.classList.remove('pdf-mode');
+                    alert('Error al generar PDF.');
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                });
+            }, 100);
+        }
+    </script>
+</body>
+
+</html>
