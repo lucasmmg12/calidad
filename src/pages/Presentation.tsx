@@ -1,4 +1,20 @@
 import { useEffect } from 'react';
+import {
+    Shield,
+    Lock,
+    Eye,
+    MessageCircle,
+    Clock,
+    AlertTriangle,
+    CheckCircle,
+    FileText,
+    TrendingUp,
+    Smartphone,
+    Search,
+    Brain,
+    Zap,
+    LayoutDashboard
+} from 'lucide-react';
 
 const Presentation = () => {
     useEffect(() => {
@@ -18,7 +34,7 @@ const Presentation = () => {
             <style>{`
         :root {
             --slide-width: 1920px;
-            --slide-height: 1358px;
+            --slide-height: 1080px; 
         }
 
         .presentation-wrapper {
@@ -27,7 +43,6 @@ const Presentation = () => {
             align-items: center;
             gap: 40px;
             padding: 60px;
-            transition: all 0.3s ease;
         }
 
         .slide-page {
@@ -35,54 +50,38 @@ const Presentation = () => {
             height: var(--slide-height);
             background-color: #F8FAFC;
             background-image:
-                radial-gradient(circle at 0% 0%, rgba(0, 84, 139, 0.08) 0px, transparent 50%),
-                radial-gradient(circle at 100% 100%, rgba(0, 169, 157, 0.08) 0px, transparent 50%);
+                radial-gradient(circle at 0% 0%, rgba(0, 84, 139, 0.05) 0px, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(0, 169, 157, 0.05) 0px, transparent 50%);
             position: relative;
             overflow: hidden;
             box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.5);
-            page-break-inside: avoid;
-            page-break-after: always;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
         }
 
         @media screen and (max-width: 1950px) {
             .presentation-wrapper {
-                zoom: 0.4;
+                zoom: 0.45;
             }
         }
 
-        body.pdf-mode {
-            background-color: white;
-        }
-        
-        body.pdf-mode .presentation-wrapper {
-            padding: 0;
-            gap: 0;
-            width: var(--slide-width);
-        }
-
-        body.pdf-mode .slide-page {
-            box-shadow: none;
-            border-radius: 0;
-        }
-
         .glass-panel {
-            background: rgba(255, 255, 255, 0.75);
+            background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            box-shadow: 0 8px 32px 0 rgba(0, 84, 139, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px 0 rgba(0, 84, 139, 0.05);
         }
 
         .glass-card {
-            background: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
         }
 
         .grid-bg {
              background-image: linear-gradient(#00548B 1px, transparent 1px), linear-gradient(90deg, #00548B 1px, transparent 1px);
-             background-size: 40px 40px;
+             background-size: 50px 50px;
              opacity: 0.03;
         }
 
@@ -98,443 +97,412 @@ const Presentation = () => {
             right: 40px;
             font-family: 'Outfit', sans-serif;
             font-size: 1.5rem;
-            color: #CBD5E1;
+            color: #94A3B8;
             font-weight: 700;
         }
-
+        
         .floating-element { animation: float 6s ease-in-out infinite; }
         @keyframes float {
             0% { transform: translateY(0px); }
             50% { transform: translateY(-15px); }
             100% { transform: translateY(0px); }
         }
-
-        @media print {
-            body { background: white; }
-            .presentation-wrapper { zoom: 1; padding: 0; gap: 0; }
-            .slide-page { box-shadow: none; margin: 0; page-break-after: always; width: 100%; height: 100%; }
-            .no-print { display: none !important; }
-            @page { size: A4 landscape; margin: 0; }
-        }
       `}</style>
 
-
-
             <div className="presentation-wrapper" id="presentation-content">
-                {/* SLIDE 1: TITLE */}
-                <div className="slide-page relative flex items-center justify-center">
-                    <div className="absolute inset-0 z-0 grid-bg"></div>
-                    <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-sanatorio-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-                    <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-sanatorio-secondary/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4"></div>
 
-                    <div className="relative z-10 grid grid-cols-12 h-full w-full p-24 gap-12 items-center">
-                        <div className="col-span-7 flex flex-col justify-center space-y-10">
-                            <div className="mb-4">
-                                <img src="/logosanatorio.png" alt="Sanatorio Argentino" className="h-20 w-auto object-contain bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-white/60 shadow-sm" />
-                            </div>
-                            <div className="space-y-4">
-                                <div className="inline-flex items-center space-x-3 bg-sanatorio-primary/10 px-5 py-2 rounded-full border border-sanatorio-primary/10 w-fit">
-                                    <span className="w-2 h-2 rounded-full bg-sanatorio-secondary animate-pulse"></span>
-                                    <span className="text-sanatorio-primary font-bold tracking-wider text-sm uppercase">Proyecto Estratégico 2026</span>
-                                </div>
-                                <h1 className="font-display font-black text-9xl text-sanatorio-primary leading-tight tracking-tight drop-shadow-sm">
-                                    CALIDAD
-                                </h1>
-                                <h2 className="font-display font-medium text-5xl text-slate-500 max-w-2xl border-l-4 border-sanatorio-secondary pl-8 py-2">
-                                    Gestión Inteligente & <br />
-                                    <span className="text-sanatorio-secondary font-bold">Seguridad del Paciente</span>
-                                </h2>
-                            </div>
+                {/* SLIDE 1: EL PROBLEMA INVISIBLE */}
+                <div className="slide-page p-24 relative justify-center">
+                    <div className="absolute inset-0 grid-bg"></div>
+
+                    {/* Background Chaos Elements */}
+                    <div className="absolute top-20 right-20 opacity-10 rotate-12"><FileText size={400} /></div>
+                    <div className="absolute bottom-20 left-20 opacity-5 -rotate-12"><MessageCircle size={300} /></div>
+
+                    <div className="absolute top-12 left-12 flex items-center gap-4 opacity-50">
+                        <img src="/logosanatorio.png" className="h-10" alt="Logo" />
+                        <span className="text-slate-400 font-bold tracking-widest uppercase text-sm">Desafío Institucional</span>
+                    </div>
+
+                    <div className="relative z-10 grid grid-cols-2 gap-24 items-center h-full">
+                        <div className="space-y-10">
+                            <h1 className="font-display font-black text-8xl text-slate-800 leading-none">
+                                El Problema <br />
+                                <span className="text-slate-300">Invisible</span>
+                            </h1>
+                            <div className="h-2 w-32 bg-red-500 rounded-full"></div>
+                            <p className="font-sans text-3xl text-slate-500 leading-relaxed font-light">
+                                La vieja era se define por el silencio. Quejas de pasillo, emails perdidos y la sensación de hablarle a la pared generan un costo oculto incalculable.
+                            </p>
                         </div>
-                        <div className="col-span-5 relative h-full flex items-center justify-center">
-                            <div className="relative z-20 h-full flex items-end justify-center pb-12">
 
+                        <div className="grid grid-cols-1 gap-6">
+                            <div className="glass-panel p-8 rounded-2xl border-l-8 border-red-500 flex items-start gap-6 transform rotate-1">
+                                <div className="p-4 bg-red-50 text-red-500 rounded-xl">
+                                    <Search size={32} />
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-bold text-slate-700">Sin Trazabilidad</h3>
+                                    <p className="text-xl text-slate-500 mt-2">¿En qué quedó mi reclamo? Nadie sabe.</p>
+                                </div>
+                            </div>
+                            <div className="glass-panel p-8 rounded-2xl border-l-8 border-orange-500 flex items-start gap-6 transform -rotate-1 relative left-8">
+                                <div className="p-4 bg-orange-50 text-orange-500 rounded-xl">
+                                    <Lock size={32} />
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-bold text-slate-700">Miedo a Represalias</h3>
+                                    <p className="text-xl text-slate-500 mt-2">La falta de anonimato silencia la verdad.</p>
+                                </div>
+                            </div>
+                            <div className="glass-panel p-8 rounded-2xl border-l-8 border-slate-500 flex items-start gap-6 transform rotate-2">
+                                <div className="p-4 bg-slate-100 text-slate-500 rounded-xl">
+                                    <AlertTriangle size={32} />
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-bold text-slate-700">Riesgo Institucional</h3>
+                                    <p className="text-xl text-slate-500 mt-2">Lo que no se reporta, se repite.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <span className="slide-number">01</span>
                 </div>
 
-                {/* SLIDE 2: VISION */}
-                <div className="slide-page relative flex flex-col p-24 justify-center">
-                    <div className="absolute inset-0 z-0 grid-bg"></div>
+                {/* SLIDE 2: PRESENTANDO DORA */}
+                <div className="slide-page relative overflow-hidden flex items-center justify-center">
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-white"></div>
+                    <div className="absolute inset-0 grid-bg opacity-20"></div>
 
-                    <div className="absolute top-24 left-24 right-24 flex justify-between items-start">
-                        <h3 className="font-display text-sanatorio-primary text-xl font-bold tracking-widest uppercase">Nuestra Visión</h3>
-                        <img src="/logosanatorio.png" className="h-10 opacity-50" />
-                    </div>
-
-                    <div className="flex flex-col justify-center max-w-5xl mx-auto text-center space-y-16">
-                        <h2 className="font-display text-7xl font-bold text-slate-800 leading-tight">
-                            "Lo que no se mide,<br />
-                            <span className="text-gradient">no se puede mejorar."</span>
-                        </h2>
-                        <div className="glass-panel p-12 rounded-3xl border-l-8 border-sanatorio-secondary">
-                            <p className="font-sans text-3xl font-light text-slate-600 leading-relaxed">
-                                Transformar la gestión de calidad en un ecosistema vivo, donde cada dato se convierte en una oportunidad para elevar el estándar de seguridad y excelencia médica.
-                            </p>
+                    <div className="relative z-10 flex flex-col items-center text-center space-y-12">
+                        <div className="relative z-10 w-[400px] h-[400px] rounded-full bg-gradient-to-b from-white/80 to-white/40 shadow-2xl border-4 border-white backdrop-blur-sm flex items-end justify-center overflow-hidden mb-8 floating-element">
+                            <img src="/dora (2).png" className="h-[95%] w-auto object-contain drop-shadow-xl" alt="Dora" />
                         </div>
-                    </div>
-                    <div className="absolute bottom-0 right-0 z-20 h-[500px] w-auto flex items-end justify-end pointer-events-none">
 
+                        <div>
+                            <span className="inline-block py-2 px-6 rounded-full bg-sanatorio-primary/10 text-sanatorio-primary font-bold tracking-widest mb-6">SISTEMA OPERATIVO DE CALIDAD</span>
+                            <h2 className="font-display font-black text-8xl text-sanatorio-primary mb-4">DORA</h2>
+                            <p className="text-3xl text-slate-400 font-light">Inteligencia Colectiva & Mejora Continua</p>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-12 w-full max-w-6xl mt-12">
+                            <div className="glass-card p-8 rounded-2xl text-center">
+                                <div className="mx-auto w-16 h-16 bg-blue-50 text-sanatorio-primary rounded-full flex items-center justify-center mb-4"><Zap /></div>
+                                <h3 className="text-xl font-bold text-slate-700">Rapidez</h3>
+                                <p className="text-slate-500 mt-2">Gestión en tiempo real</p>
+                            </div>
+                            <div className="glass-card p-8 rounded-2xl text-center">
+                                <div className="mx-auto w-16 h-16 bg-teal-50 text-sanatorio-secondary rounded-full flex items-center justify-center mb-4"><Eye /></div>
+                                <h3 className="text-xl font-bold text-slate-700">Transparencia</h3>
+                                <p className="text-slate-500 mt-2">Visibilidad total</p>
+                            </div>
+                            <div className="glass-card p-8 rounded-2xl text-center">
+                                <div className="mx-auto w-16 h-16 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mb-4"><Brain /></div>
+                                <h3 className="text-xl font-bold text-slate-700">Modernidad</h3>
+                                <p className="text-slate-500 mt-2">Ecosistema vivo</p>
+                            </div>
+                        </div>
                     </div>
                     <span className="slide-number">02</span>
                 </div>
 
-                {/* SLIDE 3: EL PROBLEMA */}
-                <div className="slide-page relative flex flex-col p-24">
-                    <div className="absolute inset-0 z-0 grid-bg"></div>
-                    <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-slate-100 to-transparent"></div>
+                {/* SLIDE 3: SEGURIDAD PSICOLOGICA */}
+                <div className="slide-page p-24 flex items-center bg-[#F0F9FA]">
+                    <div className="absolute right-0 top-0 w-1/2 h-full bg-sanatorio-primary/5 clip-path-slant"></div>
 
-                    <div className="relative z-10 h-full flex flex-col justify-center">
-                        <div className="absolute top-0 left-0 w-full flex justify-between items-start mb-16">
-                            <h3 className="font-display text-sanatorio-primary text-xl font-bold tracking-widest uppercase">El Desafío Actual</h3>
-                            <img src="/logosanatorio.png" className="h-10 opacity-50" />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-20 items-center h-full mt-10">
-                            <div className="space-y-12">
-                                <h2 className="font-display text-6xl font-bold text-slate-800">Silos de <br /><span className="text-sanatorio-primary">Información</span></h2>
-                                <p className="font-sans text-2xl text-slate-500 leading-relaxed">
-                                    Los procesos manuales y desconectados generan puntos ciegos en la atención. La falta de trazabilidad inmediata impide una respuesta ágil ante incidentes críticos.
-                                </p>
-                            </div>
-                            <div className="grid grid-cols-1 gap-8">
-                                <div className="glass-card p-8 rounded-2xl flex items-center space-x-6">
-                                    <div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center text-red-500">
-                                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                    </div>
-                                    <div>
-                                        <h4 className="font-display text-2xl font-bold text-slate-700">Fragmentación</h4>
-                                        <p className="text-slate-500">Datos dispersos en múltiples canales.</p>
-                                    </div>
-                                </div>
-                                <div className="glass-card p-8 rounded-2xl flex items-center space-x-6">
-                                    <div className="h-16 w-16 bg-orange-50 rounded-full flex items-center justify-center text-orange-500">
-                                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                    </div>
-                                    <div>
-                                        <h4 className="font-display text-2xl font-bold text-slate-700">Lentitud</h4>
-                                        <p className="text-slate-500">Tiempos de respuesta inconsistentes.</p>
-                                    </div>
-                                </div>
-                                <div className="glass-card p-8 rounded-2xl flex items-center space-x-6">
-                                    <div className="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-500">
-                                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                    </div>
-                                    <div>
-                                        <h4 className="font-display text-2xl font-bold text-slate-700">Burocracia</h4>
-                                        <p className="text-slate-500">Gestión documental excesiva.</p>
-                                    </div>
-                                </div>
+                    <div className="grid grid-cols-2 gap-24 w-full h-full items-center z-10">
+                        <div className="relative flex justify-center">
+                            <div className="absolute inset-0 bg-sanatorio-secondary/20 blur-[100px] rounded-full"></div>
+                            <Shield size={500} className="text-sanatorio-primary drop-shadow-2xl relative z-10" strokeWidth={1} />
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                                <Lock size={150} className="text-white drop-shadow-lg" />
                             </div>
                         </div>
-                    </div>
-                    <div className="absolute bottom-0 right-0 z-20 h-[450px] w-auto flex items-end justify-end pointer-events-none">
 
+                        <div className="space-y-10">
+                            <div className="flex items-center gap-4">
+                                <div className="h-[2px] w-12 bg-sanatorio-secondary"></div>
+                                <span className="text-sanatorio-secondary font-bold tracking-widest uppercase">Cultura Justa</span>
+                            </div>
+                            <h2 className="font-display font-bold text-7xl text-slate-800 leading-tight">
+                                Seguridad <br />
+                                <span className="text-sanatorio-primary">Psicológica</span>
+                            </h2>
+                            <p className="font-sans text-2xl text-slate-600 leading-relaxed">
+                                Eliminamos el miedo para multiplicar la verdad. Nuestro sistema de anonimato cifrado protege al reportante, fomentando la detección temprana de riesgos.
+                            </p>
+
+                            <div className="bg-white p-8 rounded-2xl shadow-lg border-l-4 border-sanatorio-secondary mt-8">
+                                <div className="flex items-center gap-4 mb-2">
+                                    <TrendingUp className="text-green-500" />
+                                    <span className="font-bold text-slate-700 text-lg">Impacto Proyectado</span>
+                                </div>
+                                <p className="text-4xl font-bold text-slate-800">2x a 5x <span className="text-lg font-normal text-slate-500">más reportes en 90 días</span></p>
+                            </div>
+                        </div>
                     </div>
                     <span className="slide-number">03</span>
                 </div>
 
-                {/* SLIDE 4: LA SOLUCION */}
-                <div className="slide-page relative flex flex-col p-24">
-                    <div className="absolute inset-0 z-0 bg-gradient-to-br from-[#F8FAFC] to-[#EFF6FF]"></div>
-                    <div className="absolute inset-0 z-0 grid-bg"></div>
+                {/* SLIDE 4: TRAZABILIDAD ABSOLUTA */}
+                <div className="slide-page p-24 flex flex-col justify-center">
+                    <div className="text-center mb-20">
+                        <h2 className="font-display font-black text-6xl text-slate-800">Trazabilidad Absoluta</h2>
+                        <p className="text-2xl text-slate-500 mt-4 font-light">Nada se pierde. Todo se transforma en aprendizaje.</p>
+                    </div>
 
-                    <div className="relative z-10 h-full flex flex-col items-center justify-center">
-                        <div className="text-center mb-16">
-                            <h2 className="font-display text-6xl font-bold text-slate-800 mb-6">El Ecosistema Calidad</h2>
-                            <p className="font-sans text-2xl text-slate-500 max-w-3xl mx-auto">Una plataforma unificada que conecta personas, procesos y datos.</p>
-                        </div>
+                    <div className="relative w-full max-w-6xl mx-auto">
+                        {/* Timeline Line */}
+                        <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-200 -translate-y-1/2"></div>
 
-                        <div className="relative w-[800px] h-[600px] scale-125 origin-center mt-10">
-                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-sanatorio-primary rounded-full flex items-center justify-center shadow-glass z-20">
-                                <div className="text-center text-white">
-                                    <span className="block font-display text-3xl font-bold">CORE</span>
-                                    <span className="block text-sm opacity-80">Centralizado</span>
+                        <div className="grid grid-cols-5 gap-4 relative z-10">
+                            {/* Step 1 */}
+                            <div className="text-center group">
+                                <div className="w-24 h-24 bg-white border-4 border-sanatorio-primary rounded-full flex items-center justify-center mx-auto shadow-lg group-hover:scale-110 transition-transform">
+                                    <FileText size={32} className="text-sanatorio-primary" />
+                                </div>
+                                <div className="mt-6 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                                    <span className="block font-mono text-xs text-slate-400 mb-1">#SA-2026-001</span>
+                                    <h4 className="font-bold text-slate-700">Reporte</h4>
                                 </div>
                             </div>
-                            <div className="absolute top-0 left-1/2 transform -translate-x-1/2 glass-card px-8 py-4 rounded-full shadow-lg">
-                                <span className="font-bold text-sanatorio-primary text-xl">Gestión de Incidentes</span>
-                            </div>
-                            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 glass-card px-8 py-4 rounded-full shadow-lg">
-                                <span className="font-bold text-sanatorio-primary text-xl">Auditoría Clínica</span>
-                            </div>
-                            <div className="absolute top-1/2 left-0 transform -translate-y-1/2 glass-card px-8 py-4 rounded-full shadow-lg">
-                                <span className="font-bold text-sanatorio-primary text-xl">Analytics</span>
-                            </div>
-                            <div className="absolute top-1/2 right-0 transform -translate-y-1/2 glass-card px-8 py-4 rounded-full shadow-lg">
-                                <span className="font-bold text-sanatorio-primary text-xl">Seguridad</span>
+
+                            {/* Step 2 */}
+                            <div className="text-center group">
+                                <div className="w-24 h-24 bg-white border-4 border-sanatorio-secondary rounded-full flex items-center justify-center mx-auto shadow-lg group-hover:scale-110 transition-transform">
+                                    <Search size={32} className="text-sanatorio-secondary" />
+                                </div>
+                                <div className="mt-6 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                                    <span className="block font-mono text-xs text-slate-400 mb-1">Análisis</span>
+                                    <h4 className="font-bold text-slate-700">Evaluación</h4>
+                                </div>
                             </div>
 
-                            <svg className="absolute inset-0 w-full h-full z-10 pointer-events-none" style={{ overflow: 'visible' }}>
-                                <circle cx="400" cy="300" r="200" fill="none" stroke="#00548B" strokeWidth="2" strokeDasharray="10 10" className="opacity-20"></circle>
-                            </svg>
+                            {/* Step 3 */}
+                            <div className="text-center group">
+                                <div className="w-24 h-24 bg-white border-4 border-orange-400 rounded-full flex items-center justify-center mx-auto shadow-lg group-hover:scale-110 transition-transform">
+                                    <Zap size={32} className="text-orange-400" />
+                                </div>
+                                <div className="mt-6 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                                    <span className="block font-mono text-xs text-slate-400 mb-1">Acción</span>
+                                    <h4 className="font-bold text-slate-700">Mejora</h4>
+                                </div>
+                            </div>
+
+                            {/* Step 4 */}
+                            <div className="text-center group">
+                                <div className="w-24 h-24 bg-white border-4 border-indigo-400 rounded-full flex items-center justify-center mx-auto shadow-lg group-hover:scale-110 transition-transform">
+                                    <CheckCircle size={32} className="text-indigo-400" />
+                                </div>
+                                <div className="mt-6 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                                    <span className="block font-mono text-xs text-slate-400 mb-1">Verificación</span>
+                                    <h4 className="font-bold text-slate-700">Audit</h4>
+                                </div>
+                            </div>
+
+                            {/* Step 5 */}
+                            <div className="text-center group">
+                                <div className="w-24 h-24 bg-sanatorio-primary rounded-full flex items-center justify-center mx-auto shadow-lg group-hover:scale-110 transition-transform">
+                                    <Lock size={32} className="text-white" />
+                                </div>
+                                <div className="mt-6 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                                    <span className="block font-mono text-xs text-slate-400 mb-1">Cierre</span>
+                                    <h4 className="font-bold text-slate-700">Forensic</h4>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div className="absolute top-12 right-12 z-30">
-                        <img src="/logosanatorio.png" className="h-12 opacity-60" />
-                    </div>
-                    <div className="absolute bottom-0 right-0 z-0 h-[400px] w-auto flex items-end justify-end pointer-events-none opacity-40">
 
+                        <div className="mt-20 p-6 bg-red-50 rounded-2xl border border-red-100 flex items-center justify-center gap-4 max-w-2xl mx-auto">
+                            <AlertTriangle className="text-red-500" />
+                            <p className="text-red-700 font-medium">Novedad: "Historial de Rechazos" para auditar la calidad de las respuestas.</p>
+                        </div>
                     </div>
                     <span className="slide-number">04</span>
                 </div>
 
-                {/* SLIDE 5: DASHBOARD */}
-                <div className="slide-page relative flex flex-col p-24">
-                    <div className="absolute inset-0 z-0 grid-bg"></div>
+                {/* SLIDE 5: GESTION AGIL WHATSAPP */}
+                <div className="slide-page p-24 flex items-center justify-center bg-slate-900">
+                    <div className="absolute inset-0 bg-[#0c1214]"></div>
+                    <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-green-500/10 rounded-full blur-[120px]"></div>
 
-                    <div className="flex justify-between items-start mb-12">
-                        <div>
-                            <h3 className="font-display text-sanatorio-primary text-xl font-bold tracking-widest uppercase mb-2">Interface</h3>
-                            <h2 className="font-display text-5xl font-bold text-slate-800">Dashboard Inteligente</h2>
-                        </div>
-                        <img src="/logosanatorio.png" className="h-10 opacity-50" />
-                    </div>
-
-                    <div className="flex-1 glass-panel rounded-3xl p-8 shadow-2xl overflow-hidden relative border border-slate-200">
-                        <div className="flex gap-8 h-full">
-                            <div className="w-64 bg-slate-50 rounded-2xl p-6 flex flex-col gap-4">
-                                <div className="h-12 w-12 bg-sanatorio-primary rounded-xl mb-4"></div>
-                                <div className="h-4 bg-slate-200 rounded w-3/4"></div>
-                                <div className="h-4 bg-slate-200 rounded w-1/2"></div>
-                                <div className="h-4 bg-slate-200 rounded w-4/5 mt-8"></div>
-                                <div className="h-4 bg-slate-200 rounded w-4/5"></div>
+                    <div className="grid grid-cols-2 gap-24 w-full h-full items-center relative z-10">
+                        <div className="space-y-10 text-white">
+                            <div className="inline-flex items-center gap-3 bg-green-500/20 px-4 py-2 rounded-full text-green-400 border border-green-500/30">
+                                <Smartphone size={20} />
+                                <span className="font-bold tracking-wider text-sm uppercase">Quick Response</span>
                             </div>
-                            <div className="flex-1 flex flex-col gap-6">
-                                <div className="flex gap-6">
-                                    <div className="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-32">
-                                        <span className="text-sm font-bold text-slate-400 uppercase">Casos Abiertos</span>
-                                        <div className="text-4xl font-bold text-sanatorio-primary mt-2">24</div>
-                                    </div>
-                                    <div className="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-32">
-                                        <span className="text-sm font-bold text-slate-400 uppercase">Resueltos</span>
-                                        <div className="text-4xl font-bold text-sanatorio-secondary mt-2">156</div>
-                                    </div>
-                                    <div className="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-32">
-                                        <span className="text-sm font-bold text-slate-400 uppercase">Tiempo Promedio</span>
-                                        <div className="text-4xl font-bold text-slate-700 mt-2">48h</div>
-                                    </div>
+                            <h2 className="font-display font-black text-7xl leading-tight">
+                                Gestión Ágil<br />
+                                <span className="text-green-500">WhatsApp Integration</span>
+                            </h2>
+                            <p className="font-sans text-2xl text-slate-400 leading-relaxed font-light">
+                                Resolvemos la falta de tiempo de los jefes. Notificaciones automáticas con autenticación segura y "One-Click Action".
+                            </p>
+                            <div className="flex gap-8">
+                                <div>
+                                    <h4 className="text-4xl font-bold text-white">-70%</h4>
+                                    <p className="text-slate-500">TPO Resolución</p>
                                 </div>
-                                <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-                                    <div className="flex justify-between items-center mb-6">
-                                        <div className="h-6 bg-slate-200 rounded w-1/4"></div>
-                                        <div className="h-8 bg-sanatorio-primary rounded px-4"></div>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <div className="h-12 bg-slate-50 rounded-lg w-full"></div>
-                                        <div className="h-12 bg-white border border-slate-100 rounded-lg w-full"></div>
-                                        <div className="h-12 bg-white border border-slate-100 rounded-lg w-full"></div>
-                                        <div className="h-12 bg-white border border-slate-100 rounded-lg w-full"></div>
-                                    </div>
+                                <div>
+                                    <h4 className="text-4xl font-bold text-white">100%</h4>
+                                    <p className="text-slate-500">Mobile Friendly</p>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div className="absolute bottom-0 right-0 z-20 h-[400px] w-auto flex items-end justify-end pointer-events-none">
 
+                        <div className="relative mx-auto">
+                            {/* Phone Mockup */}
+                            <div className="w-[380px] h-[750px] bg-slate-800 rounded-[50px] border-[14px] border-slate-900 shadow-2xl relative overflow-hidden flex flex-col">
+                                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-slate-900 rounded-b-3xl"></div>
+                                <div className="bg-[#111b21] flex-1 p-4 pt-12 font-sans relative">
+                                    {/* Chat Header */}
+                                    <div className="flex items-center gap-3 pb-4 border-b border-slate-700 mb-4">
+                                        <div className="w-10 h-10 bg-sanatorio-primary rounded-full flex items-center justify-center text-white font-bold">D</div>
+                                        <div>
+                                            <p className="text-white font-bold text-sm">DORA Calidad</p>
+                                            <p className="text-slate-400 text-xs">Business Account</p>
+                                        </div>
+                                    </div>
+                                    {/* Messages */}
+                                    <div className="bg-[#202c33] p-3 rounded-lg rounded-tl-none max-w-[85%] mb-4">
+                                        <p className="text-white text-sm">Hola Dra. Martinez 👋, se ha asignado un nuevo incidente de <strong>Seguridad del Paciente (Caídas)</strong>.</p>
+                                        <span className="text-[10px] text-slate-400 block text-right mt-1">10:30 AM</span>
+                                    </div>
+                                    <div className="bg-[#202c33] p-3 rounded-lg rounded-tl-none max-w-[85%] mb-4">
+                                        <p className="text-white text-sm mb-2">Por favor, analice el caso #SA-2026-089 y proponga una acción correctiva antes de 48hs.</p>
+                                        <div className="bg-[#2a3942] p-2 rounded flex items-center gap-2 mt-2">
+                                            <div className="w-1 bg-green-500 h-8"></div>
+                                            <p className="text-green-400 text-xs font-bold">Ver Caso en App</p>
+                                        </div>
+                                    </div>
+                                    {/* Floating Button inside mock */}
+                                    <div className="absolute bottom-6 right-6 w-12 h-12 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+                                        <MessageCircle className="text-white" size={24} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <span className="slide-number">05</span>
                 </div>
 
-                {/* SLIDE 6: DORA */}
-                <div className="slide-page relative flex items-center bg-[#F0F9FA]">
-                    <div className="absolute inset-0 z-0 grid-bg opacity-10"></div>
-                    <div className="absolute top-12 right-12 z-30">
-                        <img src="/logosanatorio.png" className="h-12 opacity-60" />
+                {/* SLIDE 6: GESTION PROACTIVA */}
+                <div className="slide-page p-24 bg-slate-50 flex flex-col justify-center">
+                    <div className="flex justify-between items-end mb-16">
+                        <div className="space-y-4">
+                            <span className="text-sanatorio-primary font-bold tracking-widest uppercase">Semáforos & Alertas</span>
+                            <h2 className="font-display font-black text-6xl text-slate-800">Gestión Proactiva</h2>
+                        </div>
+                        <div className="flex gap-4">
+                            <div className="px-6 py-3 bg-red-100 text-red-700 rounded-lg font-bold flex items-center gap-2"><AlertTriangle size={18} /> Crítico</div>
+                            <div className="px-6 py-3 bg-orange-100 text-orange-700 rounded-lg font-bold flex items-center gap-2"><Clock size={18} /> Vence Pronto</div>
+                            <div className="px-6 py-3 bg-green-100 text-green-700 rounded-lg font-bold flex items-center gap-2"><CheckCircle size={18} /> En Plazo</div>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-2 w-full h-full">
-                        <div className="flex items-center justify-center relative">
-                            <div className="w-[700px] h-[700px] bg-sanatorio-secondary/10 rounded-full absolute blur-3xl"></div>
+                    <div className="w-full h-[600px] glass-panel rounded-3xl border border-slate-200 shadow-2xl p-8 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-2 bg-sanatorio-primary"></div>
 
-                            <div className="relative z-10 w-[600px] h-[600px] rounded-full bg-gradient-to-b from-white/80 to-white/40 shadow-2xl border-4 border-white backdrop-blur-sm flex items-end justify-center overflow-hidden">
-                                <img src="/dora (2).png" className="h-[95%] w-auto object-contain drop-shadow-xl" alt="Dora" />
+                        <div className="grid grid-cols-4 gap-6 mb-8">
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                                <p className="text-xs font-bold text-slate-400 uppercase">Tiempo Promedio</p>
+                                <p className="text-3xl font-black text-slate-800 mt-2">1.2 días</p>
+                                <div className="flex items-center gap-1 text-green-500 text-xs mt-2"><TrendingUp size={12} /> -15% vs mes ant.</div>
+                            </div>
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                                <p className="text-xs font-bold text-slate-400 uppercase">Eficacia Terapéutica</p>
+                                <p className="text-3xl font-black text-slate-800 mt-2">94%</p>
+                            </div>
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 col-span-2 flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs font-bold text-slate-400 uppercase">Alertas de Vencimiento (48h)</p>
+                                    <p className="text-3xl font-black text-orange-500 mt-2">3 Casos</p>
+                                </div>
+                                <div className="flex -space-x-2">
+                                    <div className="w-10 h-10 rounded-full bg-slate-200 border-2 border-white"></div>
+                                    <div className="w-10 h-10 rounded-full bg-slate-300 border-2 border-white"></div>
+                                    <div className="w-10 h-10 rounded-full bg-slate-400 border-2 border-white flex items-center justify-center text-xs font-bold text-white">+1</div>
+                                </div>
                             </div>
                         </div>
-                        <div className="flex flex-col justify-center p-24 space-y-10">
-                            <div>
-                                <span className="bg-white/80 backdrop-blur px-4 py-2 rounded-full text-sanatorio-secondary font-bold text-sm uppercase tracking-wider shadow-sm border border-sanatorio-secondary/20">Asistente IA</span>
+
+                        <div className="space-y-4">
+                            <div className="bg-white p-4 rounded-xl border-l-4 border-red-500 shadow-sm flex items-center justify-between">
+                                <div className="flex gap-4 items-center">
+                                    <AlertTriangle className="text-red-500" size={20} />
+                                    <div>
+                                        <p className="font-bold text-slate-800">Desvío en Protocolo Quirúrgico</p>
+                                        <p className="text-sm text-slate-500">Quirófano 3 • Dr. R. Gomez</p>
+                                    </div>
+                                </div>
+                                <span className="px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full">VENCIDO (+2h)</span>
                             </div>
-                            <h2 className="font-display text-8xl font-black text-sanatorio-primary">DORA</h2>
-                            <h3 className="font-display text-4xl text-slate-600">Tu copiloto experto en calidad.</h3>
-                            <p className="font-sans text-xl text-slate-500 leading-relaxed max-w-xl">
-                                Dora no solo responde preguntas; analiza patrones, sugiere clasificaciones de incidentes y guía a los usuarios a través de protocolos complejos con lenguaje natural.
-                            </p>
-                            <div className="flex gap-4">
-                                <div className="px-6 py-3 bg-white rounded-xl shadow-sm border border-slate-200 text-slate-600 font-medium">✨ Análisis Predictivo</div>
-                                <div className="px-6 py-3 bg-white rounded-xl shadow-sm border border-slate-200 text-slate-600 font-medium">💬 Chat Interactivo</div>
+
+                            <div className="bg-white p-4 rounded-xl border-l-4 border-orange-500 shadow-sm flex items-center justify-between">
+                                <div className="flex gap-4 items-center">
+                                    <Clock className="text-orange-500" size={20} />
+                                    <div>
+                                        <p className="font-bold text-slate-800">Falta de Insumo Crítico</p>
+                                        <p className="text-sm text-slate-500">Farmacia • Lic. A. Perez</p>
+                                    </div>
+                                </div>
+                                <span className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-full">VENCE HOY</span>
+                            </div>
+
+                            <div className="bg-white p-4 rounded-xl border-l-4 border-green-500 shadow-sm flex items-center justify-between opacity-60">
+                                <div className="flex gap-4 items-center">
+                                    <CheckCircle className="text-green-500" size={20} />
+                                    <div>
+                                        <p className="font-bold text-slate-800">Error de Identificación (Near Miss)</p>
+                                        <p className="text-sm text-slate-500">Admisión • J. Lopez</p>
+                                    </div>
+                                </div>
+                                <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">RESUELTO</span>
                             </div>
                         </div>
                     </div>
                     <span className="slide-number">06</span>
                 </div>
 
-                {/* SLIDE 7: INCIDENT WORKFLOW */}
-                <div className="slide-page relative flex flex-col p-24 justify-center">
-                    <div className="absolute inset-0 z-0 grid-bg"></div>
+                {/* SLIDE 7: BIENVENIDOS ALA ERA DORA */}
+                <div className="slide-page relative flex items-center justify-center overflow-hidden">
+                    <div className="absolute inset-0 bg-sanatorio-primary"></div>
+                    <div className="absolute inset-0 z-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#ffffff 2px, transparent 2px)', backgroundSize: '40px 40px' }}></div>
 
-                    <div className="absolute top-12 right-12 z-30">
-                        <img src="/logosanatorio.png" className="h-12 opacity-60" />
-                    </div>
-
-                    <div className="absolute top-24 left-24 right-24 flex justify-between items-start">
-                        <h3 className="font-display text-sanatorio-primary text-xl font-bold tracking-widest uppercase">Flujo de Trabajo</h3>
-                        <h2 className="font-display text-5xl font-bold text-slate-800">Gestión de Incidentes</h2>
-                    </div>
-
-                    <div className="flex items-center justify-between w-full mt-24 px-12">
-                        <div className="relative flex flex-col items-center group">
-                            <div className="w-40 h-40 bg-white rounded-full shadow-lg border-4 border-sanatorio-primary flex items-center justify-center z-10 group-hover:scale-110 transition-transform">
-                                <span className="font-display text-6xl font-bold text-sanatorio-primary">1</span>
-                            </div>
-                            <h4 className="mt-8 font-display text-3xl font-bold text-slate-700">Reporte</h4>
-                            <p className="text-center text-slate-500 mt-2 max-w-xs text-xl">Notificación inmediata del evento adverso.</p>
-                        </div>
-
-                        <div className="h-2 bg-slate-200 flex-1 mx-4 rounded-full relative overflow-hidden">
-                            <div className="absolute inset-0 bg-sanatorio-primary/20 w-full animate-pulse"></div>
-                        </div>
-
-                        <div className="relative flex flex-col items-center group">
-                            <div className="w-40 h-40 bg-white rounded-full shadow-lg border-4 border-sanatorio-secondary flex items-center justify-center z-10 group-hover:scale-110 transition-transform">
-                                <span className="font-display text-6xl font-bold text-sanatorio-secondary">2</span>
-                            </div>
-                            <h4 className="mt-8 font-display text-3xl font-bold text-slate-700">Análisis</h4>
-                            <p className="text-center text-slate-500 mt-2 max-w-xs text-xl">Clasificación y evaluación del riesgo.</p>
-                        </div>
-
-                        <div className="h-2 bg-slate-200 flex-1 mx-4 rounded-full"></div>
-
-                        <div className="relative flex flex-col items-center group">
-                            <div className="w-40 h-40 bg-white rounded-full shadow-lg border-4 border-slate-300 flex items-center justify-center z-10 group-hover:scale-110 transition-transform">
-                                <span className="font-display text-6xl font-bold text-slate-300">3</span>
-                            </div>
-                            <h4 className="mt-8 font-display text-3xl font-bold text-slate-700">Resolución</h4>
-                            <p className="text-center text-slate-500 mt-2 max-w-xs text-xl">Implementación de mejoras y cierre.</p>
-                        </div>
-                    </div>
-                    <div className="absolute bottom-0 right-0 z-20 h-[400px] w-auto flex items-end justify-end pointer-events-none">
-
-                    </div>
-                    <span className="slide-number">07</span>
-                </div>
-
-                {/* SLIDE 8: RCA & ACTIONS */}
-                <div className="slide-page relative flex flex-col p-24 bg-slate-900 overflow-hidden justify-center">
-                    <div className="absolute top-0 right-0 w-[1000px] h-[1000px] bg-sanatorio-primary/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
-
-                    <div className="absolute top-12 right-12 z-30">
-                        <img src="/logosanatorio.png" className="h-12 opacity-80 brightness-0 invert" />
-                    </div>
-                    <div className="absolute bottom-0 right-0 z-20 h-[450px] w-auto flex items-end justify-end pointer-events-none">
-
-                    </div>
-
-                    <div className="relative z-10 grid grid-cols-2 gap-20 items-center h-full">
-                        <div className="space-y-8">
-                            <h2 className="font-display text-6xl font-bold text-white leading-tight">Causa Raíz &<br /><span className="text-sanatorio-secondary">Acción Correctiva</span></h2>
-                            <p className="font-sans text-2xl text-slate-300 leading-relaxed font-light">
-                                El sistema fuerza un análisis profundo. No basta con registrar el problema; exigimos entender el "por qué" y documentar el plan de acción concreto para evitar la recurrencia.
+                    <div className="relative z-10 grid grid-cols-2 gap-20 w-full max-w-7xl px-12 items-center">
+                        <div className="space-y-8 text-white">
+                            <h2 className="font-display font-black text-8xl leading-tight">
+                                La Nueva Era <br />
+                                <span className="text-sanatorio-secondary">de Calidad</span>
+                            </h2>
+                            <p className="font-sans text-3xl font-light opacity-90 leading-relaxed">
+                                Un sistema <span className="font-bold">transparente, seguro y eficiente</span>. <br />
+                                Dejamos atrás la opacidad para construir un ecosistema de excelencia.
                             </p>
-                            <ul className="space-y-6 mt-8">
-                                <li className="flex items-center text-xl text-white">
-                                    <span className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center mr-4 text-xs font-bold text-white">✓</span>
-                                    Validación de Planes de Acción
-                                </li>
-                                <li className="flex items-center text-xl text-white">
-                                    <span className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center mr-4 text-xs font-bold text-white">✓</span>
-                                    Seguimiento de Eficacia
-                                </li>
-                                <li className="flex items-center text-xl text-white">
-                                    <span className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center mr-4 text-xs font-bold text-white">✓</span>
-                                    Evidencia Documental Obligatoria
-                                </li>
-                            </ul>
-                        </div>
-                        <div className="glass-panel bg-white/10 border-white/10 p-10 rounded-3xl">
-                            <div className="flex flex-col gap-6">
-                                <div className="text-white font-bold text-xl mb-4">Eficacia de las Medidas</div>
-                                <div className="flex items-end gap-4 h-64 border-b border-white/20 pb-4">
-                                    <div className="flex-1 bg-sanatorio-secondary/30 rounded-t-lg h-[40%] relative group cursor-pointer hover:bg-sanatorio-secondary/50 transition-all">
-                                        <div className="absolute bottom-full mb-2 text-white text-center w-full opacity-0 group-hover:opacity-100">Q1</div>
-                                    </div>
-                                    <div className="flex-1 bg-sanatorio-secondary/50 rounded-t-lg h-[60%] relative group cursor-pointer hover:bg-sanatorio-secondary/70 transition-all"></div>
-                                    <div className="flex-1 bg-sanatorio-secondary/70 rounded-t-lg h-[75%] relative group cursor-pointer hover:bg-sanatorio-secondary/90 transition-all"></div>
-                                    <div className="flex-1 bg-sanatorio-secondary rounded-t-lg h-[90%] relative group cursor-pointer hover:bg-white transition-all">
-                                        <div className="absolute top-4 w-full text-center text-white font-bold text-xs">ACTUAL</div>
+
+                            <div className="pt-8">
+                                <div className="inline-block border-2 border-white/20 bg-white/10 backdrop-blur-md px-10 py-6 rounded-2xl">
+                                    <p className="font-mono uppercase tracking-widest text-sm mb-2 opacity-70">Próximos Pasos</p>
+                                    <div className="flex items-center gap-8 text-xl font-bold">
+                                        <div className="flex items-center gap-3"><CheckCircle className="text-green-400" /> Piloto 30 Días</div>
+                                        <div className="flex items-center gap-3"><LayoutDashboard className="text-blue-300" /> Migración</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <span className="slide-number">08</span>
-                </div>
 
-                {/* SLIDE 9: ANALYTICS */}
-                <div className="slide-page relative flex flex-col p-24 justify-center">
-                    <div className="absolute inset-0 z-0 grid-bg"></div>
-                    <div className="absolute top-12 right-12 z-30">
-                        <img src="/logosanatorio.png" className="h-12 opacity-60" />
-                    </div>
-                    <div className="absolute bottom-0 right-0 z-0 h-[400px] w-auto flex items-end justify-end pointer-events-none opacity-20">
-
-                    </div>
-
-                    <div className="text-center mb-16">
-                        <h2 className="font-display text-5xl font-bold text-slate-800">Cultura de Datos</h2>
-                        <p className="text-xl text-slate-500 mt-4">Transformando registros en inteligencia institucional.</p>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-8">
-                        <div className="glass-card p-10 rounded-3xl text-center hover:-translate-y-2 transition-transform">
-                            <div className="text-6xl font-display font-black text-sanatorio-primary mb-4">40%</div>
-                            <div className="h-2 w-20 bg-slate-200 mx-auto rounded-full mb-4"></div>
-                            <h4 className="text-xl font-bold text-slate-700">Reducción en Tiempos de Respuesta</h4>
-                        </div>
-                        <div className="glass-card p-10 rounded-3xl text-center hover:-translate-y-2 transition-transform">
-                            <div className="text-6xl font-display font-black text-sanatorio-secondary mb-4">100%</div>
-                            <div className="h-2 w-20 bg-slate-200 mx-auto rounded-full mb-4"></div>
-                            <h4 className="text-xl font-bold text-slate-700">Trazabilidad Digital de Casos</h4>
-                        </div>
-                        <div className="glass-card p-10 rounded-3xl text-center hover:-translate-y-2 transition-transform">
-                            <div className="text-6xl font-display font-black text-slate-800 mb-4">24/7</div>
-                            <div className="h-2 w-20 bg-slate-200 mx-auto rounded-full mb-4"></div>
-                            <h4 className="text-xl font-bold text-slate-700">Disponibilidad del Sistema</h4>
-                        </div>
-                    </div>
-                    <span className="slide-number">09</span>
-                </div>
-
-                {/* SLIDE 10: FUTURE */}
-                <div className="slide-page relative flex items-center justify-center overflow-hidden">
-                    <div className="absolute inset-0 bg-sanatorio-primary"></div>
-                    <div className="absolute inset-0 z-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#ffffff 2px, transparent 2px)', backgroundSize: '50px 50px' }}></div>
-
-                    <div className="absolute top-12 right-12 z-30">
-                        <img src="/logosanatorio.png" className="h-12 brightness-0 invert opacity-80" />
-                    </div>
-                    <div className="absolute bottom-0 right-0 z-20 h-[500px] w-auto flex items-end justify-end pointer-events-none">
-
-                    </div>
-
-                    <div className="relative z-10 text-center text-white space-y-8 p-12 max-w-4xl">
-                        <div className="inline-block border border-white/30 bg-white/10 backdrop-blur px-6 py-2 rounded-full font-mono text-sm tracking-widest mb-4">ROADMAP 2026</div>
-                        <h2 className="font-display text-7xl font-bold leading-tight">El estándar de oro en<br />salud digital.</h2>
-                        <p className="font-sans text-2xl text-white/80 font-light">
-                            Sanatorio Argentino lidera el camino hacia un futuro donde la tecnología y el cuidado humano son indisolubles.
-                        </p>
-                        <div className="pt-12">
-                            <h3 className="font-display text-4xl font-bold">Gracias.</h3>
-                            <div className="mt-8 flex justify-center gap-8 text-white/60">
-                                <span>www.sanatorioargentino.com.ar</span>
-                                <span>•</span>
-                                <span>Departamento de Calidad</span>
+                        <div className="flex justify-end">
+                            <div className="relative">
+                                <div className="absolute -inset-4 bg-sanatorio-secondary/30 rounded-full blur-2xl"></div>
+                                <LayoutDashboard size={400} className="text-white/10 relative z-0" />
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+                                    <h3 className="font-display text-6xl font-black text-white">DORA</h3>
+                                    <p className="text-white/60 tracking-widest uppercase mt-2">Bienvenido</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <span className="slide-number">10</span>
+                    <span className="slide-number">07</span>
                 </div>
 
             </div>
