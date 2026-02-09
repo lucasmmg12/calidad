@@ -696,12 +696,30 @@ export const Dashboard = () => {
         const currentNotes = selectedReport.notes || '';
         const updatedNotes = currentNotes ? `${currentNotes}\n\n${logEntry}` : logEntry;
 
+        // 0. Prepare history entry
+        const historyEntry = {
+            rejected_at: new Date().toISOString(),
+            rejected_by: "Calidad (Reapertura)",
+            reject_reason: reason,
+            previous_data: {
+                immediate_action: selectedReport.immediate_action,
+                root_cause: selectedReport.root_cause,
+                corrective_plan: selectedReport.corrective_plan,
+                implementation_date: selectedReport.implementation_date,
+                resolution_evidence_urls: selectedReport.resolution_evidence_urls
+            }
+        };
+
+        const currentHistory = selectedReport.resolution_history || [];
+        const updatedHistory = [...currentHistory, historyEntry];
+
         // 1. Update Database
         const { error } = await supabase
             .from('reports')
             .update({
                 status: 'pending_resolution',
-                notes: updatedNotes
+                notes: updatedNotes,
+                resolution_history: updatedHistory
             })
             .eq('id', selectedReport.id);
 
@@ -715,7 +733,7 @@ export const Dashboard = () => {
                     body: {
                         number: botNumber,
                         message: `🛑 *Solución Insuficiente - Caso Reabierto*\n\nSe ha reabierto el caso *${selectedReport.tracking_id}* tras revisión de Calidad.\n\n⚠️ *Motivo:* ${reason}\n\n👉 *Se requiere una nueva gestión del caso:* ${resolutionLink}`,
-                        mediaUrl: "https://i.imgur.com/jgX2y4n.png"
+                        mediaUrl: "https://i.imgur.com/GfBdckl.jpeg"
                     }
                 });
 
@@ -723,7 +741,12 @@ export const Dashboard = () => {
             }
 
             // 3. Update local state
-            setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'pending_resolution', notes: updatedNotes } : r));
+            setReports(reports.map(r => r.id === selectedReport.id ? {
+                ...r,
+                status: 'pending_resolution',
+                notes: updatedNotes,
+                resolution_history: updatedHistory
+            } : r));
             setSelectedReport(null);
             setShowReopenModal(false);
             setFeedbackModal({ isOpen: true, type: 'success', title: 'Caso Reabierto', message: 'El ticket ha vuelto a estado pendiente para corrección.' });
