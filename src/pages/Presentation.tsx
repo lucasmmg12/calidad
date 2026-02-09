@@ -174,12 +174,7 @@ const Presentation = () => {
                     </svg>
                     Inicio
                 </Link>
-                <button id="download-btn" onClick={downloadPDF} className="group flex items-center gap-3 bg-sanatorio-primary text-white px-6 py-4 rounded-full shadow-lg hover:bg-[#004270] transition-all hover:scale-105 active:scale-95 font-display font-bold text-lg border-2 border-white/20 backdrop-blur-md cursor-pointer">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 group-hover:animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Descargar PDF A4
-                </button>
+
             </div>
 
             <div className="presentation-wrapper" id="presentation-content">
@@ -210,7 +205,7 @@ const Presentation = () => {
                         </div>
                         <div className="col-span-5 relative h-full flex items-center justify-center">
                             <div className="relative z-20 h-full flex items-end justify-center pb-12">
-                                <img src="/dora (2).png" alt="Dora" className="h-[85%] w-auto object-contain drop-shadow-2xl floating-element mix-blend-multiply" style={{ filter: 'contrast(1.05) saturate(1.05)' }} />
+
                             </div>
                         </div>
                     </div>
@@ -238,7 +233,7 @@ const Presentation = () => {
                         </div>
                     </div>
                     <div className="absolute bottom-0 right-0 z-20 h-[500px] w-auto flex items-end justify-end pointer-events-none">
-                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-2xl opacity-90 mix-blend-multiply" alt="Dora" />
+
                     </div>
                     <span className="slide-number">02</span>
                 </div>
@@ -293,7 +288,7 @@ const Presentation = () => {
                         </div>
                     </div>
                     <div className="absolute bottom-0 right-0 z-20 h-[450px] w-auto flex items-end justify-end pointer-events-none">
-                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-2xl opacity-90 mix-blend-multiply" alt="Dora" />
+
                     </div>
                     <span className="slide-number">03</span>
                 </div>
@@ -338,7 +333,7 @@ const Presentation = () => {
                         <img src="/logosanatorio.png" className="h-12 opacity-60" />
                     </div>
                     <div className="absolute bottom-0 right-0 z-0 h-[400px] w-auto flex items-end justify-end pointer-events-none opacity-40">
-                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-xl mix-blend-multiply" alt="Dora" />
+
                     </div>
                     <span className="slide-number">04</span>
                 </div>
@@ -395,7 +390,7 @@ const Presentation = () => {
                         </div>
                     </div>
                     <div className="absolute bottom-0 right-0 z-20 h-[400px] w-auto flex items-end justify-end pointer-events-none">
-                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-2xl mix-blend-multiply" alt="Dora" />
+
                     </div>
                     <span className="slide-number">05</span>
                 </div>
@@ -410,7 +405,7 @@ const Presentation = () => {
                     <div className="grid grid-cols-2 w-full h-full">
                         <div className="flex items-center justify-center relative">
                             <div className="w-[700px] h-[700px] bg-sanatorio-secondary/10 rounded-full absolute blur-3xl"></div>
-                            <img src="/dora (2).png" className="relative z-10 h-[80%] object-contain drop-shadow-2xl mix-blend-multiply" />
+
                         </div>
                         <div className="flex flex-col justify-center p-24 space-y-10">
                             <div>
@@ -475,7 +470,7 @@ const Presentation = () => {
                         </div>
                     </div>
                     <div className="absolute bottom-0 right-0 z-20 h-[400px] w-auto flex items-end justify-end pointer-events-none">
-                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-2xl opacity-90 mix-blend-multiply" alt="Dora" />
+
                     </div>
                     <span className="slide-number">07</span>
                 </div>
@@ -488,7 +483,7 @@ const Presentation = () => {
                         <img src="/logosanatorio.png" className="h-12 opacity-80 brightness-0 invert" />
                     </div>
                     <div className="absolute bottom-0 right-0 z-20 h-[450px] w-auto flex items-end justify-end pointer-events-none">
-                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-2xl opacity-80" style={{ filter: 'brightness(0.9) grayscale(0.2)' }} alt="Dora" />
+
                     </div>
 
                     <div className="relative z-10 grid grid-cols-2 gap-20 items-center h-full">
@@ -538,7 +533,7 @@ const Presentation = () => {
                         <img src="/logosanatorio.png" className="h-12 opacity-60" />
                     </div>
                     <div className="absolute bottom-0 right-0 z-0 h-[400px] w-auto flex items-end justify-end pointer-events-none opacity-20">
-                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-xl mix-blend-multiply" alt="Dora" />
+
                     </div>
 
                     <div className="text-center mb-16">
@@ -575,7 +570,7 @@ const Presentation = () => {
                         <img src="/logosanatorio.png" className="h-12 brightness-0 invert opacity-80" />
                     </div>
                     <div className="absolute bottom-0 right-0 z-20 h-[500px] w-auto flex items-end justify-end pointer-events-none">
-                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-2xl opacity-90 grayscale mix-blend-soft-light" alt="Dora" />
+
                     </div>
 
                     <div className="relative z-10 text-center text-white space-y-8 p-12 max-w-4xl">
