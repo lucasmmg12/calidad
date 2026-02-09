@@ -9,6 +9,7 @@ import {
     X,
     Loader2,
     AlertCircle,
+    AlertTriangle,
     Send,
     Eye,
     BrainCircuit,
@@ -481,12 +482,40 @@ export const Dashboard = () => {
         const currentNotes = selectedReport.notes || '';
         const updatedNotes = currentNotes ? `${currentNotes}\n\n${logEntry}` : logEntry;
 
-        // 1. Update Database
+        // 0. Prepare history entry
+        const historyEntry = {
+            rejected_at: new Date().toISOString(),
+            rejected_by: "Calidad",
+            reject_reason: reason,
+            previous_data: {
+                immediate_action: selectedReport.immediate_action,
+                root_cause: selectedReport.root_cause,
+                corrective_plan: selectedReport.corrective_plan,
+                implementation_date: selectedReport.implementation_date,
+                resolution_evidence_urls: selectedReport.resolution_evidence_urls
+            }
+        };
+
+        const currentHistory = selectedReport.resolution_history || [];
+        const updatedHistory = [...currentHistory, historyEntry];
+
+        // 1. Update Database (Reset resolution fields and append history)
         const { error } = await supabase
             .from('reports')
             .update({
                 status: 'pending_resolution',
-                notes: updatedNotes
+                notes: updatedNotes,
+                resolution_history: updatedHistory,
+                // Optional: Clear fields to force fresh input, or keep them for reference? 
+                // User said "force fresh start", usually implies clearing. 
+                // Let's clear them so the form feels "new" but maybe pre-fill? 
+                // The prompt says "debe quedar grabado todo", implying we move current to history.
+                // ResolucionForm usually loads existing data. If we clear, it loads empty.
+                // ensuring "soluciones insuficientes" logs are visible.
+                immediate_action: null,
+                root_cause: null,
+                corrective_plan: null,
+                implementation_date: null
             })
             .eq('id', selectedReport.id);
 
@@ -500,7 +529,7 @@ export const Dashboard = () => {
                     body: {
                         number: botNumber,
                         message: `🛑 *Solución Insuficiente - Calidad*\n\nLa solución propuesta para el caso *${selectedReport.tracking_id}* ha sido rechazada por considerarse insuficiente.\n\n⚠️ *Motivo:* ${reason}\n\n👉 *Por favor, gestione nuevamente el caso e ingrese un nuevo plan de acción:* ${resolutionLink}`,
-                        mediaUrl: "https://i.imgur.com/jgX2y4n.png"
+                        mediaUrl: "https://i.imgur.com/GfBdckl.jpeg"
                     }
                 });
             }
@@ -1420,6 +1449,54 @@ export const Dashboard = () => {
                                                 </div>
                                             )}
                                         </div>
+
+                                        {/* RENDERIZADO DE HISTORIAL DE RECHAZOS (SOLUCIONES INSUFICIENTES) */}
+                                        {selectedReport.resolution_history && selectedReport.resolution_history.length > 0 && (
+                                            <div className="bg-red-50 rounded-2xl p-6 border border-red-100 mt-6">
+                                                <h3 className="text-sm font-bold text-red-800 flex items-center gap-2 mb-4">
+                                                    <AlertTriangle className="w-4 h-4" />
+                                                    Historial de Soluciones Insuficientes
+                                                </h3>
+                                                <div className="space-y-4">
+                                                    {selectedReport.resolution_history.map((entry: any, index: number) => (
+                                                        <div key={index} className="bg-white rounded-xl p-4 border border-red-100 shadow-sm relative overflow-hidden">
+                                                            <div className="absolute top-0 left-0 w-1 h-full bg-red-200"></div>
+
+                                                            <div className="flex justify-between items-start mb-3">
+                                                                <div>
+                                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                                                        Rechazado el {new Date(entry.rejected_at).toLocaleString()}
+                                                                    </span>
+                                                                    <p className="text-xs font-bold text-red-600 mt-1">
+                                                                        Motivo: "{entry.reject_reason}"
+                                                                    </p>
+                                                                </div>
+                                                                <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-bold rounded-full">
+                                                                    Intento #{index + 1}
+                                                                </span>
+                                                            </div>
+
+                                                            <div className="space-y-3 text-xs text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                                <div>
+                                                                    <span className="font-bold text-gray-700 block mb-0.5">Acción Inmediata Propuesta:</span>
+                                                                    {entry.previous_data.immediate_action || '-'}
+                                                                </div>
+                                                                {entry.previous_data.root_cause && (
+                                                                    <div>
+                                                                        <span className="font-bold text-gray-700 block mb-0.5">Causa Raíz (RCA):</span>
+                                                                        {entry.previous_data.root_cause}
+                                                                    </div>
+                                                                )}
+                                                                <div>
+                                                                    <span className="font-bold text-gray-700 block mb-0.5">Plan de Acción:</span>
+                                                                    {entry.previous_data.corrective_plan || '-'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <div className="flex gap-3 flex-shrink-0 pt-2 border-t border-purple-100">
                                             <button
