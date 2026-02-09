@@ -203,7 +203,7 @@ const Presentation = () => {
                         </div>
                         <div className="col-span-5 relative h-full flex items-center justify-center">
                             <div className="relative z-20 h-full flex items-end justify-center pb-12">
-                                <img src="/dora (2).png" alt="Dora" className="h-[85%] w-auto object-contain drop-shadow-2xl floating-element" style={{ filter: 'contrast(1.05) saturate(1.05)' }} />
+                                <img src="/dora (2).png" alt="Dora" className="h-[85%] w-auto object-contain drop-shadow-2xl floating-element mix-blend-multiply" style={{ filter: 'contrast(1.05) saturate(1.05)' }} />
                             </div>
                         </div>
                     </div>
@@ -231,7 +231,7 @@ const Presentation = () => {
                         </div>
                     </div>
                     <div className="absolute bottom-0 right-0 z-20 h-[500px] w-auto flex items-end justify-end pointer-events-none">
-                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-2xl opacity-90" alt="Dora" />
+                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-2xl opacity-90 mix-blend-multiply" alt="Dora" />
                     </div>
                     <span className="slide-number">02</span>
                 </div>
@@ -286,7 +286,7 @@ const Presentation = () => {
                         </div>
                     </div>
                     <div className="absolute bottom-0 right-0 z-20 h-[450px] w-auto flex items-end justify-end pointer-events-none">
-                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-2xl opacity-90" alt="Dora" />
+                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-2xl opacity-90 mix-blend-multiply" alt="Dora" />
                     </div>
                     <span className="slide-number">03</span>
                 </div>
@@ -331,7 +331,7 @@ const Presentation = () => {
                         <img src="/logosanatorio.png" className="h-12 opacity-60" />
                     </div>
                     <div className="absolute bottom-0 right-0 z-0 h-[400px] w-auto flex items-end justify-end pointer-events-none opacity-40">
-                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-xl" alt="Dora" />
+                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-xl mix-blend-multiply" alt="Dora" />
                     </div>
                     <span className="slide-number">04</span>
                 </div>
@@ -388,7 +388,7 @@ const Presentation = () => {
                         </div>
                     </div>
                     <div className="absolute bottom-0 right-0 z-20 h-[400px] w-auto flex items-end justify-end pointer-events-none">
-                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-2xl" alt="Dora" />
+                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-2xl mix-blend-multiply" alt="Dora" />
                     </div>
                     <span className="slide-number">05</span>
                 </div>
@@ -403,7 +403,7 @@ const Presentation = () => {
                     <div className="grid grid-cols-2 w-full h-full">
                         <div className="flex items-center justify-center relative">
                             <div className="w-[700px] h-[700px] bg-sanatorio-secondary/10 rounded-full absolute blur-3xl"></div>
-                            <img src="/dora (2).png" className="relative z-10 h-[80%] object-contain drop-shadow-2xl" />
+                            <img src="/dora (2).png" className="relative z-10 h-[80%] object-contain drop-shadow-2xl mix-blend-multiply" />
                         </div>
                         <div className="flex flex-col justify-center p-24 space-y-10">
                             <div>
@@ -468,7 +468,7 @@ const Presentation = () => {
                         </div>
                     </div>
                     <div className="absolute bottom-0 right-0 z-20 h-[400px] w-auto flex items-end justify-end pointer-events-none">
-                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-2xl opacity-90" alt="Dora" />
+                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-2xl opacity-90 mix-blend-multiply" alt="Dora" />
                     </div>
                     <span className="slide-number">07</span>
                 </div>
@@ -481,7 +481,7 @@ const Presentation = () => {
                         <img src="/logosanatorio.png" className="h-12 opacity-80 brightness-0 invert" />
                     </div>
                     <div className="absolute bottom-0 right-0 z-20 h-[450px] w-auto flex items-end justify-end pointer-events-none">
-                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-2xl opacity-80" style={{ filter: 'brightness(0.9)' }} alt="Dora" />
+                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-2xl opacity-80" style={{ filter: 'brightness(0.9) grayscale(0.2)' }} alt="Dora" />
                     </div>
 
                     <div className="relative z-10 grid grid-cols-2 gap-20 items-center h-full">
@@ -531,7 +531,7 @@ const Presentation = () => {
                         <img src="/logosanatorio.png" className="h-12 opacity-60" />
                     </div>
                     <div className="absolute bottom-0 right-0 z-0 h-[400px] w-auto flex items-end justify-end pointer-events-none opacity-20">
-                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-xl" alt="Dora" />
+                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-xl mix-blend-multiply" alt="Dora" />
                     </div>
 
                     <div className="text-center mb-16">
@@ -568,7 +568,7 @@ const Presentation = () => {
                         <img src="/logosanatorio.png" className="h-12 brightness-0 invert opacity-80" />
                     </div>
                     <div className="absolute bottom-0 right-0 z-20 h-[500px] w-auto flex items-end justify-end pointer-events-none">
-                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-2xl" alt="Dora" />
+                        <img src="/dora (2).png" className="h-full object-contain drop-shadow-2xl opacity-90 grayscale mix-blend-soft-light" alt="Dora" />
                     </div>
 
                     <div className="relative z-10 text-center text-white space-y-8 p-12 max-w-4xl">
