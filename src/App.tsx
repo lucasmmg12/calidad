@@ -8,6 +8,7 @@ import { HelpGuide } from './components/HelpGuide';
 import { AdminLogin } from './components/AdminLogin';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import LegalContent from './components/LegalContent';
+import { Changelog } from './components/Changelog';
 import { UserManagement } from './pages/UserManagement';
 import { ResolutionPage } from './pages/ResolutionPage';
 import Presentation from './pages/Presentation';
@@ -173,6 +174,7 @@ function App() {
               <Route path="/terminos" element={<LegalContent />} />
               <Route path="/resolver-caso/:ticketId" element={<ResolutionPage />} />
               <Route path="/presentacion" element={<Presentation />} />
+              <Route path="/changelog" element={<Changelog />} />
 
               {/* Admin Routes */}
               <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
@@ -218,6 +220,7 @@ function App() {
               <p>© {new Date().getFullYear()} Sanatorio Argentino • Desarrollado por el Departamento de Innovación y Transformación Digital</p>
               <div className="flex gap-8 items-center">
                 <Link to="/privacidad" className="hover:text-sanatorio-primary transition-colors">Privacidad</Link>
+                <Link to="/changelog" className="hover:text-sanatorio-primary transition-colors">Actualizaciones</Link>
                 <Link to="/terminos" className="hover:text-sanatorio-primary transition-colors">Términos</Link>
                 <div className="w-1 h-1 bg-slate-300 rounded-full hidden sm:block"></div>
                 <a href="mailto:innovacion@sanatorioargentino.com.ar" className="hover:text-sanatorio-primary transition-colors flex items-center gap-2">
