@@ -1,6 +1,4 @@
-import { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
-import { supabase } from '../utils/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Loader2, ShieldAlert } from 'lucide-react';
 
@@ -9,21 +7,10 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
-    const [checking, setChecking] = useState(true);
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const { role, loading: authLoading } = useAuth();
+    const { session, role, loading } = useAuth();
 
-    const checkAuth = async () => {
-        const { data } = await supabase.auth.getSession();
-        setIsAuthenticated(!!data.session);
-        setChecking(false);
-    };
-
-    useEffect(() => {
-        checkAuth();
-    }, []);
-
-    if (checking || authLoading) {
+    // Wait for auth to fully resolve (session + profile)
+    if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <Loader2 className="w-8 h-8 animate-spin text-sanatorio-primary" />
@@ -31,12 +18,23 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
         );
     }
 
-    if (!isAuthenticated) {
-        return <Navigate to="/admin" replace />;
+    // No session = not authenticated
+    if (!session) {
+        return <Navigate to="/login" replace />;
+    }
+
+    // Session exists but role hasn't loaded yet — shouldn't happen after loading=false
+    // but guard just in case
+    if (!role) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <Loader2 className="w-8 h-8 animate-spin text-sanatorio-primary" />
+            </div>
+        );
     }
 
     // Role-based access check
-    if (allowedRoles && role && !allowedRoles.includes(role)) {
+    if (allowedRoles && !allowedRoles.includes(role)) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center animate-in fade-in">
                 <div className="bg-red-50 p-6 rounded-2xl border border-red-200 max-w-md">

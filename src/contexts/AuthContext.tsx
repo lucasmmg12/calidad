@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react';
 import { supabase } from '../utils/supabase';
 import type { Session } from '@supabase/supabase-js';
 
@@ -50,8 +50,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const fetchProfile = async (userId: string) => {
+    // Guard against double-fetch race conditions
+    const fetchingRef = useRef(false);
+    const initializedRef = useRef(false);
+
+    const fetchProfile = async (userId: string, userEmail?: string) => {
+        // Prevent concurrent fetches
+        if (fetchingRef.current) {
+            console.log('[Auth] Skipping fetch — already in progress');
+            return;
+        }
+        fetchingRef.current = true;
+
         try {
+            console.log('[Auth] Fetching profile for:', userId);
             const { data, error } = await supabase
                 .from('user_profiles')
                 .select('*')
@@ -66,7 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     .insert({
                         user_id: userId,
                         role: 'responsable',
-                        display_name: session?.user?.email || 'Usuario',
+                        display_name: userEmail || 'Usuario',
                         assigned_sectors: [],
                         sector_edit_count: 0,
                     })
@@ -75,8 +87,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
                 if (insertError) {
                     console.error('[Auth] Error creating profile:', insertError);
-                    // Even if creation fails, we stop loading to prevent infinite spinner
-                    // But we keep profile null so the app knows something is wrong
                     return;
                 }
 
@@ -86,43 +96,80 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 }
             } else if (error) {
                 console.error('[Auth] Error fetching profile:', error);
-                // If it's a 500 error (recursion), we might want to alert the user or retry?
-                // For now, logging uses console.error which is visible in devtools
+                // Retry once after a small delay (RLS recursion race)
+                await new Promise(resolve => setTimeout(resolve, 500));
+                const { data: retryData, error: retryError } = await supabase
+                    .from('user_profiles')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .single();
+
+                if (!retryError && retryData) {
+                    console.log('[Auth] Profile fetched on retry:', retryData.role);
+                    setProfile(retryData);
+                } else {
+                    console.error('[Auth] Retry also failed:', retryError);
+                }
             } else {
+                console.log('[Auth] Profile loaded:', data.role);
                 setProfile(data);
             }
         } catch (err) {
             console.error('[Auth] Unexpected error:', err);
+        } finally {
+            fetchingRef.current = false;
         }
     };
 
     const refreshProfile = async () => {
         if (session?.user?.id) {
-            await fetchProfile(session.user.id);
+            fetchingRef.current = false; // Allow refresh to bypass guard
+            await fetchProfile(session.user.id, session.user.email || undefined);
         }
     };
 
     useEffect(() => {
+        // Only initialize once
+        if (initializedRef.current) return;
+        initializedRef.current = true;
+
         // Get initial session
         supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+            console.log('[Auth] Initial session:', currentSession ? 'found' : 'none');
             setSession(currentSession);
             if (currentSession?.user?.id) {
-                fetchProfile(currentSession.user.id).finally(() => setLoading(false));
+                fetchProfile(currentSession.user.id, currentSession.user.email || undefined)
+                    .finally(() => setLoading(false));
             } else {
                 setLoading(false);
             }
         });
 
-        // Listen for auth changes
+        // Listen for auth changes (sign in, sign out, token refresh)
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (_event, newSession) => {
+            async (event, newSession) => {
+                console.log('[Auth] Auth state change:', event);
+
+                // Skip INITIAL_SESSION as we handle it above with getSession
+                if (event === 'INITIAL_SESSION') return;
+
                 setSession(newSession);
-                if (newSession?.user?.id) {
-                    await fetchProfile(newSession.user.id);
-                } else {
+
+                if (event === 'SIGNED_IN' && newSession?.user?.id) {
+                    fetchingRef.current = false; // Reset guard for new sign-in
+                    await fetchProfile(newSession.user.id, newSession.user.email || undefined);
+                    setLoading(false);
+                } else if (event === 'SIGNED_OUT') {
                     setProfile(null);
+                    setLoading(false);
+                } else if (event === 'TOKEN_REFRESHED' && newSession?.user?.id) {
+                    // On token refresh, only re-fetch if we don't have a profile
+                    if (!profile) {
+                        fetchingRef.current = false;
+                        await fetchProfile(newSession.user.id, newSession.user.email || undefined);
+                    }
+                    setLoading(false);
                 }
-                setLoading(false);
             }
         );
 
