@@ -2,10 +2,83 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
 import { useAuth, type UserProfile } from '../contexts/AuthContext';
 import { SECTOR_OPTIONS } from '../constants/sectors';
-import { Loader2, Search, UserPlus, Edit, Save, X } from 'lucide-react';
+import { Loader2, Search, UserPlus, Edit, Save, X, CheckCircle2, AlertTriangle } from 'lucide-react';
 
+// ─── Notification Modal Component ─────────────────────────────────────
+interface NotificationModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    type: 'success' | 'error';
+    title: string;
+    message: string;
+}
+
+const NotificationModal = ({ isOpen, onClose, type, title, message }: NotificationModalProps) => {
+    if (!isOpen) return null;
+
+    const isSuccess = type === 'success';
+
+    return (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div
+                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300"
+                onClick={onClose}
+            />
+
+            {/* Modal Content */}
+            <div className="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20">
+                {/* Header Decoration */}
+                <div className={`absolute top-0 left-0 w-full h-32 ${isSuccess ? 'bg-gradient-to-br from-green-500/10 to-transparent' : 'bg-gradient-to-br from-red-500/10 to-transparent'} pointer-events-none`} />
+
+                <div className="p-8 relative z-10 text-center">
+                    <button
+                        onClick={onClose}
+                        className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+
+                    <div className={`w-20 h-20 ${isSuccess ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'} rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm border transform rotate-3`}>
+                        {isSuccess
+                            ? <CheckCircle2 className="w-10 h-10 text-green-500" />
+                            : <AlertTriangle className="w-10 h-10 text-red-500" />
+                        }
+                    </div>
+
+                    <h3 className="text-2xl font-display font-black text-slate-800 mb-3">
+                        {title}
+                    </h3>
+
+                    <p className="text-slate-500 font-medium leading-relaxed mb-8">
+                        {message}
+                    </p>
+
+                    <button
+                        onClick={onClose}
+                        className={`w-full py-3.5 px-6 ${isSuccess
+                            ? 'bg-green-500 hover:bg-green-600 shadow-green-500/20'
+                            : 'bg-red-500 hover:bg-red-600 shadow-red-500/20'
+                            } active:scale-95 text-white rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2`}
+                    >
+                        Aceptar
+                    </button>
+                </div>
+
+                {/* Footer Brand */}
+                <div className="bg-slate-50 p-3 text-center border-t border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        Sanatorio Argentino
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ─── Main Component ───────────────────────────────────────────────────
 export const UserManagement = () => {
-    const { } = useAuth(); // Removed unused currentUserProfile
+    useAuth();
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -17,6 +90,22 @@ export const UserManagement = () => {
     const [newUserPassword, setNewUserPassword] = useState('');
     const [newUserRole, setNewUserRole] = useState<'admin' | 'responsable' | 'directivo'>('responsable');
     const [creatingLoading, setCreatingLoading] = useState(false);
+
+    // Notification Modal State
+    const [notification, setNotification] = useState<{
+        isOpen: boolean;
+        type: 'success' | 'error';
+        title: string;
+        message: string;
+    }>({ isOpen: false, type: 'success', title: '', message: '' });
+
+    const showNotification = (type: 'success' | 'error', title: string, message: string) => {
+        setNotification({ isOpen: true, type, title, message });
+    };
+
+    const closeNotification = () => {
+        setNotification(prev => ({ ...prev, isOpen: false }));
+    };
 
     useEffect(() => {
         fetchUsers();
@@ -34,7 +123,6 @@ export const UserManagement = () => {
             setUsers(data || []);
         } catch (error) {
             console.error('Error fetching users:', error);
-            // alert('Error al cargar usuarios');
         } finally {
             setLoading(false);
         }
@@ -56,10 +144,10 @@ export const UserManagement = () => {
 
             setUsers(users.map(u => u.id === editingUser.id ? editingUser : u));
             setEditingUser(null);
-            alert('Usuario actualizado correctamente');
+            showNotification('success', '¡Usuario Actualizado!', `El perfil de ${editingUser.display_name || 'usuario'} fue modificado correctamente.`);
         } catch (error) {
             console.error('Error updating user:', error);
-            alert('Error al actualizar usuario');
+            showNotification('error', 'Error al Actualizar', 'No se pudo actualizar el usuario. Intenta nuevamente.');
         }
     };
 
@@ -68,7 +156,6 @@ export const UserManagement = () => {
         setCreatingLoading(true);
 
         try {
-            // Call Supabase Edge Function to create user securely
             const { error } = await supabase.functions.invoke('create-user', {
                 body: {
                     email: newUserEmail,
@@ -79,14 +166,24 @@ export const UserManagement = () => {
 
             if (error) throw error;
 
-            alert('Usuario creado exitosamente. El perfil aparecerá en la lista en breve.');
+            const roleName = newUserRole === 'admin' ? 'Administrador' : newUserRole === 'directivo' ? 'Directivo' : 'Responsable';
+            showNotification(
+                'success',
+                '¡Usuario Creado!',
+                `Se creó exitosamente el usuario ${newUserEmail} con el rol de ${roleName}.`
+            );
             setIsCreating(false);
             setNewUserEmail('');
             setNewUserPassword('');
-            fetchUsers(); // Refresh list
+            setNewUserRole('responsable');
+            fetchUsers();
         } catch (error: any) {
             console.error('Error creating user:', error);
-            alert('Error al crear usuario: ' + (error.message || 'Error desconocido'));
+            showNotification(
+                'error',
+                'Error al Crear Usuario',
+                error.message || 'Ocurrió un error inesperado. Verifica los datos e intenta nuevamente.'
+            );
         } finally {
             setCreatingLoading(false);
         }
@@ -317,6 +414,15 @@ export const UserManagement = () => {
                     </div>
                 </div>
             )}
+
+            {/* Notification Modal */}
+            <NotificationModal
+                isOpen={notification.isOpen}
+                onClose={closeNotification}
+                type={notification.type}
+                title={notification.title}
+                message={notification.message}
+            />
         </div>
     );
 };
