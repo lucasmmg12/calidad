@@ -173,10 +173,10 @@ export const ReportingForm = () => {
                 </button>
 
                 {/* Dora Success Message */}
-                <div className="hidden md:block">
+                <div className="mt-6">
                     <DoraAssistant
+                        variant="inline"
                         message="¡Excelente trabajo! Tu reporte nos ayuda a ser mejores cada día. 💙"
-                        emotion="happy"
                     />
                 </div>
             </div>
@@ -185,16 +185,18 @@ export const ReportingForm = () => {
 
     return (
         <div className="max-w-3xl mx-auto p-4 md:p-6 mb-20 relative">
-            <DoraAssistant
-                message={formData.content.length > 20
-                    ? "¡Muy bien! Cuantos más detalles nos des, más rápido podremos actuar."
-                    : "Hola, soy Dora 👩‍⚕️. Estoy aquí para escucharte. Todo lo que me cuentes es confidencial."}
-            />
-
             <div className="mb-12 text-center space-y-3">
                 <h1 className="text-4xl md:text-5xl font-display font-black text-sanatorio-primary tracking-tight">Gestión de Calidad</h1>
                 <p className="text-slate-500 text-lg font-medium">Tu voz es el motor de nuestra mejora continua.</p>
             </div>
+
+            {/* Dora Peek - between title and guide */}
+            <DoraAssistant
+                variant="peek"
+                message={formData.content.length > 20
+                    ? "¡Muy bien! Cuantos más detalles nos des, más rápido podremos actuar. 💪"
+                    : "¡Hola! Soy Dora 👩‍⚕️ Contame qué encontraste, todo es confidencial."}
+            />
 
             {/* Quick Guide Card */}
             <div className="glass-panel rounded-3xl p-8 mb-10 relative overflow-hidden group">
