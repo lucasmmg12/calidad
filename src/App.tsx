@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { useState } from 'react';
 import { ReportingForm } from './components/ReportingForm';
 import { Dashboard } from './components/Dashboard';
 import { TrackingPage } from './components/TrackingPage';
@@ -10,6 +11,7 @@ import LegalContent from './components/LegalContent';
 import { ResolutionPage } from './pages/ResolutionPage';
 import Presentation from './pages/Presentation';
 import ProfileSettings from './pages/ProfileSettings';
+import { LogoutModal } from './components/LogoutModal';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import {
   LayoutDashboard,
@@ -24,17 +26,23 @@ import { supabase } from './utils/supabase';
 
 function Navbar() {
   const { session, role, isAdmin, isDirectivo } = useAuth();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  const handleLogout = async () => {
-    // Debug alert to confirm click is registered
-    if (!window.confirm('¿Confirmar salida de emergencia?')) return;
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
 
+  const handleConfirmLogout = async () => {
     try {
       await supabase.auth.signOut();
     } catch (err) {
       console.error('[Logout] signOut error:', err);
     }
-    localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token');
+    // Clear local storage token
+    const key = 'sb-' + import.meta.env.VITE_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token';
+    localStorage.removeItem(key);
+
+    // Force reload/redirect
     window.location.href = '/login';
   };
 
@@ -101,7 +109,7 @@ function Navbar() {
                 </div>
 
                 <button
-                  onClick={handleLogout}
+                  onClick={handleLogoutClick}
                   className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600 rounded-xl font-bold text-sm transition-all ml-2 cursor-pointer z-[10000]"
                   style={{ pointerEvents: 'auto' }}
                 >
@@ -124,12 +132,21 @@ function Navbar() {
 
       {/* Emergency Logout Button - Fixed Position */}
       <button
-        onClick={handleLogout}
-        className="fixed bottom-4 right-4 z-[99999] bg-red-600 text-white p-4 rounded-full shadow-2xl font-bold text-xs hover:bg-red-700 transition-all"
+        onClick={handleLogoutClick}
+        className="fixed bottom-4 right-4 z-[99999] bg-red-600 text-white p-4 rounded-full shadow-2xl font-bold text-xs hover:bg-red-700 hover:scale-105 transition-all active:scale-95"
         title="Botón de Emergencia"
       >
         🆘 SALIR
       </button>
+
+      {/* Logout Modal */}
+      {showLogoutModal && (
+        <LogoutModal
+          isOpen={showLogoutModal}
+          onClose={() => setShowLogoutModal(false)}
+          onConfirm={handleConfirmLogout}
+        />
+      )}
     </>
   );
 }
