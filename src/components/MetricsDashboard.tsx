@@ -705,51 +705,77 @@ export const MetricsDashboard = () => {
                     </div>
                 </div>
 
-                {/* Urgency Chart (Visual) */}
+                {/* Urgency Donut Chart */}
                 <div className="bg-white p-8 rounded-3xl shadow-card border border-gray-100 flex flex-col">
                     <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
                         <Zap className="w-5 h-5 text-yellow-500" />
                         Gravedad de Incidentes
                     </h3>
 
-                    <div className="flex-1 flex gap-4 items-end justify-center h-64 border-b border-gray-100 pb-0">
-                        {/* Green Bar */}
-                        <div className="flex flex-col items-center justify-end gap-2 w-20 h-full group">
-                            <span className="text-green-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mb-auto">{stats.byUrgency.Verdes}</span>
-                            <div
-                                className="w-full bg-green-100 rounded-t-xl relative overflow-hidden transition-all hover:bg-green-200"
-                                style={{ height: `${stats.total ? (stats.byUrgency.Verdes / stats.total) * 100 : 0}%`, minHeight: '8px' }}
-                            >
-                                <div className="absolute bottom-0 w-full bg-green-500 h-1"></div>
-                            </div>
-                            <span className="text-xs font-bold text-gray-400 uppercase mt-2">Leve</span>
-                        </div>
+                    {(() => {
+                        const green = stats.byUrgency.Verdes;
+                        const yellow = stats.byUrgency.Amarillos;
+                        const red = stats.byUrgency.Rojos;
+                        const total = green + yellow + red || 1;
+                        const pGreen = (green / total) * 100;
+                        const pYellow = (yellow / total) * 100;
+                        const pRed = (red / total) * 100;
 
-                        {/* Yellow Bar */}
-                        <div className="flex flex-col items-center justify-end gap-2 w-20 h-full group">
-                            <span className="text-yellow-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mb-auto">{stats.byUrgency.Amarillos}</span>
-                            <div
-                                className="w-full bg-yellow-100 rounded-t-xl relative overflow-hidden transition-all hover:bg-yellow-200"
-                                style={{ height: `${stats.total ? (stats.byUrgency.Amarillos / stats.total) * 100 : 0}%`, minHeight: '8px' }}
-                            >
-                                <div className="absolute bottom-0 w-full bg-yellow-500 h-1"></div>
-                            </div>
-                            <span className="text-xs font-bold text-gray-400 uppercase mt-2">Medio</span>
-                        </div>
+                        const segments = [
+                            { label: 'Leve', count: green, pct: pGreen, color: '#22c55e', bg: 'bg-green-50', border: 'border-green-100', text: 'text-green-700', barBg: 'bg-green-200', barFill: 'bg-green-500' },
+                            { label: 'Medio', count: yellow, pct: pYellow, color: '#eab308', bg: 'bg-yellow-50', border: 'border-yellow-100', text: 'text-yellow-700', barBg: 'bg-yellow-200', barFill: 'bg-yellow-500' },
+                            { label: 'Crítico', count: red, pct: pRed, color: '#ef4444', bg: 'bg-red-50', border: 'border-red-100', text: 'text-red-700', barBg: 'bg-red-200', barFill: 'bg-red-500' },
+                        ];
 
-                        {/* Red Bar */}
-                        <div className="flex flex-col items-center justify-end gap-2 w-20 h-full group">
-                            <span className="text-red-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity mb-auto">{stats.byUrgency.Rojos}</span>
-                            <div
-                                className="w-full bg-red-100 rounded-t-xl relative overflow-hidden transition-all hover:bg-red-200"
-                                style={{ height: `${stats.total ? (stats.byUrgency.Rojos / stats.total) * 100 : 0}%`, minHeight: '8px' }}
-                            >
-                                <div className="absolute bottom-0 w-full bg-red-500 h-1 animate-pulse"></div>
+                        // Build conic-gradient stops
+                        let cumulative = 0;
+                        const stops = segments.map(s => {
+                            const start = cumulative;
+                            cumulative += s.pct;
+                            return `${s.color} ${start}% ${cumulative}%`;
+                        }).join(', ');
+
+                        return (
+                            <div className="flex flex-col sm:flex-row items-center gap-8 flex-1">
+                                {/* Donut */}
+                                <div className="relative w-44 h-44 shrink-0">
+                                    <div
+                                        className="w-full h-full rounded-full shadow-inner"
+                                        style={{
+                                            background: total > 1
+                                                ? `conic-gradient(${stops})`
+                                                : '#e5e7eb',
+                                        }}
+                                    />
+                                    {/* Inner white circle (donut hole) */}
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[65%] h-[65%] bg-white rounded-full shadow-sm flex flex-col items-center justify-center">
+                                        <span className="text-3xl font-black text-gray-800 leading-none">{green + yellow + red}</span>
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Total</span>
+                                    </div>
+                                </div>
+
+                                {/* Legend */}
+                                <div className="flex-1 space-y-3 w-full">
+                                    {segments.map(s => (
+                                        <div key={s.label} className={`flex items-center gap-3 p-3 rounded-xl ${s.bg} border ${s.border} transition-all hover:scale-[1.02]`}>
+                                            <div className="w-3.5 h-3.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-baseline justify-between mb-1">
+                                                    <span className={`text-sm font-bold ${s.text}`}>{s.label}</span>
+                                                    <span className="text-xs font-bold text-gray-500">{s.count} <span className="text-gray-400 font-medium">({s.pct.toFixed(0)}%)</span></span>
+                                                </div>
+                                                <div className={`w-full h-1.5 rounded-full ${s.barBg}`}>
+                                                    <div className={`h-full rounded-full ${s.barFill} transition-all duration-700`} style={{ width: `${s.pct}%` }} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                            <span className="text-xs font-bold text-gray-400 uppercase mt-2">Crítico</span>
-                        </div>
-                    </div>
-                    <p className="text-center text-xs text-gray-400 mt-4">Distribución basada en Triage AI</p>
+                        );
+                    })()}
+
+                    <p className="text-center text-xs text-gray-400 mt-6">Distribución basada en Triage AI</p>
                 </div>
             </div>
 
