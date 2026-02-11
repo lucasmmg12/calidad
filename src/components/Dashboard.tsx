@@ -458,7 +458,7 @@ import { useAuth } from '../contexts/AuthContext';
 // ... (other imports remain, just ensuring useAuth is imported)
 
 export const Dashboard = () => {
-    const { role, sectors } = useAuth();
+    const { role, sectors, isAdmin } = useAuth();
     const [reports, setReports] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedReport, setSelectedReport] = useState<any>(null);
@@ -1039,7 +1039,7 @@ export const Dashboard = () => {
                                     <th className="px-6 py-4">Problema</th>
                                     <th className="px-6 py-4">Prioridad</th>
                                     <th className="px-6 py-4 text-center">Notif.</th>
-                                    <th className="px-6 py-4 text-right">Ver</th>
+                                    <th className="px-6 py-4">Clasificación</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
@@ -1089,8 +1089,10 @@ export const Dashboard = () => {
                                                     <div className="w-2 h-2 rounded-full bg-gray-200 mx-auto"></div>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button className="p-2 rounded-lg hover:bg-white text-gray-400 hover:text-sanatorio-primary hover:shadow-sm transition-all"><Eye className="w-4 h-4" /></button>
+                                            <td className="px-6 py-4">
+                                                <span className={`text-xs font-medium px-2 py-1 rounded-lg ${(!report.ai_category || report.ai_category === 'Sin clasificar') ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-gray-50 text-gray-600 border border-gray-100'}`}>
+                                                    {report.ai_category || 'Sin clasificar'}
+                                                </span>
                                             </td>
                                         </tr>
                                     ))
@@ -1121,26 +1123,36 @@ export const Dashboard = () => {
                                 </div>
                                 <div className="flex flex-col items-end gap-1">
                                     <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Prioridad</span>
-                                    <div className="flex gap-1.5 p-1 bg-gray-50 rounded-full border border-gray-100">
-                                        {['Verde', 'Amarillo', 'Rojo'].map(color => (
-                                            <button
-                                                key={color}
-                                                onClick={() => handleUpdateUrgency(color)}
-                                                title={`Cambiar prioridad a ${color}`}
-                                                className={`w-6 h-6 rounded-full transition-all duration-300 flex items-center justify-center relative group
-                                                    ${color === 'Rojo' ? 'bg-red-500 hover:bg-red-600' : color === 'Amarillo' ? 'bg-yellow-400 hover:bg-yellow-500' : 'bg-green-500 hover:bg-green-600'}
-                                                    ${selectedReport.ai_urgency === color
-                                                        ? 'scale-110 ring-2 ring-offset-1 ring-gray-200 shadow-sm opacity-100'
-                                                        : 'opacity-30 hover:opacity-100 grayscale hover:grayscale-0'
-                                                    }
-                                                `}
-                                            >
-                                                {selectedReport.ai_urgency === color && (
-                                                    <div className="w-1.5 h-1.5 bg-white rounded-full shadow-sm" />
-                                                )}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    {isAdmin ? (
+                                        <div className="flex gap-1.5 p-1 bg-gray-50 rounded-full border border-gray-100">
+                                            {['Verde', 'Amarillo', 'Rojo'].map(color => (
+                                                <button
+                                                    key={color}
+                                                    onClick={() => handleUpdateUrgency(color)}
+                                                    title={`Cambiar prioridad a ${color}`}
+                                                    className={`w-6 h-6 rounded-full transition-all duration-300 flex items-center justify-center relative group
+                                                        ${color === 'Rojo' ? 'bg-red-500 hover:bg-red-600' : color === 'Amarillo' ? 'bg-yellow-400 hover:bg-yellow-500' : 'bg-green-500 hover:bg-green-600'}
+                                                        ${selectedReport.ai_urgency === color
+                                                            ? 'scale-110 ring-2 ring-offset-1 ring-gray-200 shadow-sm opacity-100'
+                                                            : 'opacity-30 hover:opacity-100 grayscale hover:grayscale-0'
+                                                        }
+                                                    `}
+                                                >
+                                                    {selectedReport.ai_urgency === color && (
+                                                        <div className="w-1.5 h-1.5 bg-white rounded-full shadow-sm" />
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold
+                                            ${selectedReport.ai_urgency === 'Rojo' ? 'bg-red-100 text-red-700' :
+                                                selectedReport.ai_urgency === 'Amarillo' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-700'
+                                            }`}>
+                                            <span className={`w-2 h-2 rounded-full ${selectedReport.ai_urgency === 'Rojo' ? 'bg-red-500' : selectedReport.ai_urgency === 'Amarillo' ? 'bg-yellow-400' : 'bg-green-500'}`}></span>
+                                            {selectedReport.ai_urgency || 'Normal'}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
@@ -1170,72 +1182,77 @@ export const Dashboard = () => {
                                         )}
                                     </div>
 
-                                    {/* Origin Field (Editable) */}
+                                    {/* Origin Field (Editable - Admin Only) */}
                                     <div className="mt-4">
                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Origen (Calidad)</h3>
-                                        <select
-                                            value={selectedReport.resolution_notes?.split('Origen: ')[1]?.split('.')[0] || 'Reclamo/Queja'}
-                                            onChange={async (e) => {
-                                                const newOrigin = e.target.value;
-                                                // This is a bit hacky because we are storing Origin inside resolution_notes string based on the current schema patterns
-                                                // Ideally we should have a 'origin' column.
-                                                // We will update the resolution_notes to include this new origin or update a hypothetical origin column if it existed.
-                                                // For now, let's assume we append/replace in notes or just use a new metadata field if possible.
-                                                // Given the constraint "El campo 'Origen' ... debe ser visible y editable solo para el perfil de Calidad",
-                                                // and looking at CorrectiveActionForm, it seems it saves to resolution_notes: `... Origen: ${origin}`.
-
-                                                let currentNotes = selectedReport.resolution_notes || '';
-                                                let newNotes = currentNotes;
-                                                if (currentNotes.includes('Origen: ')) {
-                                                    newNotes = currentNotes.replace(/Origen: [^.]*/, `Origen: ${newOrigin}`);
-                                                } else {
-                                                    newNotes = `${currentNotes ? currentNotes + '. ' : ''}Origen: ${newOrigin}`;
-                                                }
-
-                                                const { error } = await supabase.from('reports').update({ resolution_notes: newNotes }).eq('id', selectedReport.id);
-
-                                                if (!error) {
-                                                    const updatedReport = { ...selectedReport, resolution_notes: newNotes };
-                                                    setReports(reports.map(r => r.id === selectedReport.id ? updatedReport : r));
-                                                    setSelectedReport(updatedReport);
-                                                }
-                                            }}
-                                            className="w-full bg-white border border-gray-200 text-gray-700 text-sm rounded-lg p-2.5 outline-none focus:border-sanatorio-primary focus:ring-1 focus:ring-sanatorio-primary"
-                                        >
-                                            <option value="Reclamo/Queja">Reclamo/Queja</option>
-                                            <option value="Auditoría fin de semana">Auditoría fin de semana</option>
-                                            <option value="Auditoría de proceso">Auditoría de proceso</option>
-                                            <option value="5S">5S</option>
-                                            <option value="Evento Adverso">Evento Adverso</option>
-                                        </select>
+                                        {isAdmin ? (
+                                            <select
+                                                value={selectedReport.resolution_notes?.split('Origen: ')[1]?.split('.')[0] || 'Reclamo/Queja'}
+                                                onChange={async (e) => {
+                                                    const newOrigin = e.target.value;
+                                                    let currentNotes = selectedReport.resolution_notes || '';
+                                                    let newNotes = currentNotes;
+                                                    if (currentNotes.includes('Origen: ')) {
+                                                        newNotes = currentNotes.replace(/Origen: [^.]*/, `Origen: ${newOrigin}`);
+                                                    } else {
+                                                        newNotes = `${currentNotes ? currentNotes + '. ' : ''}Origen: ${newOrigin}`;
+                                                    }
+                                                    const { error } = await supabase.from('reports').update({ resolution_notes: newNotes }).eq('id', selectedReport.id);
+                                                    if (!error) {
+                                                        const updatedReport = { ...selectedReport, resolution_notes: newNotes };
+                                                        setReports(reports.map(r => r.id === selectedReport.id ? updatedReport : r));
+                                                        setSelectedReport(updatedReport);
+                                                    }
+                                                }}
+                                                className="w-full bg-white border border-gray-200 text-gray-700 text-sm rounded-lg p-2.5 outline-none focus:border-sanatorio-primary focus:ring-1 focus:ring-sanatorio-primary"
+                                            >
+                                                <option value="Reclamo/Queja">Reclamo/Queja</option>
+                                                <option value="Auditoría fin de semana">Auditoría fin de semana</option>
+                                                <option value="Auditoría de proceso">Auditoría de proceso</option>
+                                                <option value="5S">5S</option>
+                                                <option value="Evento Adverso">Evento Adverso</option>
+                                            </select>
+                                        ) : (
+                                            <p className="text-sm text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                                                {selectedReport.resolution_notes?.split('Origen: ')[1]?.split('.')[0] || 'Reclamo/Queja'}
+                                            </p>
+                                        )}
                                     </div>
 
                                     {/* Clasificación Operativa (Tableau) */}
                                     <div className="mt-4">
                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Clasificación Operativa</h3>
-                                        <select
-                                            value={selectedReport.ai_category || 'Sin clasificar'}
-                                            onChange={async (e) => {
-                                                const newCategory = e.target.value;
-                                                const { error } = await supabase.from('reports').update({ ai_category: newCategory }).eq('id', selectedReport.id);
-                                                if (!error) {
-                                                    const updatedReport = { ...selectedReport, ai_category: newCategory };
-                                                    setReports(reports.map(r => r.id === selectedReport.id ? updatedReport : r));
-                                                    setSelectedReport(updatedReport);
-                                                }
-                                            }}
-                                            className={`w-full bg-white border text-sm rounded-lg p-2.5 outline-none focus:border-sanatorio-primary focus:ring-1 focus:ring-sanatorio-primary ${(!selectedReport.ai_category || selectedReport.ai_category === 'Sin clasificar')
-                                                ? 'border-amber-300 bg-amber-50'
-                                                : 'border-gray-200 text-gray-700'
-                                                }`}
-                                        >
-                                            <option value="Sin clasificar">⚠️ Sin clasificar</option>
-                                            {CLASSIFICATION_CATEGORIES.map(cat => (
-                                                <option key={cat} value={cat}>{cat}</option>
-                                            ))}
-                                        </select>
-                                        {(!selectedReport.ai_category || selectedReport.ai_category === 'Sin clasificar') && (
-                                            <p className="text-[10px] text-amber-600 mt-1 font-medium">⚠ Este ticket necesita clasificación operativa</p>
+                                        {isAdmin ? (
+                                            <>
+                                                <select
+                                                    value={selectedReport.ai_category || 'Sin clasificar'}
+                                                    onChange={async (e) => {
+                                                        const newCategory = e.target.value;
+                                                        const { error } = await supabase.from('reports').update({ ai_category: newCategory }).eq('id', selectedReport.id);
+                                                        if (!error) {
+                                                            const updatedReport = { ...selectedReport, ai_category: newCategory };
+                                                            setReports(reports.map(r => r.id === selectedReport.id ? updatedReport : r));
+                                                            setSelectedReport(updatedReport);
+                                                        }
+                                                    }}
+                                                    className={`w-full bg-white border text-sm rounded-lg p-2.5 outline-none focus:border-sanatorio-primary focus:ring-1 focus:ring-sanatorio-primary ${(!selectedReport.ai_category || selectedReport.ai_category === 'Sin clasificar')
+                                                        ? 'border-amber-300 bg-amber-50'
+                                                        : 'border-gray-200 text-gray-700'
+                                                        }`}
+                                                >
+                                                    <option value="Sin clasificar">⚠️ Sin clasificar</option>
+                                                    {CLASSIFICATION_CATEGORIES.map(cat => (
+                                                        <option key={cat} value={cat}>{cat}</option>
+                                                    ))}
+                                                </select>
+                                                {(!selectedReport.ai_category || selectedReport.ai_category === 'Sin clasificar') && (
+                                                    <p className="text-[10px] text-amber-600 mt-1 font-medium">⚠ Este ticket necesita clasificación operativa</p>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <p className="text-sm text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                                                {selectedReport.ai_category || 'Sin clasificar'}
+                                            </p>
                                         )}
                                     </div>
                                 </div>
@@ -1358,7 +1375,7 @@ export const Dashboard = () => {
                         {/* Columna Derecha: Gestión y Resolución */}
                         <div className="w-1/2 bg-gray-50 border-l border-gray-200 p-8 flex flex-col">
                             <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-lg font-bold text-gray-800">Centro de Gestión</h3>
+                                <h3 className="text-lg font-bold text-gray-800">{isAdmin ? 'Centro de Gestión' : 'Detalle del Caso'}</h3>
                                 <button onClick={() => setSelectedReport(null)} className="p-2 hover:bg-gray-200 rounded-full"><X className="w-5 h-5 text-gray-500" /></button>
                             </div>
 
@@ -1452,20 +1469,20 @@ export const Dashboard = () => {
                                             </div>
                                         </div>
 
-                                        <div className="mt-6 pt-4 border-t border-gray-100 flex flex-col gap-3">
-
-
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setShowReopenModal(true);
-                                                }}
-                                                className="w-full py-3 px-4 bg-red-50 border border-red-100 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-all flex items-center justify-center gap-2"
-                                            >
-                                                <BrainCircuit className="w-5 h-5" />
-                                                Apelar / Solicitar Corrección
-                                            </button>
-                                        </div>
+                                        {isAdmin && (
+                                            <div className="mt-6 pt-4 border-t border-gray-100 flex flex-col gap-3">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowReopenModal(true);
+                                                    }}
+                                                    className="w-full py-3 px-4 bg-red-50 border border-red-100 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    <BrainCircuit className="w-5 h-5" />
+                                                    Apelar / Solicitar Corrección
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : selectedReport.status === 'pending_resolution' ? (
                                     // VISTA ESPERANDO RESPUESTA
@@ -1476,12 +1493,14 @@ export const Dashboard = () => {
                                             La solicitud ha sido enviada al responsable. <br />
                                             El sistema te notificará cuando haya respuesta.
                                         </p>
-                                        <button
-                                            onClick={() => setShowReferralModal(true)}
-                                            className="text-xs font-bold text-blue-600 hover:underline"
-                                        >
-                                            Reenviar Solicitud
-                                        </button>
+                                        {isAdmin && (
+                                            <button
+                                                onClick={() => setShowReferralModal(true)}
+                                                className="text-xs font-bold text-blue-600 hover:underline"
+                                            >
+                                                Reenviar Solicitud
+                                            </button>
+                                        )}
                                     </div>
                                 ) : selectedReport.status === 'quality_validation' ? (
                                     // VISTA VALIDACIÓN CALIDAD
@@ -1622,20 +1641,22 @@ export const Dashboard = () => {
                                             </div>
                                         )}
 
-                                        <div className="flex gap-3 flex-shrink-0 pt-2 border-t border-purple-100">
-                                            <button
-                                                onClick={() => setShowQualityReturnModal(true)}
-                                                className="flex-1 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold text-sm hover:bg-red-50 transition-colors"
-                                            >
-                                                Devolver (Rechazo)
-                                            </button>
-                                            <button
-                                                onClick={() => setShowQualityApproveModal(true)}
-                                                className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 shadow-lg shadow-purple-500/20"
-                                            >
-                                                Aprobar y Cerrar
-                                            </button>
-                                        </div>
+                                        {isAdmin && (
+                                            <div className="flex gap-3 flex-shrink-0 pt-2 border-t border-purple-100">
+                                                <button
+                                                    onClick={() => setShowQualityReturnModal(true)}
+                                                    className="flex-1 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold text-sm hover:bg-red-50 transition-colors"
+                                                >
+                                                    Devolver (Rechazo)
+                                                </button>
+                                                <button
+                                                    onClick={() => setShowQualityApproveModal(true)}
+                                                    className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 shadow-lg shadow-purple-500/20"
+                                                >
+                                                    Aprobar y Cerrar
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : selectedReport.status === 'assignment_rejected' ? (
                                     // VISTA RECHAZO DEL RESPONSABLE
@@ -1693,68 +1714,85 @@ export const Dashboard = () => {
                                             </div>
                                         )}
 
-                                        {/* Actions */}
-                                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                                            <h4 className="font-bold text-gray-800 mb-2">Rederivación Requerida</h4>
-                                            <p className="text-xs text-gray-500 mb-4">
-                                                Asigná este caso a otro responsable o al sector correcto enviando una nueva solicitud por WhatsApp.
-                                            </p>
-                                            <button
-                                                onClick={() => setShowReferralModal(true)}
-                                                className="w-full py-3 bg-sanatorio-primary text-white rounded-xl font-bold text-sm hover:opacity-90 shadow-lg shadow-blue-900/10 flex items-center justify-center gap-2"
-                                            >
-                                                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                                                    <Send className="w-3 h-3" />
+                                        {/* Actions - Admin Only */}
+                                        {isAdmin ? (
+                                            <>
+                                                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                                                    <h4 className="font-bold text-gray-800 mb-2">Rederivación Requerida</h4>
+                                                    <p className="text-xs text-gray-500 mb-4">
+                                                        Asigná este caso a otro responsable o al sector correcto enviando una nueva solicitud por WhatsApp.
+                                                    </p>
+                                                    <button
+                                                        onClick={() => setShowReferralModal(true)}
+                                                        className="w-full py-3 bg-sanatorio-primary text-white rounded-xl font-bold text-sm hover:opacity-90 shadow-lg shadow-blue-900/10 flex items-center justify-center gap-2"
+                                                    >
+                                                        <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+                                                            <Send className="w-3 h-3" />
+                                                        </div>
+                                                        Rederivación (WhatsApp)
+                                                    </button>
                                                 </div>
-                                                Rederivación (WhatsApp)
-                                            </button>
-                                        </div>
-
-                                        <div className="text-center py-4 border-t border-gray-100">
-                                            <p className="text-xs text-gray-400 mb-2">Otras acciones</p>
-                                            <button
-                                                onClick={handleDiscardClick}
-                                                className="text-gray-400 hover:text-gray-600 text-xs font-bold transition-colors flex items-center justify-center gap-1 mx-auto"
-                                            >
-                                                <Archive className="w-3 h-3" /> Descartar Caso
-                                            </button>
-                                        </div>
+                                                <div className="text-center py-4 border-t border-gray-100">
+                                                    <p className="text-xs text-gray-400 mb-2">Otras acciones</p>
+                                                    <button
+                                                        onClick={handleDiscardClick}
+                                                        className="text-gray-400 hover:text-gray-600 text-xs font-bold transition-colors flex items-center justify-center gap-1 mx-auto"
+                                                    >
+                                                        <Archive className="w-3 h-3" /> Descartar Caso
+                                                    </button>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center">
+                                                <p className="text-sm text-blue-700 font-medium">👀 Solo lectura — la gestión de este caso está a cargo del equipo de Calidad.</p>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
-                                    // VISTA ACCIONES INICIALES (DERIVAR)
+                                    // VISTA ACCIONES INICIALES (DERIVAR) - Admin Only
                                     <div className="space-y-4">
-                                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                                            <h4 className="font-bold text-gray-800 mb-2">Derivar a Responsable</h4>
-                                            <p className="text-xs text-gray-500 mb-4">
-                                                Envía un formulario de gestión automático al encargado del sector.
-                                            </p>
-                                            <button
-                                                onClick={() => setShowReferralModal(true)}
-                                                className="w-full py-3 bg-sanatorio-primary text-white rounded-xl font-bold text-sm hover:opacity-90 shadow-lg shadow-blue-900/10 flex items-center justify-center gap-2"
-                                            >
-                                                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                                                    <Send className="w-3 h-3" />
-                                                </div>
-                                                Solicitar Gestión (WhatsApp)
-                                            </button>
+                                        {isAdmin ? (
+                                            <>
+                                                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                                                    <h4 className="font-bold text-gray-800 mb-2">Derivar a Responsable</h4>
+                                                    <p className="text-xs text-gray-500 mb-4">
+                                                        Envía un formulario de gestión automático al encargado del sector.
+                                                    </p>
+                                                    <button
+                                                        onClick={() => setShowReferralModal(true)}
+                                                        className="w-full py-3 bg-sanatorio-primary text-white rounded-xl font-bold text-sm hover:opacity-90 shadow-lg shadow-blue-900/10 flex items-center justify-center gap-2"
+                                                    >
+                                                        <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+                                                            <Send className="w-3 h-3" />
+                                                        </div>
+                                                        Solicitar Gestión (WhatsApp)
+                                                    </button>
 
-                                            {selectedReport.last_whatsapp_status === 'sent' && selectedReport.last_whatsapp_sent_at && (
-                                                <div className="flex items-center justify-center gap-1.5 mt-3 text-xs text-green-600 font-medium bg-green-50 py-2 rounded-lg border border-green-100">
-                                                    <CheckCircle className="w-3 h-3" />
-                                                    Enviado: {new Date(selectedReport.last_whatsapp_sent_at).toLocaleString()}
+                                                    {selectedReport.last_whatsapp_status === 'sent' && selectedReport.last_whatsapp_sent_at && (
+                                                        <div className="flex items-center justify-center gap-1.5 mt-3 text-xs text-green-600 font-medium bg-green-50 py-2 rounded-lg border border-green-100">
+                                                            <CheckCircle className="w-3 h-3" />
+                                                            Enviado: {new Date(selectedReport.last_whatsapp_sent_at).toLocaleString()}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
 
-                                        <div className="text-center py-4 border-t border-gray-100">
-                                            <p className="text-xs text-gray-400 mb-2">Otras acciones</p>
-                                            <button
-                                                onClick={handleDiscardClick}
-                                                className="text-gray-400 hover:text-gray-600 text-xs font-bold transition-colors flex items-center justify-center gap-1 mx-auto"
-                                            >
-                                                <Archive className="w-3 h-3" /> Descartar Caso
-                                            </button>
-                                        </div>
+                                                <div className="text-center py-4 border-t border-gray-100">
+                                                    <p className="text-xs text-gray-400 mb-2">Otras acciones</p>
+                                                    <button
+                                                        onClick={handleDiscardClick}
+                                                        className="text-gray-400 hover:text-gray-600 text-xs font-bold transition-colors flex items-center justify-center gap-1 mx-auto"
+                                                    >
+                                                        <Archive className="w-3 h-3" /> Descartar Caso
+                                                    </button>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 text-center space-y-2">
+                                                <Eye className="w-8 h-8 text-blue-400 mx-auto" />
+                                                <h4 className="font-bold text-blue-800 text-sm">Modo Visualización</h4>
+                                                <p className="text-xs text-blue-600">Este caso está pendiente de derivación por el equipo de Calidad. Aquí podrás seguir su progreso.</p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
