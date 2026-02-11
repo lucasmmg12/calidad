@@ -60,12 +60,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             if (error && error.code === 'PGRST116') {
                 // Profile doesn't exist yet — create default one
+                console.log('[Auth] Profile not found, creating new one...');
                 const { data: newProfile, error: insertError } = await supabase
                     .from('user_profiles')
                     .insert({
                         user_id: userId,
                         role: 'responsable',
-                        display_name: session?.user?.email || null,
+                        display_name: session?.user?.email || 'Usuario',
                         assigned_sectors: [],
                         sector_edit_count: 0,
                     })
@@ -74,11 +75,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
                 if (insertError) {
                     console.error('[Auth] Error creating profile:', insertError);
+                    // Even if creation fails, we stop loading to prevent infinite spinner
+                    // But we keep profile null so the app knows something is wrong
                     return;
                 }
-                setProfile(newProfile);
+
+                if (newProfile) {
+                    console.log('[Auth] New profile created:', newProfile);
+                    setProfile(newProfile);
+                }
             } else if (error) {
                 console.error('[Auth] Error fetching profile:', error);
+                // If it's a 500 error (recursion), we might want to alert the user or retry?
+                // For now, logging uses console.error which is visible in devtools
             } else {
                 setProfile(data);
             }

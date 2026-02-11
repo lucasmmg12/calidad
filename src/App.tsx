@@ -37,13 +37,14 @@ function Navbar() {
       await supabase.auth.signOut();
     } catch (err) {
       console.error('[Logout] signOut error:', err);
-    }
-    // Clear local storage token
-    const key = 'sb-' + import.meta.env.VITE_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token';
-    localStorage.removeItem(key);
+    } finally {
+      // Clear local storage token
+      const key = 'sb-' + import.meta.env.VITE_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token';
+      localStorage.removeItem(key);
 
-    // Force reload/redirect
-    window.location.href = '/login';
+      // Force reload/redirect always
+      window.location.href = '/login';
+    }
   };
 
   return (
@@ -129,15 +130,6 @@ function Navbar() {
           </nav>
         </div>
       </header>
-
-      {/* Emergency Logout Button - Fixed Position */}
-      <button
-        onClick={handleLogoutClick}
-        className="fixed bottom-4 right-4 z-[99999] bg-red-600 text-white p-4 rounded-full shadow-2xl font-bold text-xs hover:bg-red-700 hover:scale-105 transition-all active:scale-95"
-        title="Botón de Emergencia"
-      >
-        🆘 SALIR
-      </button>
 
       {/* Logout Modal */}
       {showLogoutModal && (
