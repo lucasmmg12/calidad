@@ -8,6 +8,7 @@ import { HelpGuide } from './components/HelpGuide';
 import { AdminLogin } from './components/AdminLogin';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import LegalContent from './components/LegalContent';
+import { UserManagement } from './pages/UserManagement';
 import { ResolutionPage } from './pages/ResolutionPage';
 import Presentation from './pages/Presentation';
 import ProfileSettings from './pages/ProfileSettings';
@@ -21,6 +22,7 @@ import {
   LogIn,
   UserCog,
   Shield,
+  Users
 } from 'lucide-react';
 import { supabase } from './utils/supabase';
 
@@ -32,19 +34,18 @@ function Navbar() {
     setShowLogoutModal(true);
   };
 
-  const handleConfirmLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.error('[Logout] signOut error:', err);
-    } finally {
-      // Clear local storage token
-      const key = 'sb-' + import.meta.env.VITE_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token';
-      localStorage.removeItem(key);
+  const handleConfirmLogout = () => {
+    setShowLogoutModal(false);
 
-      // Force reload/redirect always
-      window.location.href = '/login';
-    }
+    // 1. Clear local storage immediately
+    const key = 'sb-' + import.meta.env.VITE_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token';
+    localStorage.removeItem(key);
+
+    // 2. Fire and forget signOut (don't await it)
+    supabase.auth.signOut().catch(err => console.error('[Logout] signOut error:', err));
+
+    // 3. Force reload/redirect immediately
+    window.location.href = '/login';
   };
 
   return (
@@ -72,6 +73,16 @@ function Navbar() {
 
             {session ? (
               <>
+                {/* Admin Users Link */}
+                {isAdmin && (
+                  <Link
+                    to="/admin/users"
+                    className="hidden sm:flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all"
+                  >
+                    <Users className="w-4 h-4" /> Usuarios
+                  </Link>
+                )}
+
                 {/* Dashboard link — Admin & Responsable only */}
                 {!isDirectivo && (
                   <Link
@@ -162,6 +173,11 @@ function App() {
               <Route path="/terminos" element={<LegalContent />} />
               <Route path="/resolver-caso/:ticketId" element={<ResolutionPage />} />
               <Route path="/presentacion" element={<Presentation />} />
+
+              {/* Admin Routes */}
+              <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+                <Route path="/admin/users" element={<UserManagement />} />
+              </Route>
 
               {/* Dashboard — Admin & Responsable */}
               <Route element={<ProtectedRoute allowedRoles={['admin', 'responsable']} />}>
