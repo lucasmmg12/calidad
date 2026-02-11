@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../utils/supabase';
-import { Search, Clock, CheckCircle, AlertCircle, Activity } from 'lucide-react';
+import { Search, Clock, CheckCircle, AlertCircle, Activity, XCircle, AlertTriangle } from 'lucide-react';
 
 export const TrackingPage = () => {
     const [trackingId, setTrackingId] = useState('');
@@ -129,97 +129,125 @@ export const TrackingPage = () => {
                             </div>
 
                             {/* Activity History Log */}
-                            {report.notes && (
-                                <div className="mt-6 border-t border-gray-100 pt-6">
-                                    <h3 className="text-sm font-bold text-sanatorio-primary flex items-center gap-2 mb-4">
-                                        <Clock className="w-4 h-4" />
-                                        Historial de Actividad
-                                    </h3>
+                            <div className="mt-6 border-t border-gray-100 pt-6">
+                                <h3 className="text-sm font-bold text-sanatorio-primary flex items-center gap-2 mb-4">
+                                    <Clock className="w-4 h-4" />
+                                    Historial de Actividad
+                                </h3>
 
-                                    <div className="relative space-y-0 pl-2">
-                                        {/* Vertical Guide Line */}
-                                        <div className="absolute top-2 bottom-2 left-[19px] w-0.5 bg-gray-100 -z-10"></div>
+                                <div className="relative space-y-0 pl-2">
+                                    {/* Vertical Guide Line */}
+                                    <div className="absolute top-2 bottom-2 left-[19px] w-0.5 bg-gray-100 -z-10"></div>
 
-                                        {(() => {
-                                            // 1. Initial Creation Event
-                                            const events = [{
-                                                date: new Date(report.created_at).toLocaleString('es-AR', {
+                                    {(() => {
+                                        // 1. Initial Creation Event
+                                        const events: { date: string; message: string; type: string }[] = [{
+                                            date: new Date(report.created_at).toLocaleString('es-AR', {
+                                                timeZone: 'America/Argentina/Buenos_Aires',
+                                                day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                                            }),
+                                            message: "Ticket Creado",
+                                            type: 'start'
+                                        }];
+
+                                        // 2. Parse Notes for Events
+                                        if (report.notes) {
+                                            const notes = report.notes.split('\n\n').filter((n: string) => n.trim().length > 0);
+                                            notes.forEach((note: string) => {
+                                                const match = note.match(/^\[([^\]]+)\]\s?(.*)/);
+                                                if (match) {
+                                                    const msg = match[2];
+                                                    let type = 'info';
+                                                    if (msg.includes('📤 DERIVADO') || msg.includes('Derivado')) type = 'derivation';
+                                                    else if (msg.includes('🔴 RECHAZO DE ASIGNACIÓN')) type = 'rejection';
+                                                    else if (msg.includes('⚠️ RECHAZADO POR CALIDAD')) type = 'quality_return';
+                                                    else if (msg.includes('🔄 APELADO') || msg.includes('REABIERTO')) type = 'reopen';
+                                                    else if (msg.includes('✅ APROBADO POR CALIDAD')) type = 'approved';
+                                                    else if (msg.includes('❌ ERROR')) type = 'error';
+
+                                                    events.push({ date: match[1], message: msg, type });
+                                                } else {
+                                                    events.push({ date: '', message: note, type: 'note' });
+                                                }
+                                            });
+                                        }
+
+                                        // 3. Status Based Events
+                                        if (report.status === 'resolved' && !events.some(e => e.type === 'approved')) {
+                                            events.push({
+                                                date: new Date(report.resolved_at || new Date()).toLocaleString('es-AR', {
                                                     timeZone: 'America/Argentina/Buenos_Aires',
                                                     day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
                                                 }),
-                                                message: "Ticket Creado",
-                                                type: 'start'
-                                            }];
+                                                message: "Resolución Finalizada",
+                                                type: 'resolved'
+                                            });
+                                        }
 
-                                            // 2. Parse Notes for Events
-                                            // Expected fomat: "[timestamp] message" e.g. "[2/5/2026, 08:30:00] 🔄 REOPENED..."
-                                            if (report.notes) {
-                                                const notes = report.notes.split('\n\n').filter((n: string) => n.trim().length > 0);
-                                                notes.forEach((note: string) => {
-                                                    const match = note.match(/^\[(.*?)\]\s?(.*)/);
-                                                    if (match) {
-                                                        events.push({
-                                                            date: match[1], // Keep original string or parse if needed
-                                                            message: match[2],
-                                                            type: note.includes('🔄') ? 'reopen' : note.includes('🔴 RECHAZO DE ASIGNACIÓN') ? 'rejection' : note.includes('🛑') ? 'rejection' : 'info'
-                                                        });
-                                                    } else {
-                                                        // Legacy plain notes
-                                                        events.push({
-                                                            date: 'Nota Reciente',
-                                                            message: note,
-                                                            type: 'note'
-                                                        });
-                                                    }
-                                                });
+                                        // Icon mapping
+                                        const getIcon = (type: string) => {
+                                            switch (type) {
+                                                case 'start': return <div className="w-2.5 h-2.5 rounded-full bg-gray-400" />;
+                                                case 'derivation': return <Activity className="w-4 h-4" />;
+                                                case 'rejection': return <XCircle className="w-4 h-4" />;
+                                                case 'quality_return': return <AlertTriangle className="w-4 h-4" />;
+                                                case 'reopen': return <Activity className="w-4 h-4" />;
+                                                case 'approved': return <CheckCircle className="w-5 h-5" />;
+                                                case 'resolved': return <CheckCircle className="w-5 h-5" />;
+                                                case 'error': return <AlertCircle className="w-4 h-4" />;
+                                                default: return <div className="w-2.5 h-2.5 rounded-full bg-purple-400" />;
                                             }
+                                        };
 
-                                            // 3. Status Based Events
-                                            if (report.status === 'resolved') {
-                                                events.push({
-                                                    date: new Date(report.resolved_at || new Date()).toLocaleString('es-AR', {
-                                                        timeZone: 'America/Argentina/Buenos_Aires',
-                                                        day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                                                    }),
-                                                    message: "Resolución Finalizada",
-                                                    type: 'resolved'
-                                                });
-                                            }
+                                        const bgColor: Record<string, string> = {
+                                            start: 'bg-gray-200 text-gray-500',
+                                            derivation: 'bg-blue-100 text-blue-600',
+                                            rejection: 'bg-red-100 text-red-600',
+                                            quality_return: 'bg-orange-100 text-orange-600',
+                                            reopen: 'bg-amber-100 text-amber-600',
+                                            approved: 'bg-green-100 text-green-600',
+                                            resolved: 'bg-green-100 text-green-600',
+                                            error: 'bg-red-100 text-red-500',
+                                            info: 'bg-white border-blue-50 text-sanatorio-primary',
+                                            note: 'bg-white border-purple-50 text-purple-500'
+                                        };
 
-                                            return events.map((event, idx) => (
-                                                <div key={idx} className="flex gap-4 pb-6 last:pb-0 group">
-                                                    {/* Custom Icon/Dot based on type */}
-                                                    <div className={`
+                                        const textColor: Record<string, string> = {
+                                            start: 'text-gray-700',
+                                            derivation: 'text-blue-700',
+                                            rejection: 'text-red-700 font-bold',
+                                            quality_return: 'text-orange-700 font-bold',
+                                            reopen: 'text-amber-700 font-bold',
+                                            approved: 'font-bold text-green-700',
+                                            resolved: 'font-bold text-green-700',
+                                            error: 'text-red-600',
+                                            info: 'text-gray-700',
+                                            note: 'text-gray-700 italic'
+                                        };
+
+                                        return events.map((event, idx) => (
+                                            <div key={idx} className="flex gap-4 pb-6 last:pb-0 group">
+                                                <div className={`
                                                         w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-4 border-white shadow-sm z-10
-                                                        ${event.type === 'start' ? 'bg-gray-200 text-gray-500' :
-                                                            event.type === 'resolved' ? 'bg-green-100 text-green-600' :
-                                                                event.type === 'reopen' ? 'bg-blue-100 text-blue-600' :
-                                                                    'bg-white border-blue-50 text-sanatorio-primary'}
+                                                        ${bgColor[event.type] || 'bg-gray-100 text-gray-500'}
                                                     `}>
-                                                        {event.type === 'start' && <div className="w-2.5 h-2.5 rounded-full bg-gray-400" />}
-                                                        {event.type === 'resolved' && <CheckCircle className="w-5 h-5" />}
-                                                        {event.type === 'reopen' && <Activity className="w-4 h-4" />}
-                                                        {(event.type === 'info' || event.type === 'note') && <div className="w-2.5 h-2.5 rounded-full bg-purple-400" />}
-                                                    </div>
+                                                    {getIcon(event.type)}
+                                                </div>
 
-                                                    <div className="pt-1.5 w-full">
+                                                <div className="pt-1.5 w-full min-w-0">
+                                                    {event.date && (
                                                         <span className="text-xs text-gray-400 font-mono block mb-0.5">{event.date}</span>
-                                                        <div className={`text-sm ${event.type === 'resolved' ? 'font-bold text-green-700' : 'text-gray-700'}`}>
-                                                            {event.message}
-                                                        </div>
-                                                        {/* If resolved, show resolution note */}
-                                                        {event.type === 'resolved' && report.resolution_notes && (
-                                                            <div className="mt-2 text-xs text-green-600 bg-green-50 p-3 rounded-lg border border-green-100 italic">
-                                                                "{report.resolution_notes}"
-                                                            </div>
-                                                        )}
+                                                    )}
+                                                    <div className={`text-sm ${textColor[event.type] || 'text-gray-700'}`}>
+                                                        {event.message}
                                                     </div>
                                                 </div>
-                                            ));
-                                        })()}
-                                    </div>
+                                            </div>
+                                        ));
+                                    })()}
                                 </div>
-                            )}
+                            </div>
+
 
                             {report.status === 'resolved' && (
                                 <div className="bg-green-50 border border-green-200 rounded-xl p-5 mt-6 animate-in zoom-in-95 delay-300">
@@ -239,7 +267,7 @@ export const TrackingPage = () => {
                                 </div>
                             )}
 
-                            {report.status !== 'resolved' && !report.notes && (
+                            {report.status === 'pending' && (
                                 <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 flex items-start gap-3 mt-6">
                                     <Clock className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                                     <div>

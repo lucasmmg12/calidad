@@ -560,13 +560,19 @@ export const Dashboard = () => {
             });
         }
 
+        const approveTimestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+        const approveLog = `[${approveTimestamp}] ✅ APROBADO POR CALIDAD: Caso cerrado tras validación`;
+        const prevNotes = selectedReport.notes || '';
+        const finalNotes = prevNotes ? `${prevNotes}\n\n${approveLog}` : approveLog;
+
         const { error } = await supabase.from('reports').update({
             status: 'resolved',
-            resolved_at: new Date().toISOString()
+            resolved_at: new Date().toISOString(),
+            notes: finalNotes
         }).eq('id', selectedReport.id);
 
         if (!error) {
-            setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'resolved' } : r));
+            setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'resolved', notes: finalNotes, resolved_at: new Date().toISOString() } : r));
             setSelectedReport(null);
             setShowQualityApproveModal(false);
             setFeedbackModal({ isOpen: true, type: 'success', title: 'Caso Aprobado', message: 'El ticket ha sido cerrado correctamente.' });
@@ -642,9 +648,12 @@ export const Dashboard = () => {
 
         // 3. Determinar estado del envío
         const whatsappStatus = error ? 'failed' : 'sent';
-        const notes = error
-            ? `Error al enviar WhatsApp a ${responsiblePhone}. (${new Date().toLocaleTimeString()})`
-            : `Derivado a ${responsiblePhone} como [${typeLabel}].`;
+        const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+        const logEntry = error
+            ? `[${timestamp}] ❌ ERROR AL ENVIAR: Error al enviar WhatsApp a ${responsiblePhone}`
+            : `[${timestamp}] 📤 DERIVADO: Enviado a ${responsiblePhone} como [${typeLabel}]`;
+        const currentNotes = selectedReport.notes || '';
+        const updatedNotes = currentNotes ? `${currentNotes}\n\n${logEntry}` : logEntry;
 
         if (error) {
             console.error("Error al enviar WhatsApp:", error);
@@ -668,8 +677,8 @@ export const Dashboard = () => {
             .from('reports')
             .update({
                 status: 'pending_resolution',
-                notes: notes,
-                is_adverse_event: isAdverse, // This triggers the correct form type (Simple vs RCA)
+                notes: updatedNotes,
+                is_adverse_event: isAdverse,
                 assigned_to: responsiblePhone,
                 last_whatsapp_status: whatsappStatus,
                 last_whatsapp_sent_at: new Date().toISOString()
@@ -680,6 +689,7 @@ export const Dashboard = () => {
             setReports(reports.map(r => r.id === selectedReport.id ? {
                 ...r,
                 status: 'pending_resolution',
+                notes: updatedNotes,
                 assigned_to: responsiblePhone,
                 last_whatsapp_status: whatsappStatus,
                 last_whatsapp_sent_at: new Date().toISOString()
@@ -1246,62 +1256,100 @@ export const Dashboard = () => {
                                         <Clock className="w-4 h-4 text-sanatorio-primary" />
                                         Historial de Actividad
                                     </h3>
-                                    <div className="space-y-4">
-                                        {/* Entry created */}
-                                        <div className="flex gap-3 relative pb-4 border-l-2 border-gray-100 pl-4 last:border-0 last:pb-0">
-                                            <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-gray-300 ring-4 ring-white"></div>
-                                            <div>
-                                                <p className="text-xs text-gray-400 font-mono mb-1">{new Date(selectedReport.created_at).toLocaleString()}</p>
-                                                <p className="text-sm text-gray-600 font-medium">Ticket Creado</p>
-                                            </div>
-                                        </div>
+                                    <div className="space-y-0 relative">
+                                        {/* Vertical guide */}
+                                        <div className="absolute top-2 bottom-2 left-[4px] w-0.5 bg-gray-100"></div>
 
-                                        {/* WhatsApp Sent */}
-                                        {selectedReport.last_whatsapp_sent_at && (
-                                            <div className="flex gap-3 relative pb-4 border-l-2 border-gray-100 pl-4 last:border-0 last:pb-0">
-                                                <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-blue-400 ring-4 ring-white"></div>
-                                                <div>
-                                                    <p className="text-xs text-gray-400 font-mono mb-1">{new Date(selectedReport.last_whatsapp_sent_at).toLocaleString()}</p>
-                                                    <p className="text-sm text-gray-600 font-medium">WhatsApp enviado a responsable ({selectedReport.assigned_to})</p>
-                                                </div>
-                                            </div>
-                                        )}
+                                        {(() => {
+                                            // Build events array from all sources
+                                            const events: { date: string; message: string; type: string }[] = [];
 
-                                        {/* Notes log */}
-                                        {selectedReport.notes && (
-                                            <div className="flex gap-3 relative pb-4 border-l-2 border-gray-100 pl-4 last:border-0 last:pb-0">
-                                                <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-purple-400 ring-4 ring-white"></div>
-                                                <div>
-                                                    <p className="text-xs text-gray-400 font-mono mb-1">Nota Reciente</p>
-                                                    <p className="text-sm text-gray-600 font-medium italic">"{selectedReport.notes}"</p>
-                                                </div>
-                                            </div>
-                                        )}
+                                            // 1. Ticket Created
+                                            events.push({
+                                                date: new Date(selectedReport.created_at).toLocaleString('es-AR', {
+                                                    timeZone: 'America/Argentina/Buenos_Aires',
+                                                    day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+                                                }),
+                                                message: 'Ticket Creado',
+                                                type: 'start'
+                                            });
 
-                                        {/* Assignment Rejected */}
-                                        {selectedReport.status === 'assignment_rejected' && (
-                                            <div className="flex gap-3 relative pb-4 border-l-2 border-red-200 pl-4 last:border-0 last:pb-0">
-                                                <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-red-500 ring-4 ring-white"></div>
-                                                <div>
-                                                    <p className="text-xs text-gray-400 font-mono mb-1">Rechazo de Asignación</p>
-                                                    <p className="text-sm text-red-600 font-bold">Responsable rechazó la asignación</p>
-                                                    {selectedReport.assigned_to && (
-                                                        <p className="text-xs text-gray-500 mt-0.5">Rechazado por: {selectedReport.assigned_to}</p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
+                                            // 2. Parse Notes (each entry separated by \n\n)
+                                            if (selectedReport.notes) {
+                                                const entries = selectedReport.notes.split('\n\n').filter((n: string) => n.trim().length > 0);
+                                                entries.forEach((entry: string) => {
+                                                    const match = entry.match(/^\[([^\]]+)\]\s?(.*)/);
+                                                    if (match) {
+                                                        const msg = match[2];
+                                                        let type = 'info';
+                                                        if (msg.includes('📤 DERIVADO') || msg.includes('Derivado')) type = 'derivation';
+                                                        else if (msg.includes('🔴 RECHAZO DE ASIGNACIÓN')) type = 'rejection';
+                                                        else if (msg.includes('⚠️ RECHAZADO POR CALIDAD')) type = 'quality_return';
+                                                        else if (msg.includes('🔄 APELADO') || msg.includes('REABIERTO')) type = 'reopen';
+                                                        else if (msg.includes('✅ APROBADO POR CALIDAD')) type = 'approved';
+                                                        else if (msg.includes('❌ ERROR')) type = 'error';
 
-                                        {/* Resolved */}
-                                        {selectedReport.resolved_at && (
-                                            <div className="flex gap-3 relative pb-4 border-l-2 border-gray-100 pl-4 last:border-0 last:pb-0">
-                                                <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-green-500 ring-4 ring-white"></div>
-                                                <div>
-                                                    <p className="text-xs text-gray-400 font-mono mb-1">{new Date(selectedReport.resolved_at).toLocaleString()}</p>
-                                                    <p className="text-sm text-gray-600 font-bold text-green-700">Resolución Finalizada</p>
+                                                        events.push({ date: match[1], message: msg, type });
+                                                    } else {
+                                                        // Legacy plain notes (no timestamp format)
+                                                        events.push({ date: '', message: entry, type: 'note' });
+                                                    }
+                                                });
+                                            }
+
+                                            // 3. Resolved event (if applicable and not already in notes)
+                                            if (selectedReport.resolved_at && !events.some(e => e.type === 'approved')) {
+                                                events.push({
+                                                    date: new Date(selectedReport.resolved_at).toLocaleString('es-AR', {
+                                                        timeZone: 'America/Argentina/Buenos_Aires',
+                                                        day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+                                                    }),
+                                                    message: 'Resolución Finalizada',
+                                                    type: 'resolved'
+                                                });
+                                            }
+
+                                            // Color mapping
+                                            const dotColor: Record<string, string> = {
+                                                start: 'bg-gray-300',
+                                                derivation: 'bg-blue-400',
+                                                rejection: 'bg-red-500',
+                                                quality_return: 'bg-orange-500',
+                                                reopen: 'bg-amber-500',
+                                                approved: 'bg-green-500',
+                                                resolved: 'bg-green-500',
+                                                error: 'bg-red-400',
+                                                info: 'bg-purple-400',
+                                                note: 'bg-purple-400'
+                                            };
+
+                                            const textColor: Record<string, string> = {
+                                                start: 'text-gray-600',
+                                                derivation: 'text-blue-700',
+                                                rejection: 'text-red-600 font-bold',
+                                                quality_return: 'text-orange-700 font-bold',
+                                                reopen: 'text-amber-700 font-bold',
+                                                approved: 'text-green-700 font-bold',
+                                                resolved: 'text-green-700 font-bold',
+                                                error: 'text-red-600',
+                                                info: 'text-gray-600',
+                                                note: 'text-gray-600 italic'
+                                            };
+
+                                            return events.map((event, idx) => (
+                                                <div key={idx} className="flex gap-3 relative pb-4 pl-4 last:pb-0">
+                                                    <div className={`absolute left-0 top-1 w-2.5 h-2.5 rounded-full ${dotColor[event.type] || 'bg-gray-300'} ring-4 ring-white z-10`}></div>
+                                                    <div className="min-w-0">
+                                                        {event.date && (
+                                                            <p className="text-xs text-gray-400 font-mono mb-0.5 truncate">{event.date}</p>
+                                                        )}
+                                                        <p className={`text-sm ${textColor[event.type] || 'text-gray-600'}`}>
+                                                            {event.message}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )}
+                                            ));
+                                        })()}
                                     </div>
                                 </div>
                             </div>
