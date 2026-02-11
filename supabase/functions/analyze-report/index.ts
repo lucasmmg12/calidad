@@ -42,14 +42,15 @@ Deno.serve(async (req) => {
       
       Tareas:
       1. Resume el problema (Máx 15 palabras).
-      2. Clasifícalo: "Evento Centinela", "Evento Adverso", "Cuasi Falla" (Near Miss), "Condición Latente", "Sugerencia", "Reclamo Administrativo", "Felicitación".
+      2. Clasifícalo en UNA de estas categorías operativas (elegir la más adecuada):
+         "Calidez en la atención", "Capacitación", "Cirugía segura", "Comunicación con el paciente", "Comunicación efectiva interservicios", "Demora en la atención", "Gestión de turnos", "Identificación del paciente", "Mantenimiento e infraestructura", "Prácticas administrativas", "Prácticas asistenciales", "Recursos e insumos", "Riesgo de caídas", "Seguridad de los medicamentos", "Sistema informático".
+         Si no encaja claramente en ninguna, usa "Sin clasificar".
       3. Determina el Triage de Urgencia (Color) BASADO ESTRICTAMENTE en:
          - 🔴 ROJO (Inmediato): FALTA DE LUZ/AGUA/OXÍGENO, Riesgo de vida, daño permanente, cirugía en sitio incorrecto, caída con daño, violencia física/sexual, neonatología, falta de insumos críticos.
          - 🟡 AMARILLO (Urgente): Riesgo de daño temporal, error de medicación, retraso en atención, fallas de equipos menores.
          - 🟢 VERDE (Rutina): Sugerencias, reclamos de hotelería/confort, felicitaciones.
       4. Consecuencias Potenciales: Describe en 1 frase qué pasaría si esto no se soluciona hoy.
-      
-       5. Soluciones Recomendadas: Enumera 3 acciones concretas.
+      5. Soluciones Recomendadas: Enumera 3 acciones concretas.
 
       Responde SOLO en formato JSON puro: { "summary": "...", "category": "...", "color": "...", "consequences": "...", "solutions": "..." }
     `

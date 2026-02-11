@@ -16,9 +16,11 @@ import {
     UserCog,
     Camera,
     Archive,
-    Bell
+    Bell,
+    XCircle
 } from 'lucide-react';
 import { useMemo } from 'react';
+import { CLASSIFICATION_CATEGORIES } from '../constants/classification_categories';
 
 // Discard Confirmation Modal Component
 const DiscardConfirmationModal = ({
@@ -808,19 +810,20 @@ export const Dashboard = () => {
 
     // FILTROS
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation' | 'discarded'>('all');
+    const [statusFilter, setStatusFilter] = useState<'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation' | 'discarded' | 'assignment_rejected'>('all');
 
 
 
     const filteredReports = reports.filter(report => {
         // Filtro por Estado (Mapeo de UI a valores BD)
         const matchesStatus =
-            statusFilter === 'all' ? report.status !== 'discarded' :
+            statusFilter === 'all' ? (report.status !== 'discarded' && report.status !== 'assignment_rejected') :
                 statusFilter === 'pending' ? (report.status === 'pending' || report.status === 'analyzed') :
                     statusFilter === 'in_progress' ? report.status === 'pending_resolution' :
                         statusFilter === 'quality_validation' ? report.status === 'quality_validation' :
                             statusFilter === 'resolved' ? report.status === 'resolved' :
-                                statusFilter === 'discarded' ? report.status === 'discarded' : true;
+                                statusFilter === 'discarded' ? report.status === 'discarded' :
+                                    statusFilter === 'assignment_rejected' ? report.status === 'assignment_rejected' : true;
 
         // Filtro por Texto (ID, Sector, Contenido)
         const searchLower = searchTerm.toLowerCase();
@@ -973,11 +976,12 @@ export const Dashboard = () => {
                         { id: 'in_progress', label: 'En Gestión' },
                         { id: 'quality_validation', label: 'Por Validar' },
                         { id: 'resolved', label: 'Resueltos' },
+                        { id: 'assignment_rejected', label: '⚡ Rechazados' },
                         { id: 'discarded', label: 'Descartados' }
                     ].map(tab => (
                         <button
                             key={tab.id}
-                            onClick={() => setStatusFilter(tab.id as 'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation' | 'discarded')}
+                            onClick={() => setStatusFilter(tab.id as 'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation' | 'discarded' | 'assignment_rejected')}
                             className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${statusFilter === tab.id
                                 ? 'bg-white text-sanatorio-primary shadow-sm'
                                 : 'text-gray-500 hover:text-gray-700'
@@ -1035,6 +1039,8 @@ export const Dashboard = () => {
                                                     <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center animate-pulse"><Clock className="w-3 h-3" /></div>
                                                 ) : report.status === 'quality_validation' ? (
                                                     <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-xs">Q</div>
+                                                ) : report.status === 'assignment_rejected' ? (
+                                                    <div className="w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center"><XCircle className="w-3 h-3" /></div>
                                                 ) : report.status === 'discarded' ? (
                                                     <div className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"><Archive className="w-3 h-3" /></div>
                                                 ) : (
@@ -1188,6 +1194,35 @@ export const Dashboard = () => {
                                             <option value="5S">5S</option>
                                             <option value="Evento Adverso">Evento Adverso</option>
                                         </select>
+                                    </div>
+
+                                    {/* Clasificación Operativa (Tableau) */}
+                                    <div className="mt-4">
+                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Clasificación Operativa</h3>
+                                        <select
+                                            value={selectedReport.ai_category || 'Sin clasificar'}
+                                            onChange={async (e) => {
+                                                const newCategory = e.target.value;
+                                                const { error } = await supabase.from('reports').update({ ai_category: newCategory }).eq('id', selectedReport.id);
+                                                if (!error) {
+                                                    const updatedReport = { ...selectedReport, ai_category: newCategory };
+                                                    setReports(reports.map(r => r.id === selectedReport.id ? updatedReport : r));
+                                                    setSelectedReport(updatedReport);
+                                                }
+                                            }}
+                                            className={`w-full bg-white border text-sm rounded-lg p-2.5 outline-none focus:border-sanatorio-primary focus:ring-1 focus:ring-sanatorio-primary ${(!selectedReport.ai_category || selectedReport.ai_category === 'Sin clasificar')
+                                                    ? 'border-amber-300 bg-amber-50'
+                                                    : 'border-gray-200 text-gray-700'
+                                                }`}
+                                        >
+                                            <option value="Sin clasificar">⚠️ Sin clasificar</option>
+                                            {CLASSIFICATION_CATEGORIES.map(cat => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                            ))}
+                                        </select>
+                                        {(!selectedReport.ai_category || selectedReport.ai_category === 'Sin clasificar') && (
+                                            <p className="text-[10px] text-amber-600 mt-1 font-medium">⚠ Este ticket necesita clasificación operativa</p>
+                                        )}
                                     </div>
                                 </div>
 

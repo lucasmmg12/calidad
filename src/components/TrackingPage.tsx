@@ -161,7 +161,7 @@ export const TrackingPage = () => {
                                                         events.push({
                                                             date: match[1], // Keep original string or parse if needed
                                                             message: match[2],
-                                                            type: note.includes('🔄') ? 'reopen' : note.includes('🛑') ? 'rejection' : 'info'
+                                                            type: note.includes('🔄') ? 'reopen' : note.includes('🔴 RECHAZO DE ASIGNACIÓN') ? 'rejection' : note.includes('🛑') ? 'rejection' : 'info'
                                                         });
                                                     } else {
                                                         // Legacy plain notes

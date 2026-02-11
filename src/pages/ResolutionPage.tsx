@@ -3,7 +3,7 @@ import { supabase } from '../utils/supabase';
 import { ResolutionForm } from '../components/ResolutionForm';
 import { CorrectiveActionForm } from '../components/CorrectiveActionForm';
 import { useEffect, useState } from 'react';
-import { Loader2, FileText } from 'lucide-react';
+import { Loader2, FileText, XCircle, AlertTriangle, X, Send } from 'lucide-react';
 
 export const ResolutionPage = () => {
     const { ticketId } = useParams();
@@ -11,6 +11,10 @@ export const ResolutionPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showCorrectiveForm, setShowCorrectiveForm] = useState(false);
+    const [showRejectionModal, setShowRejectionModal] = useState(false);
+    const [rejectionReason, setRejectionReason] = useState('');
+    const [rejecting, setRejecting] = useState(false);
+    const [rejected, setRejected] = useState(false);
 
     useEffect(() => {
         const fetchReport = async () => {
@@ -25,18 +29,23 @@ export const ResolutionPage = () => {
 
                 if (error) throw error;
 
-                // Mapear datos de la respuesta a la estructura requerida por el componente
+                // Check if already rejected
+                if (data.status === 'assignment_rejected') {
+                    setRejected(true);
+                }
+
                 setReportData({
                     id: data.id,
                     trackingId: data.tracking_id,
                     description: data.content,
-                    isAdverseEvent: data.is_adverse_event || (data.ai_category === 'Incidente' || data.ai_urgency === 'Rojo'), // Priorizar flag explícito
+                    isAdverseEvent: data.is_adverse_event || data.ai_urgency === 'Rojo',
                     sector: data.sector,
-                    contactNumber: data.contact_number
+                    contactNumber: data.contact_number,
+                    status: data.status,
+                    notes: data.notes
                 });
 
-                // Auto-activar formulario correctivo si es evento adverso o incidente
-                if (data.is_adverse_event || data.ai_urgency === 'Rojo' || data.ai_category === 'Incidente') {
+                if (data.is_adverse_event || data.ai_urgency === 'Rojo') {
                     setShowCorrectiveForm(true);
                 }
 
@@ -50,6 +59,43 @@ export const ResolutionPage = () => {
 
         fetchReport();
     }, [ticketId]);
+
+    const handleAssignmentRejection = async () => {
+        if (!reportData || !rejectionReason.trim()) return;
+        setRejecting(true);
+
+        try {
+            const timestamp = new Date().toLocaleString('es-AR', {
+                timeZone: 'America/Argentina/Buenos_Aires'
+            });
+
+            const rejectionLog = `[${timestamp}] 🔴 RECHAZO DE ASIGNACIÓN: ${rejectionReason.trim()}`;
+
+            // Append to existing notes
+            const currentNotes = reportData.notes || '';
+            const updatedNotes = currentNotes
+                ? `${currentNotes}\n\n${rejectionLog}`
+                : rejectionLog;
+
+            const { error } = await supabase
+                .from('reports')
+                .update({
+                    status: 'assignment_rejected',
+                    notes: updatedNotes,
+                })
+                .eq('id', reportData.id);
+
+            if (error) throw error;
+
+            setRejected(true);
+            setShowRejectionModal(false);
+        } catch (err: any) {
+            console.error("Error rejecting assignment:", err);
+            alert("Error al rechazar la asignación: " + err.message);
+        } finally {
+            setRejecting(false);
+        }
+    };
 
     const handleSubmit = async (formData: any) => {
         if (!reportData) return;
@@ -72,8 +118,6 @@ export const ResolutionPage = () => {
 
             console.log("Resolución guardada exitosamente");
 
-            // NOTIFICAR AL REPORTANTE (Si existe contacto)
-            // UPDATE: Se ha eliminado el envío automático. Ahora se envía desde el Dashboard de Calidad al aprobar.
             if (reportData.contactNumber) {
                 console.log("Resolución guardada. Pendiente de validación de Calidad para enviar notificación.");
             }
@@ -102,57 +146,154 @@ export const ResolutionPage = () => {
         );
     }
 
+    // Show rejection success
+    if (rejected) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+                <div className="text-center max-w-md bg-white rounded-3xl shadow-card p-10 animate-in zoom-in-95 duration-500">
+                    <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <XCircle className="w-8 h-8 text-orange-500" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-3">Asignación Rechazada</h2>
+                    <p className="text-gray-500 text-sm mb-2">
+                        Has indicado que este caso <span className="font-bold text-sanatorio-primary">{reportData.trackingId}</span> no te corresponde.
+                    </p>
+                    <p className="text-gray-400 text-xs">
+                        El equipo de Calidad revisará tu solicitud y reasignará el caso al responsable correcto.
+                    </p>
+                    <div className="mt-6 bg-orange-50 rounded-xl p-4 border border-orange-100">
+                        <p className="text-xs font-bold text-orange-700 uppercase tracking-wider">Estado actualizado</p>
+                        <p className="text-sm text-orange-600 mt-1">Pendiente de reasignación por Calidad</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Assignment Rejection Modal
+    const RejectionModal = () => (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full animate-in zoom-in-95 duration-300">
+                {/* Header */}
+                <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+                            <AlertTriangle className="w-5 h-5 text-red-500" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-800">Rechazar Asignación</h3>
+                    </div>
+                    <button
+                        onClick={() => setShowRejectionModal(false)}
+                        className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                    >
+                        <X className="w-5 h-5 text-gray-400" />
+                    </button>
+                </div>
+
+                {/* Content */}
+                <div className="p-6 space-y-4">
+                    <p className="text-sm text-gray-600">
+                        Estás indicando que el caso <span className="font-bold text-sanatorio-primary">{reportData.trackingId}</span> no corresponde a tu sector.
+                    </p>
+
+                    <div className="space-y-2">
+                        <label className="block text-sm font-bold text-gray-700">
+                            Motivo del rechazo <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                            value={rejectionReason}
+                            onChange={(e) => setRejectionReason(e.target.value)}
+                            placeholder="Ej: Este reclamo corresponde al sector de Mantenimiento, no al mío..."
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-red-400 focus:ring-2 focus:ring-red-50 outline-none transition-all resize-none text-sm"
+                            rows={3}
+                        />
+                    </div>
+
+                    <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
+                        <p className="text-xs text-amber-700">
+                            <span className="font-bold">Nota:</span> Esta acción quedará registrada en el historial del ticket y será revisada por el equipo de Calidad.
+                        </p>
+                    </div>
+                </div>
+
+                {/* Actions */}
+                <div className="p-6 border-t border-gray-100 flex gap-3">
+                    <button
+                        onClick={() => setShowRejectionModal(false)}
+                        className="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition-colors text-sm"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={handleAssignmentRejection}
+                        disabled={rejecting || !rejectionReason.trim()}
+                        className="flex-1 px-4 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                        {rejecting ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <>
+                                <Send className="w-4 h-4" />
+                                Confirmar Rechazo
+                            </>
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+
     // Modo Formulario de Acción Correctiva
     if (showCorrectiveForm) {
         return (
-            <CorrectiveActionForm
-                reportId={reportData.id}
-                initialData={{
-                    date: new Date().toISOString(),
-                    sector: reportData.sector,
-                    description: reportData.description,
-                    trackingId: reportData.trackingId
-                }}
-                onClose={() => setShowCorrectiveForm(false)}
-                onSuccess={() => {
-                    // Reutilizar lógica de notificación o mostrar 'Success' simple
-                    handleSubmit({}); // Hacky reuse to trigger notif? No, separate handling appropriate inside component or passing callback.
-                    // CorrectiveActionForm handles its own DB update, keeping it encapsulated. 
-                    // But we might want to trigger the WhatsApp notification here too.
-
-                    if (reportData.contactNumber) {
-                        console.log("Acción Correctiva registrada. Pendiente de validación de Calidad.");
-                    }
-
-                    // Generate PDF immediately after success
-                    // The PDF logic is internal to the component, but we can instruct the user
-                    // to click download or rely on the component's internal logic.
-                    // However, the user wants "after clicking register".
-                    // CorrectiveActionForm calls onSuccess correctly.
-
-
-                    // We don't have access to generatePDF here easily unless we refactor.
-                    // Instead, we should rely on CorrectiveActionForm doing the work.
-
-                    window.close(); // Try to close tab or redirect
-                }}
-            />
+            <>
+                <CorrectiveActionForm
+                    reportId={reportData.id}
+                    initialData={{
+                        date: new Date().toISOString(),
+                        sector: reportData.sector,
+                        description: reportData.description,
+                        trackingId: reportData.trackingId
+                    }}
+                    onClose={() => setShowCorrectiveForm(false)}
+                    onSuccess={() => {
+                        if (reportData.contactNumber) {
+                            console.log("Acción Correctiva registrada. Pendiente de validación de Calidad.");
+                        }
+                        window.close();
+                    }}
+                />
+                {showRejectionModal && <RejectionModal />}
+            </>
         );
     }
 
     return (
         <div className="relative">
-            {/* Toggle Button for Full Form */}
-            <div className="absolute top-4 right-4 z-10 md:top-8 md:right-8">
+            {/* Top Action Bar */}
+            <div className="absolute top-4 right-4 z-10 md:top-8 md:right-8 flex gap-2">
+                {/* Rejection Button */}
+                <button
+                    onClick={() => setShowRejectionModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm border border-red-200 text-red-600 font-bold text-xs rounded-full shadow-sm hover:bg-red-50 transition-all"
+                >
+                    <XCircle className="w-4 h-4" />
+                    No me corresponde
+                </button>
+
+                {/* Toggle to Corrective Action Form */}
                 <button
                     onClick={() => setShowCorrectiveForm(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm border border-orange-200 text-orange-700 font-bold text-xs rounded-full shadow-sm hover:bg-orange-50 transition-all"
                 >
                     <FileText className="w-4 h-4" />
-                    Cambiar a Modo Evento Adverso
+                    Modo Evento Adverso
                 </button>
             </div>
+
             <ResolutionForm reportData={reportData} onSubmit={handleSubmit} />
+
+            {showRejectionModal && <RejectionModal />}
         </div>
     );
 };

@@ -2,48 +2,8 @@ import { useState, useRef } from 'react';
 import { supabase } from '../utils/supabase';
 import { Send, ShieldAlert, Loader2, ChevronDown, User, Lock, Info, AlertTriangle, Lightbulb, Paperclip, X, Phone } from 'lucide-react';
 import { DoraAssistant } from './DoraAssistant';
+import { SECTOR_OPTIONS } from '../constants/sectors';
 
-const SECTOR_OPTIONS = [
-    { value: "ADM-Administración", label: "🗃️ ADM-Administración" },
-    { value: "ANST-Anestesia", label: "💉 ANST-Anestesia" },
-    { value: "APS-Asistencia-Psicológica", label: "🤲 APS-Asistencia-Psicológica" },
-    { value: "AUX-Auxiliares-de-Hoteleria", label: "🏨 AUX-Auxiliares-de-Hoteleria" },
-    { value: "CDD-Control-de-Dispositivos", label: "📏 CDD-Control-de-Dispositivos" },
-    { value: "CDI-Control-de-Infecciones", label: "🦠 CDI-Control-de-Infecciones" },
-    { value: "CIT-Citologia", label: "🧫 CIT-Citologia" },
-    { value: "COM-Comunicacion", label: "💬 COM-Comunicacion" },
-    { value: "CYS-Compras-y-Suministros", label: "💲 CYS-Compras-y-Suministros" },
-    { value: "DIR-Direccion", label: "📍 DIR-Direccion" },
-    { value: "DXI-Diagnostico-por-Imágenes", label: "☢️ DXI-Diagnostico-por-Imágenes" },
-    { value: "EST-Estadísticas", label: "📊 EST-Estadísticas" },
-    { value: "FACT-Facturacion", label: "💰 FACT-Facturacion" },
-    { value: "FAR-Farmacia", label: "💊 FAR-Farmacia" },
-    { value: "FER-Fertilidad", label: "🤰 FER-Fertilidad" },
-    { value: "FUN-Fundacion-Sanatorio-Argentino", label: "🏥 FUN-Fundacion-Sanatorio-Argentino" },
-    { value: "GCM-Guardia-Clinica-Medica", label: "🗺️ GCM-Guardia-Clinica-Medica" },
-    { value: "GGO-Guardia-Gineco-Obstetricia", label: "🤱 GGO-Guardia-Gineco-Obstetricia" },
-    { value: "GPE-Guardia-de-Pediatria", label: "👧 GPE-Guardia-de-Pediatria" },
-    { value: "HDD-Hospital-de-dia", label: "🏢 HDD-Hospital-de-dia" },
-    { value: "HDM-Hemodinamia", label: "🩸 HDM-Hemodinamia" },
-    { value: "HEM-Hemoterapia", label: "❤️ HEM-Hemoterapia" },
-    { value: "HYS-Higiene-y-Seguridad", label: "🧹 HYS-Higiene-y-Seguridad" },
-    { value: "INT-Internado", label: "🛏️ INT-Internado" },
-    { value: "IPE-Internacion-Pediatrica", label: "👶 IPE-Internacion-Pediatrica" },
-    { value: "KIN-Kinesiología", label: "🦴 KIN-Kinesiología" },
-    { value: "LAB-Laboratorio", label: "🔬 LAB-Laboratorio" },
-    { value: "LYC-Liquidación-y-Convenio", label: "✉️ LYC-Liquidación-y-Convenio" },
-    { value: "MAN-Mantenimiento", label: "🔨 MAN-Mantenimiento" },
-    { value: "MEM-Mantenimiento-Equipamiento-Medico", label: "🥼 MEM-Mantenimiento-Equipamiento-Medico" },
-    { value: "NEO-Neonatologia", label: "👶 NEO-Neonatologia" },
-    { value: "QUI-Quirofano", label: "👨‍⚕️ QUI-Quirofano" },
-    { value: "REC-Recepcion-de-Pacientes", label: "🤒 REC-Recepcion-de-Pacientes" },
-    { value: "RES-Residencias-Medicas", label: "🩺 RES-Residencias-Medicas" },
-    { value: "RH-Recursos-Humanos", label: "👩‍💼 RH-Recursos-Humanos" },
-    { value: "SGC-Gestion-de-la-Calidad", label: "✅ SGC-Gestion-de-la-Calidad" },
-    { value: "TYS-Tecnologia-y-sistemas", label: "💻 TYS-Tecnologia-y-sistemas" },
-    { value: "UCI-Unidad-Cuidados-Intensivos", label: "💓 UCI-Unidad-Cuidados-Intensivos" },
-    { value: "VAC-Vacunatorio", label: "🩹 VAC-Vacunatorio" },
-];
 
 export const ReportingForm = () => {
     const [loading, setLoading] = useState(false);
