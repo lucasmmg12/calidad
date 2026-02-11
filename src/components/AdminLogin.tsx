@@ -16,14 +16,25 @@ export const AdminLogin = () => {
         setError(null);
 
         try {
-            const { error: authError } = await supabase.auth.signInWithPassword({
+            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             });
 
             if (authError) throw authError;
 
-            navigate('/dashboard');
+            // Fetch user profile to determine role-based redirect
+            const { data: profile } = await supabase
+                .from('user_profiles')
+                .select('role')
+                .eq('user_id', authData.user.id)
+                .single();
+
+            if (profile?.role === 'directivo') {
+                navigate('/metrics');
+            } else {
+                navigate('/dashboard');
+            }
         } catch (err: any) {
             setError(err.message || 'Error al iniciar sesión');
         } finally {
