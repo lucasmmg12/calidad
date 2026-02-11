@@ -26,97 +26,111 @@ function Navbar() {
   const { session, role, isAdmin, isDirectivo } = useAuth();
 
   const handleLogout = async () => {
+    // Debug alert to confirm click is registered
+    if (!window.confirm('¿Confirmar salida de emergencia?')) return;
+
     try {
       await supabase.auth.signOut();
     } catch (err) {
       console.error('[Logout] signOut error:', err);
     }
-    // Force cleanup even if signOut fails (e.g. network issues)
     localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token');
     window.location.href = '/login';
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full px-4 py-3">
-      <div className="max-w-7xl mx-auto glass-panel rounded-2xl md:rounded-3xl px-4 md:px-8 py-3 flex justify-between items-center transition-all duration-300">
-        <Link to="/" className="flex items-center gap-3 group focus:outline-none">
-          <img
-            src="/logosanatorio.png"
-            alt="Sanatorio Argentino"
-            className="h-10 md:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
-          />
-          <span className="font-display font-bold text-slate-700 text-lg group-hover:text-sanatorio-primary transition-colors hidden sm:block">Inicio</span>
-        </Link>
-
-        <nav className="flex items-center gap-1">
-          <Link to="/track" className="p-2.5 rounded-xl text-slate-500 hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 transition-all duration-200" title="Seguimiento">
-            <LayoutDashboard className="w-5 h-5" />
-          </Link>
-          <Link to="/guia" className="p-2.5 rounded-xl text-slate-500 hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 transition-all duration-200" title="Guía">
-            <HelpCircle className="w-5 h-5" />
+    <>
+      <header className="sticky top-0 z-[9999] w-full px-4 py-3">
+        <div className="max-w-7xl mx-auto glass-panel rounded-2xl md:rounded-3xl px-4 md:px-8 py-3 flex justify-between items-center transition-all duration-300">
+          <Link to="/" className="flex items-center gap-3 group focus:outline-none">
+            <img
+              src="/logosanatorio.png"
+              alt="Sanatorio Argentino"
+              className="h-10 md:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+            />
+            <span className="font-display font-bold text-slate-700 text-lg group-hover:text-sanatorio-primary transition-colors hidden sm:block">Inicio</span>
           </Link>
 
-          <div className="w-px h-6 bg-slate-200 mx-2 hidden sm:block"></div>
-
-          {session ? (
-            <>
-              {/* Dashboard link — Admin & Responsable only */}
-              {!isDirectivo && (
-                <Link
-                  to="/dashboard"
-                  className="hidden sm:flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all"
-                >
-                  <LayoutDashboard className="w-4 h-4" /> Casos
-                </Link>
-              )}
-
-              {/* Metrics — All roles */}
-              <Link
-                to="/metrics"
-                className="hidden sm:flex items-center gap-2 px-4 py-2 text-sanatorio-primary font-bold text-sm hover:bg-sanatorio-primary/5 rounded-xl transition-all"
-              >
-                <BarChart3 className="w-4 h-4" /> Métricas
-              </Link>
-
-              {/* Profile Settings — Responsable only */}
-              {!isAdmin && !isDirectivo && (
-                <Link
-                  to="/perfil"
-                  className="hidden sm:flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all"
-                >
-                  <UserCog className="w-4 h-4" /> Perfil
-                </Link>
-              )}
-
-              {/* Role Badge */}
-              <div className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest ${role === 'admin' ? 'bg-purple-50 text-purple-600 border border-purple-200' :
-                role === 'directivo' ? 'bg-blue-50 text-blue-600 border border-blue-200' :
-                  'bg-green-50 text-green-600 border border-green-200'
-                }`}>
-                <Shield className="w-3 h-3" />
-                {role === 'admin' ? 'Admin' : role === 'directivo' ? 'Directivo' : 'Responsable'}
-              </div>
-
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600 rounded-xl font-bold text-sm transition-all ml-2"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Salir</span>
-              </button>
-            </>
-          ) : (
-            <Link
-              to="/login"
-              className="flex items-center gap-2 px-5 py-2.5 bg-sanatorio-primary/5 text-sanatorio-primary hover:bg-sanatorio-primary hover:text-white rounded-xl font-bold text-sm transition-all border border-sanatorio-primary/10 shadow-sm"
-            >
-              <LogIn className="w-4 h-4" />
-              <span className="hidden sm:inline">Admin</span>
+          <nav className="flex items-center gap-1">
+            <Link to="/track" className="p-2.5 rounded-xl text-slate-500 hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 transition-all duration-200" title="Seguimiento">
+              <LayoutDashboard className="w-5 h-5" />
             </Link>
-          )}
-        </nav>
-      </div>
-    </header>
+            <Link to="/guia" className="p-2.5 rounded-xl text-slate-500 hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 transition-all duration-200" title="Guía">
+              <HelpCircle className="w-5 h-5" />
+            </Link>
+
+            <div className="w-px h-6 bg-slate-200 mx-2 hidden sm:block"></div>
+
+            {session ? (
+              <>
+                {/* Dashboard link — Admin & Responsable only */}
+                {!isDirectivo && (
+                  <Link
+                    to="/dashboard"
+                    className="hidden sm:flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all"
+                  >
+                    <LayoutDashboard className="w-4 h-4" /> Casos
+                  </Link>
+                )}
+
+                {/* Metrics — All roles */}
+                <Link
+                  to="/metrics"
+                  className="hidden sm:flex items-center gap-2 px-4 py-2 text-sanatorio-primary font-bold text-sm hover:bg-sanatorio-primary/5 rounded-xl transition-all"
+                >
+                  <BarChart3 className="w-4 h-4" /> Métricas
+                </Link>
+
+                {/* Profile Settings — Responsable only */}
+                {!isAdmin && !isDirectivo && (
+                  <Link
+                    to="/perfil"
+                    className="hidden sm:flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all"
+                  >
+                    <UserCog className="w-4 h-4" /> Perfil
+                  </Link>
+                )}
+
+                {/* Role Badge */}
+                <div className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest ${role === 'admin' ? 'bg-purple-50 text-purple-600 border border-purple-200' :
+                  role === 'directivo' ? 'bg-blue-50 text-blue-600 border border-blue-200' :
+                    'bg-green-50 text-green-600 border border-green-200'
+                  }`}>
+                  <Shield className="w-3 h-3" />
+                  {role === 'admin' ? 'Admin' : role === 'directivo' ? 'Directivo' : 'Responsable'}
+                </div>
+
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600 rounded-xl font-bold text-sm transition-all ml-2 cursor-pointer z-[10000]"
+                  style={{ pointerEvents: 'auto' }}
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">Salir</span>
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="flex items-center gap-2 px-5 py-2.5 bg-sanatorio-primary/5 text-sanatorio-primary hover:bg-sanatorio-primary hover:text-white rounded-xl font-bold text-sm transition-all border border-sanatorio-primary/10 shadow-sm"
+              >
+                <LogIn className="w-4 h-4" />
+                <span className="hidden sm:inline">Admin</span>
+              </Link>
+            )}
+          </nav>
+        </div>
+      </header>
+
+      {/* Emergency Logout Button - Fixed Position */}
+      <button
+        onClick={handleLogout}
+        className="fixed bottom-4 right-4 z-[99999] bg-red-600 text-white p-4 rounded-full shadow-2xl font-bold text-xs hover:bg-red-700 transition-all"
+        title="Botón de Emergencia"
+      >
+        🆘 SALIR
+      </button>
+    </>
   );
 }
 
