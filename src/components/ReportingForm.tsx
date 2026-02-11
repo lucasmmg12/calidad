@@ -190,85 +190,36 @@ export const ReportingForm = () => {
                 <p className="text-slate-500 text-lg font-medium">Tu voz es el motor de nuestra mejora continua.</p>
             </div>
 
-            {/* Quick Guide Card — with Dora leaning on the edge */}
-            <div className="relative mt-20 mb-10">
-                {/* DORA — asomándose y "agarrándose" del borde superior */}
-                <div className="absolute -top-16 left-1/2 -translate-x-1/2 z-10 flex items-end gap-3">
-                    <div className="relative group">
-                        <div
-                            className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-4 border-white shadow-xl 
-                                       bg-gradient-to-br from-blue-50 to-blue-100
-                                       transition-transform duration-300 group-hover:scale-110 cursor-pointer"
-                            style={{ animation: 'doraBounce 3s ease-in-out infinite' }}
-                        >
-                            <img
-                                src="/dora (2).png"
-                                alt="Dora - Asistente de Calidad"
-                                className="w-full h-full object-cover object-top scale-150"
-                                style={{ objectPosition: '50% 15%' }}
-                            />
+            {/* Quick Guide Card */}
+            <div className="glass-panel rounded-3xl p-8 mb-10 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-sanatorio-primary/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                <h3 className="text-xs font-bold text-sanatorio-primary uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                    <Info className="w-4 h-4" />
+                    Guía Rápida de Reporte
+                </h3>
+                <div className="grid md:grid-cols-3 gap-8">
+                    <div className="space-y-3">
+                        <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+                            <AlertTriangle className="w-5 h-5 text-orange-600" />
                         </div>
-                        {/* Online indicator */}
-                        <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-400 border-2 border-white rounded-full animate-pulse"></div>
-                        {/* "Hands" — two small rounded tabs that overlap the card border to look like she's holding on */}
-                        <div className="absolute -bottom-2 left-3 w-4 h-3 bg-[#c4a882] rounded-b-full shadow-sm"></div>
-                        <div className="absolute -bottom-2 right-3 w-4 h-3 bg-[#c4a882] rounded-b-full shadow-sm"></div>
+                        <p className="font-bold text-slate-800 text-sm">Sé Específico</p>
+                        <p className="text-xs text-slate-500 leading-relaxed">Detalla el Qué, Dónde y Cuándo con precisión.</p>
                     </div>
-
-                    {/* Speech Bubble */}
-                    <div className="relative bg-white px-4 py-2.5 rounded-2xl rounded-bl-md shadow-lg border border-blue-100 max-w-[220px] hidden sm:block animate-in fade-in slide-in-from-left-4 duration-700">
-                        <div className="absolute -left-2 bottom-3 w-0 h-0 
-                                       border-t-[6px] border-t-transparent 
-                                       border-r-[8px] border-r-white 
-                                       border-b-[6px] border-b-transparent
-                                       drop-shadow-sm"></div>
-                        <p className="text-xs text-gray-600 font-medium leading-relaxed">
-                            {formData.content.length > 20
-                                ? "¡Muy bien! Cuantos más detalles, más rápido actuamos. 💪"
-                                : "¡Hola! Soy Dora 👩‍⚕️ Contame qué encontraste."}
-                        </p>
+                    <div className="space-y-3">
+                        <div className="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center">
+                            <Lightbulb className="w-5 h-5 text-yellow-600" />
+                        </div>
+                        <p className="font-bold text-slate-800 text-sm">Aporta Ideas</p>
+                        <p className="text-xs text-slate-500 leading-relaxed">Tus sugerencias de solución son muy valiosas.</p>
+                    </div>
+                    <div className="space-y-3">
+                        <div className="w-10 h-10 bg-sanatorio-secondary/10 rounded-xl flex items-center justify-center">
+                            <ShieldAlert className="w-5 h-5 text-sanatorio-secondary" />
+                        </div>
+                        <p className="font-bold text-slate-800 text-sm">Privacidad</p>
+                        <p className="text-xs text-slate-500 leading-relaxed">Usa el modo anónimo para proteger tu identidad.</p>
                     </div>
                 </div>
-
-                {/* The actual Guide Card */}
-                <div className="glass-panel rounded-3xl p-8 pt-16 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-sanatorio-primary/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
-                    <h3 className="text-xs font-bold text-sanatorio-primary uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                        <Info className="w-4 h-4" />
-                        Guía Rápida de Reporte
-                    </h3>
-                    <div className="grid md:grid-cols-3 gap-8">
-                        <div className="space-y-3">
-                            <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
-                                <AlertTriangle className="w-5 h-5 text-orange-600" />
-                            </div>
-                            <p className="font-bold text-slate-800 text-sm">Sé Específico</p>
-                            <p className="text-xs text-slate-500 leading-relaxed">Detalla el Qué, Dónde y Cuándo con precisión.</p>
-                        </div>
-                        <div className="space-y-3">
-                            <div className="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center">
-                                <Lightbulb className="w-5 h-5 text-yellow-600" />
-                            </div>
-                            <p className="font-bold text-slate-800 text-sm">Aporta Ideas</p>
-                            <p className="text-xs text-slate-500 leading-relaxed">Tus sugerencias de solución son muy valiosas.</p>
-                        </div>
-                        <div className="space-y-3">
-                            <div className="w-10 h-10 bg-sanatorio-secondary/10 rounded-xl flex items-center justify-center">
-                                <ShieldAlert className="w-5 h-5 text-sanatorio-secondary" />
-                            </div>
-                            <p className="font-bold text-slate-800 text-sm">Privacidad</p>
-                            <p className="text-xs text-slate-500 leading-relaxed">Usa el modo anónimo para proteger tu identidad.</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Dora bounce animation */}
-                <style>{`
-                    @keyframes doraBounce {
-                        0%, 100% { transform: translateY(0); }
-                        50% { transform: translateY(-5px); }
-                    }
-                `}</style>
             </div>
 
             <div className="glass-card rounded-[2.5rem] p-6 md:p-12">
