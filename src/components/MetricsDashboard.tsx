@@ -93,9 +93,9 @@ export const MetricsDashboard = () => {
             ? (totalTimeMs / resolvedCountWithDates / (1000 * 60 * 60)).toFixed(1)
             : 0;
 
-        // By Sector
+        // By Sector — use filteredReports so responsable only sees their sectors
         const sectorMap: Record<string, number> = {};
-        reports.forEach(r => {
+        filteredReports.forEach(r => {
             const s = r.sector || 'Otros';
             sectorMap[s] = (sectorMap[s] || 0) + 1;
         });
@@ -103,24 +103,24 @@ export const MetricsDashboard = () => {
             .map(([sector, count]) => ({ sector, count, percentage: (count / total) * 100 }))
             .sort((a, b) => b.count - a.count);
 
-        // By Urgency
+        // By Urgency — use filteredReports
         const byUrgency = {
-            Verdes: reports.filter(r => r.ai_urgency === 'Verde').length,
-            Amarillos: reports.filter(r => r.ai_urgency === 'Amarillo').length,
-            Rojos: reports.filter(r => r.ai_urgency === 'Rojo').length
+            Verdes: filteredReports.filter(r => r.ai_urgency === 'Verde').length,
+            Amarillos: filteredReports.filter(r => r.ai_urgency === 'Amarillo').length,
+            Rojos: filteredReports.filter(r => r.ai_urgency === 'Rojo').length
         };
 
-        // By Status (Detailed)
+        // By Status (Detailed) — use filteredReports
         // Mapping:
         // Resueltos -> resolved
         // Pendientes -> pending, analyzed
         // Esperando Solución -> pending_resolution, in_progress, quality_validation
         // Cancelados -> cancelled
         const byStatus = {
-            resolved: reports.filter(r => r.status === 'resolved').length,
-            pending: reports.filter(r => ['pending', 'analyzed'].includes(r.status)).length,
-            waiting: reports.filter(r => ['pending_resolution', 'in_progress', 'quality_validation'].includes(r.status)).length,
-            cancelled: reports.filter(r => r.status === 'cancelled').length
+            resolved: filteredReports.filter(r => r.status === 'resolved').length,
+            pending: filteredReports.filter(r => ['pending', 'analyzed'].includes(r.status)).length,
+            waiting: filteredReports.filter(r => ['pending_resolution', 'in_progress', 'quality_validation'].includes(r.status)).length,
+            cancelled: filteredReports.filter(r => r.status === 'cancelled').length
         };
 
         setStats({
