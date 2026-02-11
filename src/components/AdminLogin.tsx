@@ -67,12 +67,13 @@ export const AdminLogin = () => {
                             <input
                                 type="email"
                                 required
-                                className="input-field pl-14"
+                                className="input-field"
+                                style={{ paddingLeft: '3.5rem' }}
                                 placeholder="ejemplo@sanatorio.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                             />
-                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 w-5 h-5 pointer-events-none" />
                         </div>
                     </div>
 
@@ -82,12 +83,13 @@ export const AdminLogin = () => {
                             <input
                                 type="password"
                                 required
-                                className="input-field pl-14"
+                                className="input-field"
+                                style={{ paddingLeft: '3.5rem' }}
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                             />
-                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 w-5 h-5 pointer-events-none" />
                         </div>
                     </div>
 
