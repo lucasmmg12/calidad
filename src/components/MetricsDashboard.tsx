@@ -15,12 +15,16 @@ import {
     Loader2,
     ChevronDown,
     Sparkles,
-    Tag
+    Tag,
+    ClipboardCheck
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import confetti from 'canvas-confetti';
 import { Chart, registerables } from 'chart.js';
+import { AdvancedAnalytics } from './AdvancedAnalytics';
+import { SlaAlertBanner } from './SlaAlerts';
+import { PdcaPanel } from './PdcaPanel';
 
 Chart.register(...registerables);
 
@@ -1130,6 +1134,28 @@ export const MetricsDashboard = () => {
                         <p className="text-sm">No hay datos de clasificación disponibles.</p>
                     </div>
                 )}
+            </div>
+
+            {/* ── SLA Alerts ── */}
+            <SlaAlertBanner reports={rawReports} />
+
+            {/* ── Advanced Analytics ── */}
+            <div>
+                <h2 className="text-xl font-black text-gray-800 mb-4 flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-sanatorio-primary" />
+                    Análisis Avanzado
+                </h2>
+                <AdvancedAnalytics reports={rawReports} />
+            </div>
+
+            {/* ── PDCA Panel ── */}
+            <div>
+                <h2 className="text-xl font-black text-gray-800 mb-4 flex items-center gap-2">
+                    <ClipboardCheck className="w-5 h-5 text-sanatorio-primary" />
+                    Ciclo PDCA — Verificación de Efectividad
+                </h2>
+                <p className="text-sm text-gray-500 mb-4">Seguimiento de acciones correctivas a 30, 60 y 90 días post-resolución.</p>
+                <PdcaPanel />
             </div>
 
             <div className="bg-gradient-to-r from-[#002b4d] to-[#004270] rounded-3xl p-8 text-white relative overflow-hidden">
