@@ -10,6 +10,7 @@ import {
     Calendar,
     Info,
     X,
+    XCircle,
     Loader2,
 } from 'lucide-react';
 import type { ResolutionFormData, ResolutionStatus } from '../types/resolution';
@@ -23,9 +24,10 @@ interface Props {
         sector: string;
     };
     onSubmit: (data: ResolutionFormData) => Promise<void>;
+    onReject?: () => void;
 }
 
-export const ResolutionForm = ({ reportData, onSubmit }: Props) => {
+export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
     const [formData, setFormData] = useState<ResolutionFormData>({
         reportId: reportData.id,
         isAdverseEvent: reportData.isAdverseEvent,
@@ -303,7 +305,7 @@ export const ResolutionForm = ({ reportData, onSubmit }: Props) => {
                     )}
 
                     {/* Action Bar */}
-                    <div className="pt-4 pb-12">
+                    <div className="pt-4 pb-12 space-y-4">
                         <button
                             type="submit"
                             disabled={isUploading}
@@ -324,6 +326,26 @@ export const ResolutionForm = ({ reportData, onSubmit }: Props) => {
                                 </>
                             )}
                         </button>
+
+                        {/* Reject Option */}
+                        {onReject && (
+                            <div className="border-2 border-dashed border-red-200 rounded-xl p-4 bg-red-50/30">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <XCircle className="w-4 h-4 text-red-400" />
+                                        <span className="text-sm text-gray-600">¿Este caso no te corresponde?</span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={onReject}
+                                        className="px-4 py-2 bg-white border border-red-200 text-red-600 font-bold text-xs rounded-lg hover:bg-red-50 transition-all"
+                                    >
+                                        Rechazar Reclamo
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         <p className="text-center text-xs text-gray-400 mt-4">
                             Sanatorio Argentino • Sistema de Gestión de Calidad
                         </p>

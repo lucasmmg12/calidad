@@ -291,7 +291,7 @@ export const ResolutionPage = () => {
                 </button>
             </div>
 
-            <ResolutionForm reportData={reportData} onSubmit={handleSubmit} />
+            <ResolutionForm reportData={reportData} onSubmit={handleSubmit} onReject={() => setShowRejectionModal(true)} />
 
             {showRejectionModal && <RejectionModal />}
         </div>
