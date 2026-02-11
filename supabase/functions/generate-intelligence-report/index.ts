@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
     }
 
     try {
-        const { reports, startDate, endDate } = await req.json()
+        const { reports, startDate, endDate, roleContext } = await req.json()
 
         if (!reports || reports.length === 0) {
             throw new Error('No hay reportes para analizar en este periodo.')
@@ -32,10 +32,14 @@ Deno.serve(async (req) => {
             category: r.ai_category
         }));
 
+        const roleInstruction = roleContext || 'Genera un informe completo institucional.';
+
         const prompt = `
       Actúa como el Director de Calidad del Sanatorio Argentino. 
       Analiza estos reportes (${startDate} a ${endDate}):
       ${JSON.stringify(reportContext)}
+
+      CONTEXTO DE ROL: ${roleInstruction}
 
       Genera un reporte de inteligencia clínica con 4 secciones:
       1. descriptive: Resumen de qué pasó y áreas críticas.

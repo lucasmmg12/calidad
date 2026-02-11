@@ -43,7 +43,7 @@ export const MetricsDashboard = () => {
     const [sectorFeedback, setSectorFeedback] = useState<Record<string, string>>({});
     const [loadingFeedback, setLoadingFeedback] = useState<string | null>(null);
 
-    const { role, sectors } = useAuth();
+    const { role, sectors, profile, session } = useAuth();
 
     useEffect(() => {
         calculateMetrics();
@@ -201,13 +201,25 @@ export const MetricsDashboard = () => {
         setIsExporting(true);
 
         try {
+            const userName = profile?.display_name || session?.user?.email || 'Usuario';
+            const userRole = role || 'responsable';
+            const userSectors = sectors || [];
+
+            // Role-based context for AI prompt
+            const roleContextMap: Record<string, string> = {
+                admin: 'Genera un informe completo institucional con visión global de todos los sectores. Incluye análisis profundo de causas raíz, correlaciones entre sectores y recomendaciones operativas detalladas.',
+                responsable: `Genera un informe de gestión sectorial enfocado EXCLUSIVAMENTE en los sectores: ${userSectors.join(', ')}. El tono debe ser operativo y práctico, con pasos concretos de mejora para estos sectores específicos.`,
+                directivo: 'Genera un executive brief estratégico. El tono debe ser conciso, ejecutivo, orientado a KPIs y decisiones de alto nivel. Usa bullet points. Evita detalles operativos, enfócate en tendencias, riesgos institucionales y recomendaciones estratégicas.'
+            };
+
             // 1. Get AI Analysis and Logo
             const [{ data: aiAnalysis, error: aiError }, logoBase64] = await Promise.all([
                 supabase.functions.invoke('generate-intelligence-report', {
                     body: {
                         reports: rawReports,
                         startDate: new Date(Math.min(...rawReports.map(r => new Date(r.created_at).getTime()))).toLocaleDateString(),
-                        endDate: new Date().toLocaleDateString()
+                        endDate: new Date().toLocaleDateString(),
+                        roleContext: roleContextMap[userRole] || roleContextMap.admin
                     }
                 }),
                 loadImageAsBase64('/logosanatorio.png')
@@ -222,11 +234,7 @@ export const MetricsDashboard = () => {
                 type: 'doughnut',
                 data: {
                     labels: stats.bySector.map(s => s.sector),
-                    datasets: [{
-                        data: stats.bySector.map(s => s.count),
-                        backgroundColor: sectorColors,
-                        borderWidth: 0
-                    }]
+                    datasets: [{ data: stats.bySector.map(s => s.count), backgroundColor: sectorColors, borderWidth: 0 }]
                 },
                 options: {
                     plugins: {
@@ -248,150 +256,383 @@ export const MetricsDashboard = () => {
                     }]
                 },
                 options: {
-                    plugins: {
-                        legend: { display: false },
-                        title: { display: true, text: 'Análisis de Triage (Riesgo)', font: { size: 18, weight: 'bold' }, padding: 20 }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, border: { display: false }, grid: { display: true, color: '#f1f5f9' } },
-                        x: { border: { display: false }, grid: { display: false } }
-                    }
+                    plugins: { legend: { display: false }, title: { display: true, text: 'Análisis de Triage (Riesgo)', font: { size: 18, weight: 'bold' }, padding: 20 } },
+                    scales: { y: { beginAtZero: true, border: { display: false }, grid: { display: true, color: '#f1f5f9' } }, x: { border: { display: false }, grid: { display: false } } }
                 }
             });
+
+            const classificationChartImg = stats.byClassification.length > 0 ? await renderChartToImage({
+                type: 'doughnut',
+                data: {
+                    labels: stats.byClassification.map(c => c.category),
+                    datasets: [{ data: stats.byClassification.map(c => c.count), backgroundColor: ['#6366f1', '#00A99D', '#00548B', '#FACC15', '#FF3131', '#a855f7', '#00D1FF', '#f97316'], borderWidth: 0 }]
+                },
+                options: {
+                    plugins: {
+                        legend: { position: 'right', labels: { font: { size: 12, weight: 'bold' } } },
+                        title: { display: true, text: 'Distribución por Clasificación', font: { size: 18, weight: 'bold' }, padding: 20 }
+                    }
+                }
+            }) : null;
 
             // 3. Initialize PDF
             const doc = new jsPDF();
             const pageWidth = doc.internal.pageSize.getWidth();
-            const primaryColor: [number, number, number] = [0, 84, 139]; // Sanatorio Blue
-            const secondaryColor: [number, number, number] = [0, 169, 157]; // Sanatorio Green
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const primaryColor: [number, number, number] = [0, 84, 139];
+            const secondaryColor: [number, number, number] = [0, 169, 157];
 
-            // --- PAGE 1: COVER & DESCRIPIVE ---
-            // Header
-            doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-            doc.rect(0, 0, pageWidth, 45, 'F');
+            // ─── HELPER: Add footer to every page ───
+            const addFooter = (pageNum: number, totalPages: number) => {
+                doc.setFontSize(7);
+                doc.setTextColor(180, 180, 180);
+                doc.text(`Sanatorio Argentino - Gestión de Calidad bajo Normas ISO 9001:2015 | Documento Confidencial`, 20, pageHeight - 8);
+                doc.text(`Pág. ${pageNum} / ${totalPages}`, pageWidth - 20, pageHeight - 8, { align: 'right' });
+            };
 
-            if (logoBase64) {
-                doc.addImage(logoBase64, 'PNG', 15, 10, 25, 25);
+            // ─── HELPER: Cover page ───
+            const buildCover = (title: string, subtitle: string, roleBadge: string, badgeColor: [number, number, number]) => {
+                // Full-width header band
+                doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+                doc.rect(0, 0, pageWidth, 60, 'F');
+
+                // Accent bar
+                doc.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+                doc.rect(0, 60, pageWidth, 3, 'F');
+
+                if (logoBase64) {
+                    doc.addImage(logoBase64, 'PNG', 15, 12, 30, 30);
+                }
+
+                doc.setTextColor(255, 255, 255);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(22);
+                doc.text(title, logoBase64 ? 52 : 20, 28);
+
+                doc.setFontSize(11);
+                doc.setFont('helvetica', 'normal');
+                doc.text(subtitle, logoBase64 ? 52 : 20, 38);
+
+                const periodStart = new Date(Math.min(...rawReports.map(r => new Date(r.created_at).getTime()))).toLocaleDateString();
+                doc.text(`Periodo: ${periodStart} - ${new Date().toLocaleDateString()}`, logoBase64 ? 52 : 20, 48);
+
+                // Role badge
+                doc.setFillColor(badgeColor[0], badgeColor[1], badgeColor[2]);
+                doc.roundedRect(pageWidth - 65, 70, 50, 12, 3, 3, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(8);
+                doc.text(roleBadge, pageWidth - 40, 78, { align: 'center' });
+
+                // User info
+                doc.setTextColor(80, 80, 80);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(10);
+                doc.text(`Generado por: ${userName}`, 20, 78);
+                doc.text(`Fecha: ${new Date().toLocaleString()}`, 20, 85);
+
+                if (userRole === 'responsable' && userSectors.length > 0) {
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(9);
+                    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+                    doc.text(`Sectores Asignados: ${userSectors.join(', ')}`, 20, 95);
+                }
+            };
+
+            // ─── HELPER: Section title  ───
+            const sectionTitle = (text: string, y: number, num?: number) => {
+                doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(16);
+                doc.text(num ? `${num}. ${text}` : text, 20, y);
+                // underline
+                doc.setDrawColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+                doc.setLineWidth(0.8);
+                doc.line(20, y + 2, 100, y + 2);
+            };
+
+            // ─── HELPER: AI text block ───
+            const aiTextBlock = (text: string, y: number) => {
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(10);
+                doc.setTextColor(50, 50, 50);
+                const lines = doc.splitTextToSize(text || 'Análisis no disponible.', pageWidth - 40);
+                doc.text(lines, 20, y);
+                return y + (lines.length * 5);
+            };
+
+            // ════════════════════════════════════════════
+            //  ADMIN REPORT — Full Institutional Intelligence
+            // ════════════════════════════════════════════
+            if (userRole === 'admin') {
+                // PAGE 1: COVER + KPIs
+                buildCover('INFORME DE INTELIGENCIA INSTITUCIONAL', 'Análisis integral de Gestión de Calidad', 'ADMINISTRADOR', [106, 27, 154]);
+
+                sectionTitle('RESUMEN EJECUTIVO', 110, 1);
+
+                autoTable(doc, {
+                    startY: 118,
+                    head: [['Métrica', 'Valor', 'Indicador']],
+                    body: [
+                        ['Total Incidentes', stats.total.toString(), '📊'],
+                        ['Casos Resueltos', stats.resolved.toString(), '✅'],
+                        ['Tasa de Resolución', `${stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}%`, stats.total > 0 && (stats.resolved / stats.total) >= 0.7 ? '🟢' : '🟡'],
+                        ['Alertas Críticas (Rojo)', stats.urgentCount.toString(), stats.urgentCount > 0 ? '🔴' : '🟢'],
+                        ['Tiempo Promedio Resolución', `${stats.avgResolutionTimeHours} hs`, Number(stats.avgResolutionTimeHours) <= 48 ? '🟢' : '🟡'],
+                        ['Casos Pendientes', stats.pending.toString(), stats.pending > 5 ? '🟡' : '🟢'],
+                    ],
+                    theme: 'striped',
+                    headStyles: { fillColor: primaryColor, fontSize: 10, fontStyle: 'bold' },
+                    styles: { fontSize: 9, cellPadding: 4 },
+                    columnStyles: { 2: { halign: 'center' } }
+                });
+
+                // Sector chart on page 1
+                if (sectorChartImg) {
+                    const chartY = (doc as any).lastAutoTable.finalY + 10;
+                    doc.addImage(sectorChartImg, 'PNG', 20, chartY, pageWidth - 40, 75);
+                }
+
+                // PAGE 2: ANALYSIS
+                doc.addPage();
+                if (urgencyChartImg) doc.addImage(urgencyChartImg, 'PNG', 20, 15, pageWidth - 40, 75);
+
+                sectionTitle('ANÁLISIS DESCRIPTIVO', 105, 2);
+                let nextY = aiTextBlock(aiAnalysis.descriptive, 115);
+
+                nextY = Math.max(nextY + 10, 180);
+                sectionTitle('ANÁLISIS DIAGNÓSTICO', nextY, 3);
+                aiTextBlock(aiAnalysis.diagnostic, nextY + 10);
+
+                // PAGE 3: PREDICTIVE + PRESCRIPTIVE
+                doc.addPage();
+                sectionTitle('ANÁLISIS PREDICTIVO', 25, 4);
+                let presY = aiTextBlock(aiAnalysis.predictive, 35);
+
+                presY = Math.max(presY + 10, 120);
+                sectionTitle('ANÁLISIS PRESCRIPTIVO', presY, 5);
+                aiTextBlock(aiAnalysis.prescriptive, presY + 10);
+
+                // PAGE 4: CLASSIFICATION + PERSONNEL
+                doc.addPage();
+                if (classificationChartImg) {
+                    doc.addImage(classificationChartImg, 'PNG', 20, 15, pageWidth - 40, 75);
+                }
+
+                sectionTitle('PERSONAL Y GESTIÓN', classificationChartImg ? 105 : 25, 6);
+
+                // Fetch all user profiles for admin report
+                const { data: allProfiles } = await supabase.from('user_profiles').select('display_name, role, assigned_sectors');
+                if (allProfiles && allProfiles.length > 0) {
+                    autoTable(doc, {
+                        startY: classificationChartImg ? 115 : 35,
+                        head: [['Nombre', 'Rol', 'Sectores Asignados']],
+                        body: allProfiles.map(p => [
+                            p.display_name || 'Sin nombre',
+                            p.role === 'admin' ? 'Administrador' : p.role === 'directivo' ? 'Directivo' : 'Responsable',
+                            (p.assigned_sectors || []).join(', ') || '-'
+                        ]),
+                        theme: 'striped',
+                        headStyles: { fillColor: secondaryColor, fontSize: 9 },
+                        styles: { fontSize: 8, cellPadding: 3 }
+                    });
+                }
+
+                // PAGE 5: CRITICAL CASES ANNEX
+                doc.addPage();
+                sectionTitle('ANEXO: CASOS CRÍTICOS', 25);
+
+                const criticalCases = rawReports.filter(r => r.ai_urgency === 'Rojo').slice(0, 15);
+                if (criticalCases.length > 0) {
+                    autoTable(doc, {
+                        startY: 35,
+                        head: [['ID', 'Sector', 'Clasificación', 'Resumen', 'Estado']],
+                        body: criticalCases.map(r => [
+                            r.tracking_id,
+                            r.sector || '-',
+                            r.ai_category || '-',
+                            (r.ai_summary || r.content || '').substring(0, 60),
+                            r.status === 'resolved' ? '✅ Resuelto' : r.status === 'cancelled' ? '❌ Cancelado' : '⏳ Pendiente'
+                        ]),
+                        theme: 'grid',
+                        headStyles: { fillColor: [239, 68, 68], fontSize: 8 },
+                        styles: { fontSize: 7, cellPadding: 3 }
+                    });
+                } else {
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(10);
+                    doc.setTextColor(100, 100, 100);
+                    doc.text('No se registraron casos críticos en el periodo analizado.', 20, 40);
+                }
+
+                // ════════════════════════════════════════════
+                //  RESPONSABLE REPORT — Sectoral Management
+                // ════════════════════════════════════════════
+            } else if (userRole === 'responsable') {
+                // PAGE 1: COVER
+                buildCover('INFORME DE GESTIÓN SECTORIAL', `Responsable: ${userName}`, 'RESPONSABLE', [22, 163, 74]);
+
+                sectionTitle('MIS INDICADORES', 110, 1);
+
+                autoTable(doc, {
+                    startY: 118,
+                    head: [['Métrica de Mi Gestión', 'Valor']],
+                    body: [
+                        ['Total Casos en Mis Sectores', stats.total.toString()],
+                        ['Casos Resueltos', stats.resolved.toString()],
+                        ['Tasa de Resolución', `${stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}%`],
+                        ['Casos Pendientes de Resolución', stats.pending.toString()],
+                        ['Alertas Críticas', stats.urgentCount.toString()],
+                        ['Tiempo Promedio de Respuesta', `${stats.avgResolutionTimeHours} hs`],
+                        ['Sectores Asignados', userSectors.join(', ') || 'Ninguno'],
+                    ],
+                    theme: 'striped',
+                    headStyles: { fillColor: [22, 163, 74], fontSize: 10 },
+                    styles: { fontSize: 9, cellPadding: 4 }
+                });
+
+                // PAGE 2: CHARTS
+                doc.addPage();
+                if (sectorChartImg) doc.addImage(sectorChartImg, 'PNG', 20, 15, pageWidth - 40, 75);
+                if (urgencyChartImg) doc.addImage(urgencyChartImg, 'PNG', 20, 105, pageWidth - 40, 75);
+
+                // PAGE 3: MY CASES TABLE
+                doc.addPage();
+                sectionTitle('MIS CASOS DETALLADOS', 25, 2);
+
+                autoTable(doc, {
+                    startY: 35,
+                    head: [['Ticket', 'Sector', 'Clasificación', 'Urgencia', 'Estado', 'Fecha']],
+                    body: rawReports.slice(0, 30).map(r => [
+                        r.tracking_id,
+                        r.sector || '-',
+                        r.ai_category || '-',
+                        r.ai_urgency || '-',
+                        r.status === 'resolved' ? 'Resuelto' : r.status === 'cancelled' ? 'Cancelado' : r.status === 'pending_resolution' ? 'Pendiente Resolución' : r.status === 'quality_validation' ? 'Validación Calidad' : 'Pendiente',
+                        new Date(r.created_at).toLocaleDateString()
+                    ]),
+                    theme: 'striped',
+                    headStyles: { fillColor: primaryColor, fontSize: 8 },
+                    styles: { fontSize: 7, cellPadding: 3 }
+                });
+
+                // PAGE 4: AI ANALYSIS (Focused)
+                doc.addPage();
+                sectionTitle('ANÁLISIS DE MI GESTIÓN', 25, 3);
+                let rNextY = aiTextBlock(aiAnalysis.descriptive, 35);
+
+                rNextY = Math.max(rNextY + 10, 100);
+                sectionTitle('DIAGNÓSTICO SECTORIAL', rNextY, 4);
+                rNextY = aiTextBlock(aiAnalysis.diagnostic, rNextY + 10);
+
+                // PAGE 5: RECOMMENDATIONS
+                doc.addPage();
+                sectionTitle('RECOMENDACIONES PARA MIS SECTORES', 25, 5);
+                let recY = aiTextBlock(aiAnalysis.prescriptive, 35);
+
+                recY = Math.max(recY + 15, 110);
+                sectionTitle('PROYECCIÓN', recY, 6);
+                aiTextBlock(aiAnalysis.predictive, recY + 10);
+
+                // ════════════════════════════════════════════
+                //  DIRECTIVO REPORT — Executive Intelligence Brief
+                // ════════════════════════════════════════════
+            } else {
+                // PAGE 1: COVER
+                buildCover('EXECUTIVE INTELLIGENCE BRIEF', 'Resumen Estratégico de Gestión de Calidad', 'DIRECCIÓN', [0, 84, 139]);
+
+                // Big KPI blocks
+                const kpiStartY = 105;
+                const kpiBoxW = (pageWidth - 50) / 2;
+                const kpiBoxH = 35;
+
+                const kpis = [
+                    { label: 'TOTAL INCIDENTES', value: stats.total.toString(), color: primaryColor },
+                    { label: 'TASA DE RESOLUCIÓN', value: `${stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}%`, color: secondaryColor },
+                    { label: 'ALERTAS CRÍTICAS', value: stats.urgentCount.toString(), color: [239, 68, 68] as [number, number, number] },
+                    { label: 'TIEMPO PROMEDIO', value: `${stats.avgResolutionTimeHours}h`, color: [99, 102, 241] as [number, number, number] },
+                ];
+
+                kpis.forEach((kpi, i) => {
+                    const col = i % 2;
+                    const row = Math.floor(i / 2);
+                    const x = 20 + col * (kpiBoxW + 10);
+                    const y = kpiStartY + row * (kpiBoxH + 8);
+
+                    doc.setFillColor(kpi.color[0], kpi.color[1], kpi.color[2]);
+                    doc.roundedRect(x, y, kpiBoxW, kpiBoxH, 4, 4, 'F');
+
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(8);
+                    doc.text(kpi.label, x + 10, y + 12);
+
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(24);
+                    doc.text(kpi.value, x + 10, y + 28);
+                });
+
+                // PAGE 2: STRATEGIC ANALYSIS
+                doc.addPage();
+                sectionTitle('VISIÓN ESTRATÉGICA', 25, 1);
+                let dNextY = aiTextBlock(aiAnalysis.descriptive, 35);
+
+                dNextY = Math.max(dNextY + 10, 120);
+                sectionTitle('DIAGNÓSTICO INSTITUCIONAL', dNextY, 2);
+                aiTextBlock(aiAnalysis.diagnostic, dNextY + 10);
+
+                // PAGE 3: CHARTS
+                doc.addPage();
+                sectionTitle('INDICADORES VISUALES', 25, 3);
+                if (sectorChartImg) doc.addImage(sectorChartImg, 'PNG', 20, 35, pageWidth - 40, 75);
+                if (urgencyChartImg) doc.addImage(urgencyChartImg, 'PNG', 20, 120, pageWidth - 40, 75);
+
+                // PAGE 4: CLASSIFICATION + STATUS
+                doc.addPage();
+                if (classificationChartImg) {
+                    doc.addImage(classificationChartImg, 'PNG', 20, 15, pageWidth - 40, 75);
+                }
+
+                sectionTitle('ESTADO DE GESTIÓN', classificationChartImg ? 105 : 25, 4);
+                autoTable(doc, {
+                    startY: classificationChartImg ? 115 : 35,
+                    head: [['Estado', 'Cantidad', 'Porcentaje']],
+                    body: [
+                        ['Resueltos', stats.byStatus.resolved.toString(), `${stats.total > 0 ? Math.round((stats.byStatus.resolved / stats.total) * 100) : 0}%`],
+                        ['Pendientes', stats.byStatus.pending.toString(), `${stats.total > 0 ? Math.round((stats.byStatus.pending / stats.total) * 100) : 0}%`],
+                        ['En Proceso', stats.byStatus.waiting.toString(), `${stats.total > 0 ? Math.round((stats.byStatus.waiting / stats.total) * 100) : 0}%`],
+                        ['Cancelados', stats.byStatus.cancelled.toString(), `${stats.total > 0 ? Math.round((stats.byStatus.cancelled / stats.total) * 100) : 0}%`],
+                    ],
+                    theme: 'striped',
+                    headStyles: { fillColor: primaryColor, fontSize: 10 },
+                    styles: { fontSize: 9, cellPadding: 5 }
+                });
+
+                // PAGE 5: STRATEGIC RECOMMENDATIONS
+                doc.addPage();
+                sectionTitle('PROYECCIÓN Y TENDENCIAS', 25, 5);
+                let stratY = aiTextBlock(aiAnalysis.predictive, 35);
+
+                stratY = Math.max(stratY + 10, 120);
+                sectionTitle('RECOMENDACIONES ESTRATÉGICAS', stratY, 6);
+                aiTextBlock(aiAnalysis.prescriptive, stratY + 10);
             }
 
-            doc.setTextColor(255, 255, 255);
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(22);
-            doc.text('INFORME DE INTELIGENCIA DE CALIDAD', logoBase64 ? 45 : 20, 25);
-
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'normal');
-            doc.text(`Periodo: ${new Date(Math.min(...rawReports.map(r => new Date(r.created_at).getTime()))).toLocaleDateString()} - ${new Date().toLocaleDateString()}`, logoBase64 ? 45 : 20, 32);
-            doc.text(`Analytics Hub SA | ${new Date().toLocaleString()}`, logoBase64 ? 45 : 20, 37);
-
-            // Descriptive Section
-            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(18);
-            doc.text('1. ANÁLISIS DESCRIPTIVO', 20, 60);
-
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(11);
-            doc.setTextColor(60, 60, 60);
-            const descriptiveLines = doc.splitTextToSize(aiAnalysis.descriptive, pageWidth - 40);
-            doc.text(descriptiveLines, 20, 70);
-
-            // KPIs
-            const kpiY = 70 + (descriptiveLines.length * 6) + 10;
-            autoTable(doc, {
-                startY: kpiY,
-                head: [['Métrica de Performance', 'Valor']],
-                body: [
-                    ['Total Incidentes Registrados', stats.total.toString()],
-                    ['Casos Gestionados con Éxito', stats.resolved.toString()],
-                    ['Tasa de Resolución Institucional', `${Math.round((stats.resolved / stats.total) * 100)}%`],
-                    ['Alertas de Riesgo Crítico', stats.urgentCount.toString()],
-                    ['Tiempo de Respuesta Promedio', `${stats.avgResolutionTimeHours} hs`]
-                ],
-                theme: 'striped',
-                headStyles: { fillColor: primaryColor, fontSize: 11 },
-                styles: { fontSize: 10, cellPadding: 4 }
-            });
-
-            // Sector Chart
-            if (sectorChartImg) {
-                const chartImgY = (doc as any).lastAutoTable.finalY + 15;
-                doc.addImage(sectorChartImg, 'PNG', 20, chartImgY, pageWidth - 40, 80);
+            // Add page numbers to all pages
+            const totalPages = doc.getNumberOfPages();
+            for (let i = 1; i <= totalPages; i++) {
+                doc.setPage(i);
+                addFooter(i, totalPages);
             }
 
-            // --- PAGE 2: DIAGNOSTIC & PREDICTIVE ---
-            doc.addPage();
+            // Role-based filename
+            const roleNames: Record<string, string> = {
+                admin: 'Institucional',
+                responsable: 'Sectorial',
+                directivo: 'Executive_Brief'
+            };
 
-            // Urgency Chart
-            if (urgencyChartImg) {
-                doc.addImage(urgencyChartImg, 'PNG', 20, 20, pageWidth - 40, 80);
-            }
-
-            // Diagnostic Section
-            const diagY = 115;
-            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(18);
-            doc.text('2. ANÁLISIS DIAGNÓSTICO', 20, diagY);
-
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(11);
-            doc.setTextColor(60, 60, 60);
-            const diagnosticLines = doc.splitTextToSize(aiAnalysis.diagnostic, pageWidth - 40);
-            doc.text(diagnosticLines, 20, diagY + 10);
-
-            // Predictive Section
-            const predictiveY = diagY + 10 + (diagnosticLines.length * 6) + 15;
-            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(18);
-            doc.text('3. ANÁLISIS PREDICTIVO', 20, predictiveY);
-
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(11);
-            doc.setTextColor(60, 60, 60);
-            const predictiveLines = doc.splitTextToSize(aiAnalysis.predictive, pageWidth - 40);
-            doc.text(predictiveLines, 20, predictiveY + 10);
-
-            // --- PAGE 3: PRESCRIPTIVE ---
-            doc.addPage();
-            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(18);
-            doc.text('4. ANÁLISIS PRESCRIPTIVO', 20, 30);
-
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(11);
-            doc.setTextColor(60, 60, 60);
-            const prescriptiveLines = doc.splitTextToSize(aiAnalysis.prescriptive, pageWidth - 40);
-            doc.text(prescriptiveLines, 20, 40);
-
-            // List of Recent Critical Cases (Operational Annex)
-            const annexY = 40 + (prescriptiveLines.length * 6) + 20;
-            doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(14);
-            doc.text('ANEXO: CASOS CRÍTICOS DEL PERIODO', 20, annexY);
-
-            autoTable(doc, {
-                startY: annexY + 5,
-                head: [['ID', 'Sector', 'Resumen AI', 'Estado']],
-                body: rawReports
-                    .filter(r => r.ai_urgency === 'Rojo')
-                    .slice(0, 10)
-                    .map(r => [r.tracking_id, r.sector, r.ai_summary || r.content.substring(0, 50), r.status === 'resolved' ? '✅ Resuelto' : '⏳ Pendiente']),
-                theme: 'grid',
-                headStyles: { fillColor: [239, 68, 68] },
-                styles: { fontSize: 8 }
-            });
-
-            // Final Footer
-            doc.setFontSize(8);
-            doc.setTextColor(180, 180, 180);
-            doc.text(`Sanatorio Argentino - Gestión de Calidad bajo Normas ISO 9001:2015. Documento Confidencial.`, pageWidth / 2, 285, { align: 'center' });
-
-            // Save PDF
-            doc.save(`Sanatorio_Argentino_Intelligence_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+            doc.save(`SA_Informe_${roleNames[userRole] || 'Calidad'}_${new Date().toISOString().split('T')[0]}.pdf`);
 
             // Success Feedback
             confetti({
@@ -438,7 +679,7 @@ export const MetricsDashboard = () => {
                         <>
                             <FileDown className="w-5 h-5" />
                             <BrainCircuit className="w-5 h-5 text-sanatorio-secondary" />
-                            Exportar Informe PDF
+                            {role === 'admin' ? 'Informe Institucional' : role === 'directivo' ? 'Executive Brief' : 'Informe Sectorial'}
                         </>
                     )}
                 </button>
