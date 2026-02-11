@@ -1267,13 +1267,27 @@ export const Dashboard = () => {
                                             </div>
                                         )}
 
-                                        {/* Notes log (simple simulation for now since we don't have a separate table log yet) */}
+                                        {/* Notes log */}
                                         {selectedReport.notes && (
                                             <div className="flex gap-3 relative pb-4 border-l-2 border-gray-100 pl-4 last:border-0 last:pb-0">
                                                 <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-purple-400 ring-4 ring-white"></div>
                                                 <div>
                                                     <p className="text-xs text-gray-400 font-mono mb-1">Nota Reciente</p>
                                                     <p className="text-sm text-gray-600 font-medium italic">"{selectedReport.notes}"</p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Assignment Rejected */}
+                                        {selectedReport.status === 'assignment_rejected' && (
+                                            <div className="flex gap-3 relative pb-4 border-l-2 border-red-200 pl-4 last:border-0 last:pb-0">
+                                                <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-red-500 ring-4 ring-white"></div>
+                                                <div>
+                                                    <p className="text-xs text-gray-400 font-mono mb-1">Rechazo de Asignación</p>
+                                                    <p className="text-sm text-red-600 font-bold">Responsable rechazó la asignación</p>
+                                                    {selectedReport.assigned_to && (
+                                                        <p className="text-xs text-gray-500 mt-0.5">Rechazado por: {selectedReport.assigned_to}</p>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}
@@ -1572,6 +1586,89 @@ export const Dashboard = () => {
                                                 className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 shadow-lg shadow-purple-500/20"
                                             >
                                                 Aprobar y Cerrar
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : selectedReport.status === 'assignment_rejected' ? (
+                                    // VISTA RECHAZO DEL RESPONSABLE
+                                    <div className="space-y-4">
+                                        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 relative overflow-hidden">
+                                            <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500"></div>
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
+                                                    <XCircle className="w-6 h-6" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-red-900 text-lg">Asignación Rechazada</h4>
+                                                    <p className="text-xs text-red-600 font-medium">El responsable indica que este caso no le corresponde</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Extract rejection reason from notes */}
+                                            {(() => {
+                                                const notes = selectedReport.notes || '';
+                                                const rejectionMatch = notes.match(/RECHAZO DE ASIGNACIÓN:\s*(.+?)(?:\n|$)/);
+                                                const rejectionReason = rejectionMatch ? rejectionMatch[1].trim() : null;
+                                                // Extract timestamp
+                                                const timestampMatch = notes.match(/\[([^\]]+)\]\s*🔴\s*RECHAZO/);
+                                                const rejectionTime = timestampMatch ? timestampMatch[1] : null;
+
+                                                return (
+                                                    <div className="space-y-3">
+                                                        {rejectionTime && (
+                                                            <div className="flex items-center gap-2 text-xs text-red-500 font-medium">
+                                                                <Clock className="w-3 h-3" />
+                                                                Rechazado el {rejectionTime}
+                                                            </div>
+                                                        )}
+                                                        <div className="bg-white p-4 rounded-xl border border-red-100 shadow-sm">
+                                                            <h5 className="text-xs font-bold text-red-700 uppercase tracking-wider mb-2">Motivo del Rechazo</h5>
+                                                            <p className="text-sm text-gray-700 leading-relaxed italic">
+                                                                "{rejectionReason || 'Motivo no especificado'}"
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+
+                                        {/* Responsable info */}
+                                        {selectedReport.assigned_to && (
+                                            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                                <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-500">
+                                                    <UserCog className="w-4 h-4" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-400 font-bold uppercase">Rechazado por</p>
+                                                    <p className="text-sm font-bold text-gray-700">{selectedReport.assigned_to}</p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Actions */}
+                                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                                            <h4 className="font-bold text-gray-800 mb-2">Rederivación Requerida</h4>
+                                            <p className="text-xs text-gray-500 mb-4">
+                                                Asigná este caso a otro responsable o al sector correcto enviando una nueva solicitud por WhatsApp.
+                                            </p>
+                                            <button
+                                                onClick={() => setShowReferralModal(true)}
+                                                className="w-full py-3 bg-sanatorio-primary text-white rounded-xl font-bold text-sm hover:opacity-90 shadow-lg shadow-blue-900/10 flex items-center justify-center gap-2"
+                                            >
+                                                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+                                                    <Send className="w-3 h-3" />
+                                                </div>
+                                                Rederivación (WhatsApp)
+                                            </button>
+                                        </div>
+
+                                        <div className="text-center py-4 border-t border-gray-100">
+                                            <p className="text-xs text-gray-400 mb-2">Otras acciones</p>
+                                            <button
+                                                onClick={handleDiscardClick}
+                                                className="text-gray-400 hover:text-gray-600 text-xs font-bold transition-colors flex items-center justify-center gap-1 mx-auto"
+                                            >
+                                                <Archive className="w-3 h-3" /> Descartar Caso
                                             </button>
                                         </div>
                                     </div>
