@@ -46,8 +46,8 @@ export const AdminLogin = () => {
         <div className="min-h-[80vh] flex items-center justify-center p-4">
             <div className="w-full max-w-md bg-white rounded-3xl shadow-card border border-gray-100 p-8 md:p-10 animate-in fade-in zoom-in-95 duration-500">
                 <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-sanatorio-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <Lock className="w-8 h-8 text-sanatorio-primary" />
+                    <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-gray-100">
+                        <img src="/logosanatorio.png" alt="Sanatorio Argentino" className="w-14 h-14 object-contain" />
                     </div>
                     <h2 className="text-2xl font-bold text-gray-800">Acceso Administrativo</h2>
                     <p className="text-sm text-gray-500 mt-2">Panel de Control de Calidad</p>
@@ -67,7 +67,7 @@ export const AdminLogin = () => {
                             <input
                                 type="email"
                                 required
-                                className="input-field pl-12"
+                                className="input-field pl-14"
                                 placeholder="ejemplo@sanatorio.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -82,7 +82,7 @@ export const AdminLogin = () => {
                             <input
                                 type="password"
                                 required
-                                className="input-field pl-12"
+                                className="input-field pl-14"
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
