@@ -170,79 +170,6 @@ export const ResolutionPage = () => {
         );
     }
 
-    // Assignment Rejection Modal
-    const RejectionModal = () => (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full animate-in zoom-in-95 duration-300">
-                {/* Header */}
-                <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
-                            <AlertTriangle className="w-5 h-5 text-red-500" />
-                        </div>
-                        <h3 className="text-lg font-bold text-gray-800">Rechazar Asignación</h3>
-                    </div>
-                    <button
-                        onClick={() => setShowRejectionModal(false)}
-                        className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-                    >
-                        <X className="w-5 h-5 text-gray-400" />
-                    </button>
-                </div>
-
-                {/* Content */}
-                <div className="p-6 space-y-4">
-                    <p className="text-sm text-gray-600">
-                        Estás indicando que el caso <span className="font-bold text-sanatorio-primary">{reportData.trackingId}</span> no corresponde a tu sector.
-                    </p>
-
-                    <div className="space-y-2">
-                        <label className="block text-sm font-bold text-gray-700">
-                            Motivo del rechazo <span className="text-red-500">*</span>
-                        </label>
-                        <textarea
-                            value={rejectionReason}
-                            onChange={(e) => setRejectionReason(e.target.value)}
-                            placeholder="Ej: Este reclamo corresponde al sector de Mantenimiento, no al mío..."
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-red-400 focus:ring-2 focus:ring-red-50 outline-none transition-all resize-none text-sm"
-                            rows={3}
-                        />
-                    </div>
-
-                    <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
-                        <p className="text-xs text-amber-700">
-                            <span className="font-bold">Nota:</span> Esta acción quedará registrada en el historial del ticket y será revisada por el equipo de Calidad.
-                        </p>
-                    </div>
-                </div>
-
-                {/* Actions */}
-                <div className="p-6 border-t border-gray-100 flex gap-3">
-                    <button
-                        onClick={() => setShowRejectionModal(false)}
-                        className="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition-colors text-sm"
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        onClick={handleAssignmentRejection}
-                        disabled={rejecting || !rejectionReason.trim()}
-                        className="flex-1 px-4 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                        {rejecting ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                            <>
-                                <Send className="w-4 h-4" />
-                                Confirmar Rechazo
-                            </>
-                        )}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-
     // Modo Formulario de Acción Correctiva
     if (showCorrectiveForm) {
         return (
@@ -263,7 +190,65 @@ export const ResolutionPage = () => {
                         window.close();
                     }}
                 />
-                {showRejectionModal && <RejectionModal />}
+                {showRejectionModal && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                        <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full animate-in zoom-in-95 duration-300">
+                            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+                                        <AlertTriangle className="w-5 h-5 text-red-500" />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-gray-800">Rechazar Asignación</h3>
+                                </div>
+                                <button onClick={() => setShowRejectionModal(false)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+                                    <X className="w-5 h-5 text-gray-400" />
+                                </button>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                <p className="text-sm text-gray-600">
+                                    Estás indicando que el caso <span className="font-bold text-sanatorio-primary">{reportData.trackingId}</span> no corresponde a tu sector.
+                                </p>
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-bold text-gray-700">
+                                        Motivo del rechazo <span className="text-red-500">*</span>
+                                    </label>
+                                    <textarea
+                                        value={rejectionReason}
+                                        onChange={(e) => setRejectionReason(e.target.value)}
+                                        placeholder="Ej: Este reclamo corresponde al sector de Mantenimiento, no al mío..."
+                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-red-400 focus:ring-2 focus:ring-red-50 outline-none transition-all resize-none text-sm"
+                                        rows={3}
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
+                                    <p className="text-xs text-amber-700">
+                                        <span className="font-bold">Nota:</span> Esta acción quedará registrada en el historial del ticket y será revisada por el equipo de Calidad.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="p-6 border-t border-gray-100 flex gap-3">
+                                <button onClick={() => setShowRejectionModal(false)} className="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition-colors text-sm">
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleAssignmentRejection}
+                                    disabled={rejecting || !rejectionReason.trim()}
+                                    className="flex-1 px-4 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {rejecting ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Send className="w-4 h-4" />
+                                            Confirmar Rechazo
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </>
         );
     }
@@ -293,7 +278,65 @@ export const ResolutionPage = () => {
 
             <ResolutionForm reportData={reportData} onSubmit={handleSubmit} onReject={() => setShowRejectionModal(true)} />
 
-            {showRejectionModal && <RejectionModal />}
+            {showRejectionModal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full animate-in zoom-in-95 duration-300">
+                        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+                                    <AlertTriangle className="w-5 h-5 text-red-500" />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-800">Rechazar Asignación</h3>
+                            </div>
+                            <button onClick={() => setShowRejectionModal(false)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+                                <X className="w-5 h-5 text-gray-400" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <p className="text-sm text-gray-600">
+                                Estás indicando que el caso <span className="font-bold text-sanatorio-primary">{reportData.trackingId}</span> no corresponde a tu sector.
+                            </p>
+                            <div className="space-y-2">
+                                <label className="block text-sm font-bold text-gray-700">
+                                    Motivo del rechazo <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={rejectionReason}
+                                    onChange={(e) => setRejectionReason(e.target.value)}
+                                    placeholder="Ej: Este reclamo corresponde al sector de Mantenimiento, no al mío..."
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-red-400 focus:ring-2 focus:ring-red-50 outline-none transition-all resize-none text-sm"
+                                    rows={3}
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
+                                <p className="text-xs text-amber-700">
+                                    <span className="font-bold">Nota:</span> Esta acción quedará registrada en el historial del ticket y será revisada por el equipo de Calidad.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="p-6 border-t border-gray-100 flex gap-3">
+                            <button onClick={() => setShowRejectionModal(false)} className="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition-colors text-sm">
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleAssignmentRejection}
+                                disabled={rejecting || !rejectionReason.trim()}
+                                className="flex-1 px-4 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {rejecting ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <>
+                                        <Send className="w-4 h-4" />
+                                        Confirmar Rechazo
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
