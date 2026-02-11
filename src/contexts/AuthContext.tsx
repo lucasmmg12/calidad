@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { supabase } from '../utils/supabase';
 import type { Session } from '@supabase/supabase-js';
 
@@ -50,18 +50,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Guard against double-fetch race conditions
-    const fetchingRef = useRef(false);
-    const initializedRef = useRef(false);
-
-    const fetchProfile = async (userId: string, userEmail?: string) => {
-        // Prevent concurrent fetches
-        if (fetchingRef.current) {
-            console.log('[Auth] Skipping fetch — already in progress');
-            return;
-        }
-        fetchingRef.current = true;
-
+    const fetchProfile = async (userId: string, userEmail?: string): Promise<UserProfile | null> => {
         try {
             console.log('[Auth] Fetching profile for:', userId);
             const { data, error } = await supabase
@@ -72,7 +61,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             if (error && error.code === 'PGRST116') {
                 // Profile doesn't exist yet — create default one
-                console.log('[Auth] Profile not found, creating new one...');
+                console.log('[Auth] Profile not found, creating...');
                 const { data: newProfile, error: insertError } = await supabase
                     .from('user_profiles')
                     .insert({
@@ -87,87 +76,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
                 if (insertError) {
                     console.error('[Auth] Error creating profile:', insertError);
-                    return;
+                    return null;
                 }
-
-                if (newProfile) {
-                    console.log('[Auth] New profile created:', newProfile);
-                    setProfile(newProfile);
-                }
+                console.log('[Auth] Profile created:', newProfile?.role);
+                return newProfile;
             } else if (error) {
                 console.error('[Auth] Error fetching profile:', error);
-                // Retry once after a small delay (RLS recursion race)
-                await new Promise(resolve => setTimeout(resolve, 500));
-                const { data: retryData, error: retryError } = await supabase
-                    .from('user_profiles')
-                    .select('*')
-                    .eq('user_id', userId)
-                    .single();
-
-                if (!retryError && retryData) {
-                    console.log('[Auth] Profile fetched on retry:', retryData.role);
-                    setProfile(retryData);
-                } else {
-                    console.error('[Auth] Retry also failed:', retryError);
-                }
+                return null;
             } else {
                 console.log('[Auth] Profile loaded:', data.role);
-                setProfile(data);
+                return data;
             }
         } catch (err) {
             console.error('[Auth] Unexpected error:', err);
-        } finally {
-            fetchingRef.current = false;
+            return null;
         }
     };
 
     const refreshProfile = async () => {
         if (session?.user?.id) {
-            fetchingRef.current = false; // Allow refresh to bypass guard
-            await fetchProfile(session.user.id, session.user.email || undefined);
+            const p = await fetchProfile(session.user.id, session.user.email || undefined);
+            if (p) setProfile(p);
         }
     };
 
     useEffect(() => {
-        // Only initialize once
-        if (initializedRef.current) return;
-        initializedRef.current = true;
-
-        // Get initial session
-        supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-            console.log('[Auth] Initial session:', currentSession ? 'found' : 'none');
-            setSession(currentSession);
-            if (currentSession?.user?.id) {
-                fetchProfile(currentSession.user.id, currentSession.user.email || undefined)
-                    .finally(() => setLoading(false));
-            } else {
-                setLoading(false);
-            }
-        });
-
-        // Listen for auth changes (sign in, sign out, token refresh)
+        // Use onAuthStateChange as the SOLE source of session truth.
+        // It fires INITIAL_SESSION immediately for existing sessions on page load.
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (event, newSession) => {
-                console.log('[Auth] Auth state change:', event);
+            (event, currentSession) => {
+                console.log('[Auth] Event:', event, currentSession ? '(session exists)' : '(no session)');
 
-                // Skip INITIAL_SESSION as we handle it above with getSession
-                if (event === 'INITIAL_SESSION') return;
+                // Synchronous state update is safe inside callback
+                setSession(currentSession);
 
-                setSession(newSession);
+                if (currentSession?.user?.id) {
+                    // CRITICAL: defer Supabase DB calls with setTimeout to avoid
+                    // "AbortError: signal is aborted without reason" which happens
+                    // when making Supabase requests inside the auth callback
+                    const userId = currentSession.user.id;
+                    const userEmail = currentSession.user.email || undefined;
 
-                if (event === 'SIGNED_IN' && newSession?.user?.id) {
-                    fetchingRef.current = false; // Reset guard for new sign-in
-                    await fetchProfile(newSession.user.id, newSession.user.email || undefined);
-                    setLoading(false);
-                } else if (event === 'SIGNED_OUT') {
+                    setTimeout(async () => {
+                        const p = await fetchProfile(userId, userEmail);
+                        if (p) setProfile(p);
+                        setLoading(false);
+                    }, 0);
+                } else {
                     setProfile(null);
-                    setLoading(false);
-                } else if (event === 'TOKEN_REFRESHED' && newSession?.user?.id) {
-                    // On token refresh, only re-fetch if we don't have a profile
-                    if (!profile) {
-                        fetchingRef.current = false;
-                        await fetchProfile(newSession.user.id, newSession.user.email || undefined);
-                    }
                     setLoading(false);
                 }
             }
