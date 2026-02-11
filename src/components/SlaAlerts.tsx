@@ -1,5 +1,5 @@
-import { AlertTriangle, Clock, AlertOctagon, CheckCircle2 } from 'lucide-react';
-import { useMemo } from 'react';
+import { AlertTriangle, Clock, AlertOctagon, CheckCircle2, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
 interface Report {
     id: string;
@@ -41,6 +41,7 @@ export const getSlaLevel = (report: Report): { level: 'critical' | 'warning' | '
 };
 
 export const SlaAlertBanner = ({ reports }: Props) => {
+    const [showInfo, setShowInfo] = useState(false);
     const alerts = useMemo(() => {
         const result: SlaAlert[] = [];
         reports.forEach(report => {
@@ -82,6 +83,16 @@ export const SlaAlertBanner = ({ reports }: Props) => {
                     }`}>
                     Alertas de SLA
                 </h3>
+                <button
+                    onClick={() => setShowInfo(!showInfo)}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${showInfo ? 'bg-white/80 text-gray-600' : 'bg-white/50 text-gray-400 hover:bg-white/70'
+                        }`}
+                    title="¿Qué es SLA?"
+                >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                    ¿Qué es esto?
+                    {showInfo ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </button>
                 <div className="flex items-center gap-2 ml-auto">
                     {criticalCount > 0 && (
                         <span className="px-2.5 py-1 bg-red-100 text-red-700 text-[10px] font-black rounded-full">
@@ -95,6 +106,28 @@ export const SlaAlertBanner = ({ reports }: Props) => {
                     )}
                 </div>
             </div>
+
+            {showInfo && (
+                <div className="mb-3 p-4 bg-white/70 rounded-xl border border-gray-200 text-xs text-gray-600 space-y-2 animate-in fade-in slide-in-from-top-1 duration-300">
+                    <p className="font-bold text-gray-800 text-sm">📋 SLA = Acuerdo de Nivel de Servicio</p>
+                    <p>Es el <strong>tiempo máximo</strong> que tiene un responsable para responder un incidente desde que fue reportado. Funciona como el triage de una guardia: cada caso tiene un plazo según su urgencia.</p>
+                    <div className="grid grid-cols-3 gap-2 mt-2">
+                        <div className="bg-red-50 p-2 rounded-lg text-center">
+                            <p className="font-black text-red-600">🔴 Crítico</p>
+                            <p className="text-red-700 font-bold">24 horas máx.</p>
+                        </div>
+                        <div className="bg-amber-50 p-2 rounded-lg text-center">
+                            <p className="font-black text-amber-600">🟡 Medio</p>
+                            <p className="text-amber-700 font-bold">48 horas máx.</p>
+                        </div>
+                        <div className="bg-green-50 p-2 rounded-lg text-center">
+                            <p className="font-black text-green-600">🟢 Leve</p>
+                            <p className="text-green-700 font-bold">48 horas máx.</p>
+                        </div>
+                    </div>
+                    <p className="mt-2"><strong>"Xhs fuera de SLA"</strong> = horas que pasaron desde que venció el plazo. <strong>"Xhs para vencer"</strong> = horas que quedan antes del deadline.</p>
+                </div>
+            )}
 
             <div className="space-y-2 max-h-40 overflow-y-auto">
                 {alerts.slice(0, 8).map(alert => (

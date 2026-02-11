@@ -142,21 +142,24 @@ export const AdvancedAnalytics = ({ reports }: Props) => {
                         </div>
 
                         {/* Bar chart */}
-                        <div className="flex items-end gap-2 h-48">
+                        <div className="flex items-end gap-1.5" style={{ height: '200px' }}>
                             {trendData.entries.map(([label, value], i) => {
                                 const height = (value / trendData.maxVal) * 100;
                                 const isLast = i === trendData.entries.length - 1;
                                 return (
-                                    <div key={label} className="flex-1 flex flex-col items-center gap-1 group">
-                                        <span className="text-[10px] font-bold text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div key={label} className="flex-1 flex flex-col items-center group" style={{ height: '100%', justifyContent: 'flex-end' }}>
+                                        <span className="text-[10px] font-bold text-gray-600 mb-1">
                                             {value}
                                         </span>
                                         <div
-                                            className={`w-full rounded-t-lg transition-all duration-500 ${isLast ? 'bg-sanatorio-primary' : 'bg-sanatorio-primary/30'
-                                                } group-hover:bg-sanatorio-primary/70`}
-                                            style={{ height: `${Math.max(height, 4)}%` }}
+                                            className="w-full rounded-t-lg transition-all duration-500 group-hover:opacity-90"
+                                            style={{
+                                                height: `${Math.max(height, 8)}%`,
+                                                backgroundColor: isLast ? '#00548B' : '#00548B80',
+                                                minHeight: '6px'
+                                            }}
                                         />
-                                        <span className="text-[9px] text-gray-400 font-medium mt-1 truncate w-full text-center">
+                                        <span className="text-[9px] text-gray-400 font-medium mt-1.5 truncate w-full text-center">
                                             {label}
                                         </span>
                                     </div>
