@@ -14,7 +14,8 @@ import {
     BrainCircuit,
     Loader2,
     ChevronDown,
-    Sparkles
+    Sparkles,
+    Tag
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -33,7 +34,8 @@ export const MetricsDashboard = () => {
         avgResolutionTimeHours: 0,
         bySector: [] as { sector: string; count: number; percentage: number }[],
         byUrgency: { Verdes: 0, Amarillos: 0, Rojos: 0 },
-        byStatus: { resolved: 0, pending: 0, waiting: 0, cancelled: 0 }
+        byStatus: { resolved: 0, pending: 0, waiting: 0, cancelled: 0 },
+        byClassification: [] as { category: string; count: number; percentage: number }[]
     });
     const [isExporting, setIsExporting] = useState(false);
     const [rawReports, setRawReports] = useState<any[]>([]);
@@ -123,6 +125,16 @@ export const MetricsDashboard = () => {
             cancelled: filteredReports.filter(r => r.status === 'cancelled').length
         };
 
+        // By Classification (ai_category) — use filteredReports
+        const classificationMap: Record<string, number> = {};
+        filteredReports.forEach(r => {
+            const cat = r.ai_category || 'Sin clasificar';
+            classificationMap[cat] = (classificationMap[cat] || 0) + 1;
+        });
+        const byClassification = Object.entries(classificationMap)
+            .map(([category, count]) => ({ category, count, percentage: total > 0 ? (count / total) * 100 : 0 }))
+            .sort((a, b) => b.count - a.count);
+
         setStats({
             total,
             resolved: resolved.length,
@@ -131,7 +143,8 @@ export const MetricsDashboard = () => {
             avgResolutionTimeHours: Number(avgHours),
             bySector,
             byUrgency,
-            byStatus
+            byStatus,
+            byClassification
         });
         setLoading(false);
     };
@@ -800,6 +813,58 @@ export const MetricsDashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Classification Breakdown Chart */}
+            <div className="bg-white p-8 rounded-3xl shadow-card border border-gray-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+                    <Tag className="w-5 h-5 text-indigo-500" />
+                    Distribución por Clasificación
+                </h3>
+                <p className="text-xs text-gray-400 mb-6">Categorías operativas asignadas a cada reporte.</p>
+
+                {stats.byClassification.length > 0 ? (
+                    <div className="space-y-3">
+                        {stats.byClassification.map((item, idx) => {
+                            const classificationColors = [
+                                'bg-indigo-500', 'bg-violet-500', 'bg-purple-500', 'bg-fuchsia-500',
+                                'bg-pink-500', 'bg-rose-500', 'bg-sky-500', 'bg-cyan-500',
+                                'bg-teal-500', 'bg-emerald-500', 'bg-amber-500', 'bg-orange-500',
+                                'bg-red-500', 'bg-blue-500', 'bg-lime-500', 'bg-slate-400'
+                            ];
+                            const barColor = classificationColors[idx % classificationColors.length];
+                            const isUnclassified = item.category === 'Sin clasificar';
+
+                            return (
+                                <div key={item.category} className={`group rounded-xl p-3 transition-all hover:bg-slate-50 ${isUnclassified ? 'opacity-60' : ''}`}>
+                                    <div className="flex justify-between items-center mb-1.5">
+                                        <span className={`text-sm font-medium ${isUnclassified ? 'text-gray-400 italic' : 'text-gray-700'}`}>
+                                            {item.category}
+                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-bold text-gray-500">{item.count}</span>
+                                            <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                                {Math.round(item.percentage)}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                                        <div
+                                            className={`h-full rounded-full transition-all duration-700 ease-out ${barColor} group-hover:opacity-90`}
+                                            style={{ width: `${item.percentage}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="text-center py-10 text-gray-400">
+                        <Tag className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                        <p className="text-sm">No hay datos de clasificación disponibles.</p>
+                    </div>
+                )}
+            </div>
+
             <div className="bg-gradient-to-r from-[#002b4d] to-[#004270] rounded-3xl p-8 text-white relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
 
