@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../utils/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import {
     BarChart3,
     PieChart,
@@ -40,9 +41,11 @@ export const MetricsDashboard = () => {
     const [sectorFeedback, setSectorFeedback] = useState<Record<string, string>>({});
     const [loadingFeedback, setLoadingFeedback] = useState<string | null>(null);
 
+    const { role, sectors } = useAuth();
+
     useEffect(() => {
         calculateMetrics();
-    }, []);
+    }, [role, sectors]);
 
     const calculateMetrics = async () => {
         setLoading(true);
@@ -56,12 +59,24 @@ export const MetricsDashboard = () => {
             return;
         }
 
-        setRawReports(reports);
+        // --- Role Based Filtering ---
+        // Admin & Directivo: View All
+        // Responsable: View only assigned sectors
+        let filteredReports = reports;
 
-        const total = reports.length;
-        const resolved = reports.filter(r => r.status === 'resolved');
-        const pending = reports.filter(r => r.status !== 'resolved');
-        const urgent = reports.filter(r => r.ai_urgency === 'Rojo');
+        if (role === 'responsable') {
+            // Normalize sectors for comparison (just in case)
+            filteredReports = reports.filter(r =>
+                r.sector && sectors.includes(r.sector)
+            );
+        }
+
+        setRawReports(filteredReports);
+
+        const total = filteredReports.length;
+        const resolved = filteredReports.filter(r => r.status === 'resolved');
+        const pending = filteredReports.filter(r => r.status !== 'resolved');
+        const urgent = filteredReports.filter(r => r.ai_urgency === 'Rojo');
 
         // Avg Resolution Time
         let totalTimeMs = 0;

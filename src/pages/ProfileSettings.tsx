@@ -5,7 +5,7 @@ import { SECTOR_OPTIONS } from '../constants/sectors';
 import { CheckCircle2, AlertTriangle, Settings, Shield, Save, Loader2, Lock } from 'lucide-react';
 
 const ProfileSettings = () => {
-    const { profile, refreshProfile, isAdmin } = useAuth();
+    const { profile, refreshProfile, isAdmin, loading: authLoading } = useAuth();
     const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
@@ -63,10 +63,30 @@ const ProfileSettings = () => {
         s.label.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    if (!profile) {
+    if (authLoading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <Loader2 className="w-8 h-8 animate-spin text-sanatorio-primary" />
+            </div>
+        );
+    }
+
+    if (!profile) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center animate-in fade-in">
+                <div className="bg-red-50 p-6 rounded-2xl border border-red-200 max-w-md">
+                    <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+                    <h2 className="text-xl font-bold text-red-700 mb-2">Error de Perfil</h2>
+                    <p className="text-sm text-red-600 mb-4">
+                        No pudimos recuperar tu información de perfil. Por favor intenta recargar la página.
+                    </p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="btn-primary bg-red-600 hover:bg-red-700 text-white w-full"
+                    >
+                        Recargar Página
+                    </button>
+                </div>
             </div>
         );
     }
@@ -87,8 +107,8 @@ const ProfileSettings = () => {
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${profile.role === 'admin' ? 'bg-purple-100 text-purple-600' :
-                                profile.role === 'directivo' ? 'bg-blue-100 text-blue-600' :
-                                    'bg-green-100 text-green-600'
+                            profile.role === 'directivo' ? 'bg-blue-100 text-blue-600' :
+                                'bg-green-100 text-green-600'
                             }`}>
                             <Shield className="w-6 h-6" />
                         </div>
@@ -96,8 +116,8 @@ const ProfileSettings = () => {
                             <p className="font-bold text-gray-800">{profile.display_name || 'Usuario'}</p>
                             <p className="text-xs font-bold uppercase tracking-wider text-gray-400">
                                 Rol: <span className={`${profile.role === 'admin' ? 'text-purple-600' :
-                                        profile.role === 'directivo' ? 'text-blue-600' :
-                                            'text-green-600'
+                                    profile.role === 'directivo' ? 'text-blue-600' :
+                                        'text-green-600'
                                     }`}>{profile.role === 'admin' ? 'Administrador (Calidad)' : profile.role === 'directivo' ? 'Directivo' : 'Responsable'}</span>
                             </p>
                         </div>
@@ -107,10 +127,10 @@ const ProfileSettings = () => {
 
             {/* Edit Counter */}
             <div className={`rounded-2xl p-5 mb-6 border ${isLocked
-                    ? 'bg-red-50 border-red-200'
-                    : editsRemaining === 1
-                        ? 'bg-amber-50 border-amber-200'
-                        : 'bg-blue-50 border-blue-200'
+                ? 'bg-red-50 border-red-200'
+                : editsRemaining === 1
+                    ? 'bg-amber-50 border-amber-200'
+                    : 'bg-blue-50 border-blue-200'
                 }`}>
                 <div className="flex items-start gap-3">
                     {isLocked ? (
@@ -173,13 +193,13 @@ const ProfileSettings = () => {
                                     onClick={() => toggleSector(sector.value)}
                                     disabled={isLocked}
                                     className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 text-left ${isSelected
-                                            ? 'border-sanatorio-primary bg-blue-50 shadow-sm'
-                                            : 'border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50'
+                                        ? 'border-sanatorio-primary bg-blue-50 shadow-sm'
+                                        : 'border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50'
                                         } ${isLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                                 >
                                     <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${isSelected
-                                            ? 'border-sanatorio-primary bg-sanatorio-primary'
-                                            : 'border-gray-300'
+                                        ? 'border-sanatorio-primary bg-sanatorio-primary'
+                                        : 'border-gray-300'
                                         }`}>
                                         {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
                                     </div>

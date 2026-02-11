@@ -453,7 +453,12 @@ const QualityApproveModal = ({
     );
 };
 
+import { useAuth } from '../contexts/AuthContext';
+
+// ... (other imports remain, just ensuring useAuth is imported)
+
 export const Dashboard = () => {
+    const { role, sectors } = useAuth();
     const [reports, setReports] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedReport, setSelectedReport] = useState<any>(null);
@@ -471,9 +476,12 @@ export const Dashboard = () => {
     const [showQualityApproveModal, setShowQualityApproveModal] = useState(false);
     const [isProcessingQuality, setIsProcessingQuality] = useState(false);
 
-    // ... (Feedback Modal State)
-
-    // ... (useEffect, fetchReports, handleSendReferral, handleReopenCase)
+    const [feedbackModal, setFeedbackModal] = useState<{
+        isOpen: boolean;
+        type: 'success' | 'error';
+        title: string;
+        message: string;
+    }>({ isOpen: false, type: 'success', title: '', message: '' });
 
     const handleQualityReturn = async (reason: string, phoneTarget: string) => {
         if (!selectedReport) return;
@@ -484,7 +492,6 @@ export const Dashboard = () => {
         const currentNotes = selectedReport.notes || '';
         const updatedNotes = currentNotes ? `${currentNotes}\n\n${logEntry}` : logEntry;
 
-        // 0. Prepare history entry
         const historyEntry = {
             rejected_at: new Date().toISOString(),
             rejected_by: "Calidad",
@@ -501,19 +508,12 @@ export const Dashboard = () => {
         const currentHistory = selectedReport.resolution_history || [];
         const updatedHistory = [...currentHistory, historyEntry];
 
-        // 1. Update Database (Reset resolution fields and append history)
         const { error } = await supabase
             .from('reports')
             .update({
                 status: 'pending_resolution',
                 notes: updatedNotes,
                 resolution_history: updatedHistory,
-                // Optional: Clear fields to force fresh input, or keep them for reference? 
-                // User said "force fresh start", usually implies clearing. 
-                // Let's clear them so the form feels "new" but maybe pre-fill? 
-                // The prompt says "debe quedar grabado todo", implying we move current to history.
-                // ResolucionForm usually loads existing data. If we clear, it loads empty.
-                // ensuring "soluciones insuficientes" logs are visible.
                 immediate_action: null,
                 root_cause: null,
                 corrective_plan: null,
@@ -522,7 +522,6 @@ export const Dashboard = () => {
             .eq('id', selectedReport.id);
 
         if (!error) {
-            // 2. Send WhatsApp if phone provided
             if (phoneTarget && phoneTarget.length > 5) {
                 const botNumber = `549${phoneTarget.replace(/\D/g, '').replace(/^549/, '')}`;
                 const resolutionLink = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}`;
@@ -536,7 +535,6 @@ export const Dashboard = () => {
                 });
             }
 
-            // 3. Update local state
             setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'pending_resolution', notes: updatedNotes } : r));
             setSelectedReport(null);
             setShowQualityReturnModal(false);
@@ -551,7 +549,6 @@ export const Dashboard = () => {
         if (!selectedReport) return;
         setIsProcessingQuality(true);
 
-        // 1. Send WhatsApp to Reporter if contact exists
         if (selectedReport.contact_number && selectedReport.contact_number.length > 5) {
             const userNumber = `549${selectedReport.contact_number}`;
             await supabase.functions.invoke('send-whatsapp', {
@@ -563,7 +560,6 @@ export const Dashboard = () => {
             });
         }
 
-        // 2. Update DB
         const { error } = await supabase.from('reports').update({
             status: 'resolved',
             resolved_at: new Date().toISOString()
@@ -579,23 +575,31 @@ export const Dashboard = () => {
         }
         setIsProcessingQuality(false);
     };
-    const [feedbackModal, setFeedbackModal] = useState<{
-        isOpen: boolean;
-        type: 'success' | 'error';
-        title: string;
-        message: string;
-    }>({ isOpen: false, type: 'success', title: '', message: '' });
 
     useEffect(() => {
-        fetchReports();
-    }, []);
+        if (role) fetchReports();
+    }, [role, sectors]);
 
     const fetchReports = async () => {
         setLoading(true);
-        const { data, error } = await supabase
+        let query = supabase
             .from('reports')
             .select('*')
             .order('created_at', { ascending: false });
+
+        // Role-based filtering
+        if (role === 'responsable') {
+            if (sectors.length > 0) {
+                query = query.in('sector', sectors);
+            } else {
+                // If responsible has no sectors, return empty
+                setReports([]);
+                setLoading(false);
+                return;
+            }
+        }
+
+        const { data, error } = await query;
 
         if (error) console.error('Error fetching reports:', error);
         else setReports(data || []);
@@ -1211,8 +1215,8 @@ export const Dashboard = () => {
                                                 }
                                             }}
                                             className={`w-full bg-white border text-sm rounded-lg p-2.5 outline-none focus:border-sanatorio-primary focus:ring-1 focus:ring-sanatorio-primary ${(!selectedReport.ai_category || selectedReport.ai_category === 'Sin clasificar')
-                                                    ? 'border-amber-300 bg-amber-50'
-                                                    : 'border-gray-200 text-gray-700'
+                                                ? 'border-amber-300 bg-amber-50'
+                                                : 'border-gray-200 text-gray-700'
                                                 }`}
                                         >
                                             <option value="Sin clasificar">⚠️ Sin clasificar</option>
