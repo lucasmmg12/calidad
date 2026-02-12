@@ -29,18 +29,46 @@ const Register = () => {
         setLoading(true);
 
         try {
-            const { error: signUpError } = await supabase.auth.signUp({
+            const { data, error: signUpError } = await supabase.auth.signUp({
                 email,
                 password,
+                options: {
+                    // Signal to skip email confirmation (works when disabled in dashboard)
+                    data: { email_confirm: true },
+                },
             });
 
             if (signUpError) throw signUpError;
 
-            // After signUp, the auth state change will create the profile
-            // and redirect to onboarding via ProtectedRoute
+            // If signUp returned a session, we're good — user is logged in
+            if (data.session) {
+                navigate('/onboarding');
+                return;
+            }
+
+            // If no session (email confirmation enabled in Supabase dashboard),
+            // try to auto-login with the same credentials immediately
+            const { error: loginError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
+
+            if (loginError) {
+                // If login fails because email not confirmed, show friendly message
+                if (loginError.message?.includes('Email not confirmed')) {
+                    setError(
+                        'Tu cuenta fue creada pero requiere confirmación de email. ' +
+                        'Contactá al equipo de Calidad para que activen tu cuenta, o revisá tu bandeja de entrada.'
+                    );
+                } else {
+                    throw loginError;
+                }
+                return;
+            }
+
             navigate('/onboarding');
         } catch (err: any) {
-            if (err.message?.includes('already registered')) {
+            if (err.message?.includes('already registered') || err.message?.includes('User already registered')) {
                 setError('Este email ya está registrado. Intentá iniciar sesión.');
             } else {
                 setError(err.message || 'Error al crear la cuenta. Intente nuevamente.');

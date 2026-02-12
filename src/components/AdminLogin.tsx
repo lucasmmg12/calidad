@@ -21,16 +21,26 @@ export const AdminLogin = () => {
                 password,
             });
 
-            if (authError) throw authError;
+            if (authError) {
+                if (authError.message?.includes('Email not confirmed')) {
+                    throw new Error('Tu email no fue confirmado aún. Contactá al equipo de Calidad para activar tu cuenta.');
+                }
+                throw authError;
+            }
 
             // Fetch user profile to determine role-based redirect
             const { data: profile } = await supabase
                 .from('user_profiles')
-                .select('role')
+                .select('role, onboarding_completed, account_status')
                 .eq('user_id', authData.user.id)
                 .single();
 
-            if (profile?.role === 'directivo') {
+            // Route based on onboarding/approval status
+            if (profile && !profile.onboarding_completed) {
+                navigate('/onboarding');
+            } else if (profile && profile.account_status !== 'approved' && profile.role !== 'admin') {
+                navigate('/pendiente');
+            } else if (profile?.role === 'directivo') {
                 navigate('/metrics');
             } else {
                 navigate('/dashboard');
