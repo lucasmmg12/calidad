@@ -146,15 +146,25 @@ export const UserManagement = () => {
 
             if (error) throw error;
 
-            // Send WhatsApp notification
+            // Send WhatsApp notification (non-blocking — approval succeeds even if WhatsApp fails)
+            let whatsappSent = false;
             if (user.phone_number) {
-                const appUrl = window.location.origin;
-                await supabase.functions.invoke('send-whatsapp', {
-                    body: {
-                        phone: user.phone_number,
-                        message: `✅ *Cuenta Autorizada - Calidad*\n\nEstimado/a ${user.display_name || 'Usuario'}, su cuenta ha sido autorizada exitosamente.\n\nYa puede acceder al sistema con su email y contraseña.\n\n👉 Ingrese aquí: ${appUrl}/login\n\n_Sanatorio Argentino - Departamento de Calidad_`
-                    }
-                });
+                try {
+                    const cleanPhone = user.phone_number.replace(/\D/g, '');
+                    // Ensure format is 549XXXXXXXXXX
+                    const botNumber = cleanPhone.startsWith('549') ? cleanPhone : `549${cleanPhone}`;
+                    const appUrl = window.location.origin;
+
+                    await supabase.functions.invoke('send-whatsapp', {
+                        body: {
+                            number: botNumber,
+                            message: `✅ *Cuenta Autorizada - Calidad*\n\nEstimado/a ${user.display_name || 'Usuario'}, su cuenta ha sido autorizada exitosamente.\n\nYa puede acceder al sistema con su email y contraseña.\n\n👉 *Ingrese aquí:* ${appUrl}/login\n\n_Sanatorio Argentino - Departamento de Calidad_`
+                        }
+                    });
+                    whatsappSent = true;
+                } catch (waErr) {
+                    console.error('Error sending WhatsApp (non-blocking):', waErr);
+                }
             }
 
             setUsers(users.map(u =>
@@ -166,7 +176,7 @@ export const UserManagement = () => {
             showNotification(
                 'success',
                 '¡Usuario Aprobado!',
-                `${user.display_name || 'Usuario'} fue autorizado exitosamente.${user.phone_number ? ' Se envió notificación por WhatsApp.' : ''}`
+                `${user.display_name || 'Usuario'} fue autorizado exitosamente.${whatsappSent ? ' Se envió notificación por WhatsApp.' : user.phone_number ? ' No se pudo enviar WhatsApp, pero la cuenta fue aprobada.' : ''}`
             );
         } catch (error) {
             console.error('Error approving user:', error);
