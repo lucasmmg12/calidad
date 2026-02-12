@@ -152,7 +152,7 @@ export const UserManagement = () => {
             let whatsappSent = false;
             if (user.phone_number) {
                 try {
-                    const cleanPhone = user.phone_number.replace(/\D/g, '');
+                    const cleanPhone = user.phone_number.trim().replace(/\D/g, '');
                     // Format: 549 + area code + number (e.g. "2645438114" → "5492645438114")
                     const botNumber = cleanPhone.startsWith('549') ? cleanPhone : `549${cleanPhone}`;
                     const appUrl = window.location.origin;
