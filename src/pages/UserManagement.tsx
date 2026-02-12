@@ -89,6 +89,8 @@ export const UserManagement = () => {
     const [isCreating, setIsCreating] = useState(false);
     const [activeTab, setActiveTab] = useState<'all' | 'pending'>('pending');
     const [approvingId, setApprovingId] = useState<string | null>(null);
+    const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
+    const [deletingLoading, setDeletingLoading] = useState(false);
 
     // New User Form State
     const [newUserEmail, setNewUserEmail] = useState('');
@@ -221,30 +223,33 @@ export const UserManagement = () => {
         }
     };
 
-    const handleDeleteUser = async (user: UserProfile) => {
-        const confirmed = window.confirm(
-            `¿Estás seguro de ELIMINAR a ${user.display_name || 'este usuario'}?\n\nEsta acción no se puede deshacer.`
-        );
-        if (!confirmed) return;
+    const handleDeleteUser = (user: UserProfile) => {
+        setDeletingUser(user);
+    };
 
+    const confirmDeleteUser = async () => {
+        if (!deletingUser) return;
+        setDeletingLoading(true);
         try {
-            // Delete profile from user_profiles
             const { error } = await supabase
                 .from('user_profiles')
                 .delete()
-                .eq('user_id', user.user_id);
+                .eq('user_id', deletingUser.user_id);
 
             if (error) throw error;
 
-            setUsers(users.filter(u => u.user_id !== user.user_id));
+            setUsers(users.filter(u => u.user_id !== deletingUser.user_id));
+            setDeletingUser(null);
             showNotification(
                 'success',
                 'Usuario Eliminado',
-                `${user.display_name || 'El usuario'} fue eliminado del sistema.`
+                `${deletingUser.display_name || 'El usuario'} fue eliminado del sistema.`
             );
         } catch (error) {
             console.error('Error deleting user:', error);
             showNotification('error', 'Error al Eliminar', 'No se pudo eliminar el usuario. Intenta nuevamente.');
+        } finally {
+            setDeletingLoading(false);
         }
     };
 
@@ -462,113 +467,130 @@ export const UserManagement = () => {
                         />
                     </div>
 
-                    {/* Users Table */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="bg-slate-50 border-b border-slate-200">
-                                    <tr>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Usuario</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Rol</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Estado</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Teléfono</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Sectores</th>
-                                        <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {filteredUsers.map(user => (
-                                        <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center">
-                                                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-lg">
-                                                        {(user.display_name?.[0] || 'U').toUpperCase()}
-                                                    </div>
-                                                    <div className="ml-4">
-                                                        <div className="text-sm font-medium text-slate-900">{user.display_name || 'Sin Nombre'}</div>
-                                                        <div className="text-xs text-slate-500">ID: {user.user_id.slice(0, 8)}...</div>
+                    {/* Users Cards */}
+                    <div className="space-y-3">
+                        {filteredUsers.length === 0 ? (
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
+                                <Search className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                                <p className="text-gray-500 font-medium">No se encontraron usuarios</p>
+                            </div>
+                        ) : (
+                            filteredUsers.map(user => (
+                                <div key={user.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 overflow-hidden">
+                                    <div className="p-5">
+                                        {/* Top row: Avatar + Name + Badges + Actions */}
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="flex items-start gap-4 min-w-0 flex-1">
+                                                {/* Avatar */}
+                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0 ${user.role === 'admin' ? 'bg-purple-100 text-purple-600' :
+                                                    user.role === 'directivo' ? 'bg-blue-100 text-blue-600' :
+                                                        'bg-green-100 text-green-600'
+                                                    }`}>
+                                                    {(user.display_name?.[0] || 'U').toUpperCase()}
+                                                </div>
+
+                                                {/* Name + Role + Status */}
+                                                <div className="min-w-0 flex-1">
+                                                    <h4 className="font-bold text-gray-800 text-base truncate">
+                                                        {user.display_name || 'Sin Nombre'}
+                                                    </h4>
+                                                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                                        {/* Role badge */}
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${user.role === 'admin' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                                            user.role === 'directivo' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                                                'bg-green-50 text-green-700 border-green-200'
+                                                            }`}>
+                                                            {user.role === 'admin' ? '👑 Admin' : user.role === 'directivo' ? '🏥 Directivo' : '🛠️ Responsable'}
+                                                        </span>
+                                                        {/* Status badge */}
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${user.account_status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
+                                                            user.account_status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                                                                'bg-amber-50 text-amber-700 border-amber-200'
+                                                            }`}>
+                                                            {user.account_status === 'approved' ? '✅ Aprobado' :
+                                                                user.account_status === 'rejected' ? '❌ Rechazado' :
+                                                                    '⏳ Pendiente'}
+                                                        </span>
                                                     </div>
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize border ${user.role === 'admin' ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                                                    user.role === 'directivo' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                                        'bg-green-50 text-green-700 border-green-200'
-                                                    }`}>
-                                                    {user.role}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize border ${user.account_status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                    user.account_status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                                                        'bg-amber-50 text-amber-700 border-amber-200'
-                                                    }`}>
-                                                    {user.account_status === 'approved' ? '✅ Aprobado' :
-                                                        user.account_status === 'rejected' ? '❌ Rechazado' :
-                                                            '⏳ Pendiente'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className="text-sm text-slate-600 font-mono">
-                                                    {user.phone_number || <span className="text-slate-400 italic font-sans">—</span>}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm text-slate-600 max-w-xs truncate">
-                                                    {user.assigned_sectors?.length
-                                                        ? user.assigned_sectors.join(', ')
-                                                        : <span className="text-slate-400 italic">Ninguno</span>}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    {/* Approve button for pending users */}
-                                                    {(user.account_status === 'pending' || !user.account_status) && user.role !== 'admin' && (
+                                            </div>
+
+                                            {/* Action buttons */}
+                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                {(user.account_status === 'pending' || !user.account_status) && user.role !== 'admin' && (
+                                                    <>
                                                         <button
                                                             onClick={() => handleApproveUser(user)}
                                                             disabled={approvingId === user.user_id}
-                                                            className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors border border-green-200"
-                                                            title="Aprobar usuario"
+                                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 text-green-700 font-bold text-xs hover:bg-green-100 transition-colors border border-green-200 disabled:opacity-50"
+                                                            title="Aprobar"
                                                         >
-                                                            {approvingId === user.user_id ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
+                                                            {approvingId === user.user_id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserCheck className="w-3.5 h-3.5" />}
+                                                            <span className="hidden sm:inline">Aprobar</span>
                                                         </button>
-                                                    )}
-                                                    {/* Reject button for pending users */}
-                                                    {(user.account_status === 'pending' || !user.account_status) && user.role !== 'admin' && (
                                                         <button
                                                             onClick={() => handleRejectUser(user)}
                                                             disabled={approvingId === user.user_id}
-                                                            className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-200"
-                                                            title="Rechazar usuario"
+                                                            className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors border border-red-200"
+                                                            title="Rechazar"
                                                         >
-                                                            <XCircle className="w-4 h-4" />
+                                                            <XCircle className="w-3.5 h-3.5" />
                                                         </button>
-                                                    )}
-                                                    {/* Edit */}
+                                                    </>
+                                                )}
+                                                <button
+                                                    onClick={() => setEditingUser(user)}
+                                                    className="p-1.5 rounded-lg text-sanatorio-primary hover:bg-blue-50 transition-colors"
+                                                    title="Editar"
+                                                >
+                                                    <Edit className="w-3.5 h-3.5" />
+                                                </button>
+                                                {user.role !== 'admin' && (
                                                     <button
-                                                        onClick={() => setEditingUser(user)}
-                                                        className="p-1.5 rounded-lg text-sanatorio-primary hover:bg-blue-50 transition-colors"
-                                                        title="Editar usuario"
+                                                        onClick={() => handleDeleteUser(user)}
+                                                        className="p-1.5 rounded-lg text-red-300 hover:bg-red-50 hover:text-red-600 transition-colors"
+                                                        title="Eliminar"
                                                     >
-                                                        <Edit className="w-4 h-4" />
+                                                        <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
-                                                    {/* Delete */}
-                                                    {user.role !== 'admin' && (
-                                                        <button
-                                                            onClick={() => handleDeleteUser(user)}
-                                                            className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-                                                            title="Eliminar usuario"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Details Row: Phone + Sectors */}
+                                        <div className="mt-4 pt-3 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {/* Phone */}
+                                            <div className="flex items-center gap-2 text-sm">
+                                                <Phone className="w-4 h-4 text-gray-400 shrink-0" />
+                                                {user.phone_number ? (
+                                                    <span className="font-mono text-gray-700 text-xs">{user.phone_number}</span>
+                                                ) : (
+                                                    <span className="text-gray-400 italic text-xs">Sin teléfono registrado</span>
+                                                )}
+                                            </div>
+
+                                            {/* Sectors */}
+                                            <div>
+                                                {user.assigned_sectors && user.assigned_sectors.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {user.assigned_sectors.map(sector => (
+                                                            <span
+                                                                key={sector}
+                                                                className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md text-[10px] font-bold border border-blue-100 whitespace-nowrap"
+                                                            >
+                                                                {sector}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-gray-400 italic text-xs">Sin sectores asignados</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </>
             )}
@@ -703,6 +725,63 @@ export const UserManagement = () => {
                                     Guardar Cambios
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deletingUser && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden animate-in zoom-in-95">
+                        <div className="p-8 text-center">
+                            <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center mx-auto mb-5">
+                                <Trash2 className="w-8 h-8 text-red-500" />
+                            </div>
+
+                            <h3 className="text-2xl font-display font-black text-slate-800 mb-3">
+                                ¿Eliminar usuario?
+                            </h3>
+
+                            <p className="text-slate-500 font-medium leading-relaxed mb-2">
+                                Estás a punto de eliminar a:
+                            </p>
+                            <p className="text-slate-800 font-bold text-lg mb-1">
+                                {deletingUser.display_name || 'Sin Nombre'}
+                            </p>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${deletingUser.role === 'directivo' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                    'bg-green-50 text-green-700 border-green-200'
+                                }`}>
+                                {deletingUser.role === 'directivo' ? '🏥 Directivo' : '🛠️ Responsable'}
+                            </span>
+
+                            <p className="text-red-500 text-sm font-medium mt-4 mb-6">
+                                ⚠️ Esta acción no se puede deshacer.
+                            </p>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setDeletingUser(null)}
+                                    disabled={deletingLoading}
+                                    className="flex-1 py-3 px-4 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-bold transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={confirmDeleteUser}
+                                    disabled={deletingLoading}
+                                    className="flex-1 py-3 px-4 bg-red-500 hover:bg-red-600 active:scale-95 text-white rounded-xl font-bold transition-all shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {deletingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                    Eliminar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50 p-3 text-center border-t border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                Sanatorio Argentino
+                            </p>
                         </div>
                     </div>
                 </div>
