@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
-    const { session, role, loading } = useAuth();
+    const { session, role, loading, needsOnboarding, isApproved } = useAuth();
 
     // Wait for auth to fully resolve (session + profile)
     if (loading) {
@@ -31,6 +31,16 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
                 <Loader2 className="w-8 h-8 animate-spin text-sanatorio-primary" />
             </div>
         );
+    }
+
+    // User needs to complete onboarding first
+    if (needsOnboarding) {
+        return <Navigate to="/onboarding" replace />;
+    }
+
+    // User is pending approval or rejected
+    if (!isApproved && role !== 'admin') {
+        return <Navigate to="/pendiente" replace />;
     }
 
     // Role-based access check

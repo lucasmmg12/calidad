@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
 import { useAuth, type UserProfile } from '../contexts/AuthContext';
 import { SECTOR_OPTIONS } from '../constants/sectors';
-import { Loader2, Search, UserPlus, Edit, Save, X, CheckCircle2, AlertTriangle } from 'lucide-react';
+import {
+    Loader2, Search, UserPlus, Edit, Save, X, CheckCircle2,
+    AlertTriangle, Clock, UserCheck, XCircle, Phone
+} from 'lucide-react';
 
 // ─── Notification Modal Component ─────────────────────────────────────
 interface NotificationModalProps {
@@ -84,6 +87,8 @@ export const UserManagement = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
     const [isCreating, setIsCreating] = useState(false);
+    const [activeTab, setActiveTab] = useState<'all' | 'pending'>('pending');
+    const [approvingId, setApprovingId] = useState<string | null>(null);
 
     // New User Form State
     const [newUserEmail, setNewUserEmail] = useState('');
@@ -125,6 +130,84 @@ export const UserManagement = () => {
             console.error('Error fetching users:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleApproveUser = async (user: UserProfile) => {
+        setApprovingId(user.user_id);
+        try {
+            const { error } = await supabase
+                .from('user_profiles')
+                .update({
+                    account_status: 'approved',
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('user_id', user.user_id);
+
+            if (error) throw error;
+
+            // Send WhatsApp notification
+            if (user.phone_number) {
+                const appUrl = window.location.origin;
+                await supabase.functions.invoke('send-whatsapp', {
+                    body: {
+                        phone: user.phone_number,
+                        message: `✅ *Cuenta Autorizada - Calidad*\n\nEstimado/a ${user.display_name || 'Usuario'}, su cuenta ha sido autorizada exitosamente.\n\nYa puede acceder al sistema con su email y contraseña.\n\n👉 Ingrese aquí: ${appUrl}/login\n\n_Sanatorio Argentino - Departamento de Calidad_`
+                    }
+                });
+            }
+
+            setUsers(users.map(u =>
+                u.user_id === user.user_id
+                    ? { ...u, account_status: 'approved' as const }
+                    : u
+            ));
+
+            showNotification(
+                'success',
+                '¡Usuario Aprobado!',
+                `${user.display_name || 'Usuario'} fue autorizado exitosamente.${user.phone_number ? ' Se envió notificación por WhatsApp.' : ''}`
+            );
+        } catch (error) {
+            console.error('Error approving user:', error);
+            showNotification('error', 'Error al Aprobar', 'No se pudo aprobar el usuario. Intenta nuevamente.');
+        } finally {
+            setApprovingId(null);
+        }
+    };
+
+    const handleRejectUser = async (user: UserProfile) => {
+        const confirmed = window.confirm(`¿Estás seguro de rechazar a ${user.display_name || 'este usuario'}?`);
+        if (!confirmed) return;
+
+        setApprovingId(user.user_id);
+        try {
+            const { error } = await supabase
+                .from('user_profiles')
+                .update({
+                    account_status: 'rejected',
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('user_id', user.user_id);
+
+            if (error) throw error;
+
+            setUsers(users.map(u =>
+                u.user_id === user.user_id
+                    ? { ...u, account_status: 'rejected' as const }
+                    : u
+            ));
+
+            showNotification(
+                'success',
+                'Usuario Rechazado',
+                `La solicitud de ${user.display_name || 'usuario'} fue rechazada.`
+            );
+        } catch (error) {
+            console.error('Error rejecting user:', error);
+            showNotification('error', 'Error', 'No se pudo rechazar el usuario.');
+        } finally {
+            setApprovingId(null);
         }
     };
 
@@ -189,9 +272,11 @@ export const UserManagement = () => {
         }
     };
 
+    const pendingUsers = users.filter(u => u.account_status === 'pending' && u.onboarding_completed);
     const filteredUsers = users.filter(user =>
         (user.display_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-        (user.role?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+        (user.role?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (user.phone_number?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     );
 
     if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>;
@@ -201,7 +286,7 @@ export const UserManagement = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
                     <h1 className="text-3xl font-display font-bold text-slate-800">Gestión de Usuarios</h1>
-                    <p className="text-slate-500">Administra roles y permisos de acceso al sistema.</p>
+                    <p className="text-slate-500">Administra roles, permisos y aprobaciones de acceso al sistema.</p>
                 </div>
                 <button
                     onClick={() => setIsCreating(true)}
@@ -212,73 +297,208 @@ export const UserManagement = () => {
                 </button>
             </div>
 
-            {/* Search Bar */}
-            <div className="relative mb-6">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                <input
-                    type="text"
-                    placeholder="Buscar por nombre o rol..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-sanatorio-primary outline-none transition-all"
-                />
+            {/* Tabs */}
+            <div className="flex gap-2 mb-6">
+                <button
+                    onClick={() => setActiveTab('pending')}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${activeTab === 'pending'
+                        ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                >
+                    <Clock className="w-4 h-4" />
+                    Pendientes
+                    {pendingUsers.length > 0 && (
+                        <span className="bg-white/20 text-white px-2 py-0.5 rounded-full text-xs font-bold min-w-[20px] text-center">
+                            {pendingUsers.length}
+                        </span>
+                    )}
+                </button>
+                <button
+                    onClick={() => setActiveTab('all')}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${activeTab === 'all'
+                        ? 'bg-sanatorio-primary text-white shadow-lg shadow-sanatorio-primary/20'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                >
+                    <Search className="w-4 h-4" />
+                    Todos los Usuarios
+                </button>
             </div>
 
-            {/* Users Table */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-slate-50 border-b border-slate-200">
-                            <tr>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Usuario</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Rol</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Sectores</th>
-                                <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {filteredUsers.map(user => (
-                                <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center">
-                                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-lg">
-                                                {(user.display_name?.[0] || 'U').toUpperCase()}
+            {/* ── PENDING APPROVALS TAB ── */}
+            {activeTab === 'pending' && (
+                <div className="space-y-4">
+                    {pendingUsers.length === 0 ? (
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
+                            <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto mb-4" />
+                            <h3 className="text-lg font-bold text-gray-800 mb-2">Sin solicitudes pendientes</h3>
+                            <p className="text-sm text-gray-500">Todas las solicitudes de acceso han sido procesadas.</p>
+                        </div>
+                    ) : (
+                        pendingUsers.map(user => (
+                            <div key={user.id} className="bg-white rounded-2xl shadow-sm border border-amber-100 p-6 animate-in fade-in duration-300">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    {/* User Info */}
+                                    <div className="flex items-start gap-4">
+                                        <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600 font-bold text-lg shrink-0">
+                                            {(user.display_name?.[0] || 'U').toUpperCase()}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <h4 className="font-bold text-gray-800 text-base">{user.display_name || 'Sin Nombre'}</h4>
+                                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${user.role === 'directivo'
+                                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                                    : 'bg-green-50 text-green-700 border-green-200'
+                                                    }`}>
+                                                    {user.role === 'directivo' ? '🏥 Directivo' : '🛠️ Responsable'}
+                                                </span>
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
+                                                    <Clock className="w-3 h-3 mr-1" /> Pendiente
+                                                </span>
                                             </div>
-                                            <div className="ml-4">
-                                                <div className="text-sm font-medium text-slate-900">{user.display_name || 'Sin Nombre'}</div>
-                                                <div className="text-xs text-slate-500">ID: {user.user_id.slice(0, 8)}...</div>
+
+                                            {/* Details */}
+                                            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-500">
+                                                {user.phone_number && (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Phone className="w-3.5 h-3.5" />
+                                                        <span className="font-mono">{user.phone_number}</span>
+                                                    </div>
+                                                )}
+                                                {user.assigned_sectors && user.assigned_sectors.length > 0 && (
+                                                    <div className="col-span-full">
+                                                        <span className="text-gray-400">Sectores: </span>
+                                                        {user.assigned_sectors.slice(0, 3).map(s => (
+                                                            <span key={s} className="inline-block px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-medium mr-1 mb-1">{s}</span>
+                                                        ))}
+                                                        {user.assigned_sectors.length > 3 && (
+                                                            <span className="text-gray-400 text-[10px]">+{user.assigned_sectors.length - 3} más</span>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize border ${user.role === 'admin' ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                                            user.role === 'directivo' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                                'bg-green-50 text-green-700 border-green-200'
-                                            }`}>
-                                            {user.role}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="text-sm text-slate-600 max-w-xs truncate">
-                                            {user.assigned_sectors?.length
-                                                ? user.assigned_sectors.join(', ')
-                                                : <span className="text-slate-400 italic">Ninguno</span>}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="flex items-center gap-2 shrink-0">
                                         <button
-                                            onClick={() => setEditingUser(user)}
-                                            className="text-sanatorio-primary hover:text-sanatorio-secondary transition-colors"
+                                            onClick={() => handleRejectUser(user)}
+                                            disabled={approvingId === user.user_id}
+                                            className="flex items-center gap-2 px-4 py-2.5 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-colors text-sm disabled:opacity-50 border border-red-200"
                                         >
-                                            <Edit className="w-5 h-5" />
+                                            <XCircle className="w-4 h-4" />
+                                            Rechazar
                                         </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                        <button
+                                            onClick={() => handleApproveUser(user)}
+                                            disabled={approvingId === user.user_id}
+                                            className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors shadow-lg shadow-green-500/20 text-sm disabled:opacity-50"
+                                        >
+                                            {approvingId === user.user_id ? (
+                                                <><Loader2 className="w-4 h-4 animate-spin" /> Aprobando...</>
+                                            ) : (
+                                                <><UserCheck className="w-4 h-4" /> Aprobar</>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </div>
-            </div>
+            )}
+
+            {/* ── ALL USERS TAB ── */}
+            {activeTab === 'all' && (
+                <>
+                    {/* Search Bar */}
+                    <div className="relative mb-6">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                        <input
+                            type="text"
+                            placeholder="Buscar por nombre, rol o teléfono..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-sanatorio-primary outline-none transition-all"
+                        />
+                    </div>
+
+                    {/* Users Table */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Usuario</th>
+                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Rol</th>
+                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Estado</th>
+                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Teléfono</th>
+                                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Sectores</th>
+                                        <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {filteredUsers.map(user => (
+                                        <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center">
+                                                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-lg">
+                                                        {(user.display_name?.[0] || 'U').toUpperCase()}
+                                                    </div>
+                                                    <div className="ml-4">
+                                                        <div className="text-sm font-medium text-slate-900">{user.display_name || 'Sin Nombre'}</div>
+                                                        <div className="text-xs text-slate-500">ID: {user.user_id.slice(0, 8)}...</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize border ${user.role === 'admin' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                                    user.role === 'directivo' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                                        'bg-green-50 text-green-700 border-green-200'
+                                                    }`}>
+                                                    {user.role}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize border ${user.account_status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
+                                                    user.account_status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                                                        'bg-amber-50 text-amber-700 border-amber-200'
+                                                    }`}>
+                                                    {user.account_status === 'approved' ? '✅ Aprobado' :
+                                                        user.account_status === 'rejected' ? '❌ Rechazado' :
+                                                            '⏳ Pendiente'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className="text-sm text-slate-600 font-mono">
+                                                    {user.phone_number || <span className="text-slate-400 italic font-sans">—</span>}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm text-slate-600 max-w-xs truncate">
+                                                    {user.assigned_sectors?.length
+                                                        ? user.assigned_sectors.join(', ')
+                                                        : <span className="text-slate-400 italic">Ninguno</span>}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <button
+                                                    onClick={() => setEditingUser(user)}
+                                                    className="text-sanatorio-primary hover:text-sanatorio-secondary transition-colors"
+                                                >
+                                                    <Edit className="w-5 h-5" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </>
+            )}
 
             {/* Create User Modal */}
             {isCreating && (

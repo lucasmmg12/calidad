@@ -10,6 +10,8 @@ export interface UserProfile {
     phone_number: string | null;
     assigned_sectors: string[];
     sector_edit_count: number;
+    onboarding_completed: boolean;
+    account_status: 'pending' | 'approved' | 'rejected';
     created_at: string;
     updated_at: string;
 }
@@ -23,6 +25,9 @@ interface AuthContextType {
     isAdmin: boolean;
     isResponsable: boolean;
     isDirectivo: boolean;
+    isApproved: boolean;
+    isPending: boolean;
+    needsOnboarding: boolean;
     refreshProfile: () => Promise<void>;
 }
 
@@ -35,6 +40,9 @@ const AuthContext = createContext<AuthContextType>({
     isAdmin: false,
     isResponsable: false,
     isDirectivo: false,
+    isApproved: false,
+    isPending: true,
+    needsOnboarding: true,
     refreshProfile: async () => { },
 });
 
@@ -71,6 +79,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         display_name: userEmail || 'Usuario',
                         assigned_sectors: [],
                         sector_edit_count: 0,
+                        onboarding_completed: false,
+                        account_status: 'pending',
                     })
                     .select()
                     .single();
@@ -136,6 +146,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const role = profile?.role || null;
     const sectors = profile?.assigned_sectors || [];
 
+    const isApproved = profile?.account_status === 'approved';
+    const isPending = profile?.account_status === 'pending';
+    const needsOnboarding = profile?.onboarding_completed === false;
+
     const value: AuthContextType = {
         session,
         profile,
@@ -145,6 +159,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAdmin: role === 'admin',
         isResponsable: role === 'responsable',
         isDirectivo: role === 'directivo',
+        isApproved,
+        isPending,
+        needsOnboarding,
         refreshProfile,
     };
 

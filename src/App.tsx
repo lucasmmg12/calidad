@@ -13,6 +13,9 @@ import { UserManagement } from './pages/UserManagement';
 import { ResolutionPage } from './pages/ResolutionPage';
 import Presentation from './pages/Presentation';
 import ProfileSettings from './pages/ProfileSettings';
+import Register from './pages/Register';
+import Onboarding from './pages/Onboarding';
+import PendingApproval from './pages/PendingApproval';
 import { LogoutModal } from './components/LogoutModal';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import {
@@ -136,7 +139,7 @@ function Navbar() {
                 className="flex items-center gap-2 px-5 py-2.5 bg-sanatorio-primary/5 text-sanatorio-primary hover:bg-sanatorio-primary hover:text-white rounded-xl font-bold text-sm transition-all border border-sanatorio-primary/10 shadow-sm"
               >
                 <LogIn className="w-4 h-4" />
-                <span className="hidden sm:inline">Admin</span>
+                <span className="hidden sm:inline">Ingresar</span>
               </Link>
             )}
           </nav>
@@ -170,6 +173,9 @@ function App() {
               <Route path="/track" element={<TrackingPage />} />
               <Route path="/guia" element={<HelpGuide />} />
               <Route path="/login" element={<AdminLogin />} />
+              <Route path="/registro" element={<Register />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/pendiente" element={<PendingApproval />} />
               <Route path="/privacidad" element={<LegalContent />} />
               <Route path="/terminos" element={<LegalContent />} />
               <Route path="/resolver-caso/:ticketId" element={<ResolutionPage />} />
