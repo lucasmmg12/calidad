@@ -4,7 +4,7 @@ import { useAuth, type UserProfile } from '../contexts/AuthContext';
 import { SECTOR_OPTIONS } from '../constants/sectors';
 import {
     Loader2, Search, UserPlus, Edit, Save, X, CheckCircle2,
-    AlertTriangle, Clock, UserCheck, XCircle, Phone
+    AlertTriangle, Clock, UserCheck, XCircle, Phone, Trash2
 } from 'lucide-react';
 
 // ─── Notification Modal Component ─────────────────────────────────────
@@ -211,6 +211,33 @@ export const UserManagement = () => {
         }
     };
 
+    const handleDeleteUser = async (user: UserProfile) => {
+        const confirmed = window.confirm(
+            `¿Estás seguro de ELIMINAR a ${user.display_name || 'este usuario'}?\n\nEsta acción no se puede deshacer.`
+        );
+        if (!confirmed) return;
+
+        try {
+            // Delete profile from user_profiles
+            const { error } = await supabase
+                .from('user_profiles')
+                .delete()
+                .eq('user_id', user.user_id);
+
+            if (error) throw error;
+
+            setUsers(users.filter(u => u.user_id !== user.user_id));
+            showNotification(
+                'success',
+                'Usuario Eliminado',
+                `${user.display_name || 'El usuario'} fue eliminado del sistema.`
+            );
+        } catch (error) {
+            console.error('Error deleting user:', error);
+            showNotification('error', 'Error al Eliminar', 'No se pudo eliminar el usuario. Intenta nuevamente.');
+        }
+    };
+
     const handleUpdateUser = async () => {
         if (!editingUser) return;
         try {
@@ -272,7 +299,7 @@ export const UserManagement = () => {
         }
     };
 
-    const pendingUsers = users.filter(u => u.account_status === 'pending' && u.onboarding_completed);
+    const pendingUsers = users.filter(u => u.account_status === 'pending' || !u.account_status);
     const filteredUsers = users.filter(user =>
         (user.display_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
         (user.role?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
@@ -484,12 +511,48 @@ export const UserManagement = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <button
-                                                    onClick={() => setEditingUser(user)}
-                                                    className="text-sanatorio-primary hover:text-sanatorio-secondary transition-colors"
-                                                >
-                                                    <Edit className="w-5 h-5" />
-                                                </button>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {/* Approve button for pending users */}
+                                                    {(user.account_status === 'pending' || !user.account_status) && user.role !== 'admin' && (
+                                                        <button
+                                                            onClick={() => handleApproveUser(user)}
+                                                            disabled={approvingId === user.user_id}
+                                                            className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors border border-green-200"
+                                                            title="Aprobar usuario"
+                                                        >
+                                                            {approvingId === user.user_id ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
+                                                        </button>
+                                                    )}
+                                                    {/* Reject button for pending users */}
+                                                    {(user.account_status === 'pending' || !user.account_status) && user.role !== 'admin' && (
+                                                        <button
+                                                            onClick={() => handleRejectUser(user)}
+                                                            disabled={approvingId === user.user_id}
+                                                            className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-200"
+                                                            title="Rechazar usuario"
+                                                        >
+                                                            <XCircle className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                    {/* Edit */}
+                                                    <button
+                                                        onClick={() => setEditingUser(user)}
+                                                        className="p-1.5 rounded-lg text-sanatorio-primary hover:bg-blue-50 transition-colors"
+                                                        title="Editar usuario"
+                                                    >
+                                                        <Edit className="w-4 h-4" />
+                                                    </button>
+                                                    {/* Delete */}
+                                                    {user.role !== 'admin' && (
+                                                        <button
+                                                            onClick={() => handleDeleteUser(user)}
+                                                            className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                                                            title="Eliminar usuario"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
