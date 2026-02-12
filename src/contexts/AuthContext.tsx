@@ -7,6 +7,7 @@ export interface UserProfile {
     user_id: string;
     role: 'admin' | 'responsable' | 'directivo';
     display_name: string | null;
+    phone_number: string | null;
     assigned_sectors: string[];
     sector_edit_count: number;
     created_at: string;

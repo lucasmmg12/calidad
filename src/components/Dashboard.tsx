@@ -1,5 +1,5 @@
 ﻿
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../utils/supabase';
 import {
     LayoutDashboard,
@@ -17,10 +17,13 @@ import {
     Camera,
     Archive,
     Bell,
-    XCircle
+    XCircle,
+    User,
+    Phone
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { CLASSIFICATION_CATEGORIES } from '../constants/classification_categories';
+import type { UserProfile } from '../contexts/AuthContext';
 
 // Discard Confirmation Modal Component
 const DiscardConfirmationModal = ({
@@ -72,21 +75,161 @@ const DiscardConfirmationModal = ({
 };
 
 
-// Referral Modal Component
+// ==========================================================
+// Shared Responsable Phone Selector (Hybrid: Dropdown + Manual)
+// ==========================================================
+const ResponsablePhoneSelector = ({
+    responsables,
+    loadingResponsables,
+    phone,
+    setPhone,
+    selectedUserId,
+    setSelectedUserId,
+    reportSector,
+}: {
+    responsables: UserProfile[];
+    loadingResponsables: boolean;
+    phone: string;
+    setPhone: (v: string) => void;
+    selectedUserId: string;
+    setSelectedUserId: (v: string) => void;
+    reportSector?: string;
+}) => {
+    const isManual = selectedUserId === '__manual__';
+
+    // Filter responsables who have at least one matching sector
+    const filtered = reportSector
+        ? responsables.filter(r => r.assigned_sectors?.includes(reportSector))
+        : responsables;
+
+    // Also keep a list of "other" responsables (not matching sector)
+    const others = reportSector
+        ? responsables.filter(r => !r.assigned_sectors?.includes(reportSector))
+        : [];
+
+    const handleSelect = (value: string) => {
+        setSelectedUserId(value);
+        if (value === '__manual__') {
+            setPhone('');
+        } else {
+            const found = responsables.find(r => r.user_id === value);
+            setPhone(found?.phone_number || '');
+        }
+    };
+
+    const selectedProfile = responsables.find(r => r.user_id === selectedUserId);
+    const selectedHasNoPhone = selectedUserId && selectedUserId !== '__manual__' && !selectedProfile?.phone_number;
+
+    return (
+        <div className="space-y-3">
+            {/* Selector */}
+            <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5" />
+                    Responsable
+                </label>
+                {loadingResponsables ? (
+                    <div className="flex items-center gap-2 p-3 text-sm text-gray-400">
+                        <Loader2 className="w-4 h-4 animate-spin" /> Cargando responsables...
+                    </div>
+                ) : (
+                    <select
+                        value={selectedUserId}
+                        onChange={(e) => handleSelect(e.target.value)}
+                        className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-sanatorio-primary/50 transition-all text-sm bg-gray-50 focus:bg-white appearance-none cursor-pointer"
+                    >
+                        <option value="">-- Seleccionar responsable --</option>
+                        {filtered.length > 0 && (
+                            <optgroup label={reportSector ? `📍 Sector: ${reportSector}` : 'Responsables'}>
+                                {filtered.map(r => (
+                                    <option key={r.user_id} value={r.user_id}>
+                                        {r.display_name || r.user_id}{r.phone_number ? ` (${r.phone_number})` : ' ⚠️ Sin teléfono'}
+                                    </option>
+                                ))}
+                            </optgroup>
+                        )}
+                        {others.length > 0 && (
+                            <optgroup label="Otros responsables">
+                                {others.map(r => (
+                                    <option key={r.user_id} value={r.user_id}>
+                                        {r.display_name || r.user_id}{r.phone_number ? ` (${r.phone_number})` : ' ⚠️ Sin teléfono'}
+                                    </option>
+                                ))}
+                            </optgroup>
+                        )}
+                        <optgroup label="──────────">
+                            <option value="__manual__">✏️ Ingresar número manualmente</option>
+                        </optgroup>
+                    </select>
+                )}
+            </div>
+
+            {/* Warning if selected responsable has no phone */}
+            {selectedHasNoPhone && (
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>Este responsable no tiene teléfono registrado. Ingrese el número manualmente.</span>
+                </div>
+            )}
+
+            {/* Phone input */}
+            <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5" />
+                    WhatsApp
+                </label>
+                <input
+                    type="tel"
+                    maxLength={10}
+                    placeholder="Ej: 2645438114"
+                    className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-sanatorio-primary/50 transition-all font-mono text-sm ${(isManual || selectedHasNoPhone)
+                            ? 'border-gray-200 bg-gray-50 focus:bg-white'
+                            : 'border-gray-100 bg-gray-100 text-gray-500 cursor-not-allowed'
+                        }`}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                    readOnly={!isManual && !selectedHasNoPhone}
+                />
+                <p className="text-[10px] text-gray-400 mt-1">
+                    {isManual || selectedHasNoPhone
+                        ? '10 dígitos sin 0 ni 15. Incluir código de área.'
+                        : 'Auto-completado desde el perfil del responsable.'
+                    }
+                </p>
+            </div>
+        </div>
+    );
+};
+
 // Referral Modal Component
 const ReferralModal = ({
     isOpen,
     onClose,
     onConfirm,
-    isSending
+    isSending,
+    responsables,
+    loadingResponsables,
+    reportSector,
 }: {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: (type: 'simple' | 'desvio' | 'adverse', responsiblePhone: string) => void;
     isSending: boolean;
+    responsables: UserProfile[];
+    loadingResponsables: boolean;
+    reportSector?: string;
 }) => {
     const [managementType, setManagementType] = useState<'simple' | 'desvio' | 'adverse'>('simple');
     const [phone, setPhone] = useState('');
+    const [selectedUserId, setSelectedUserId] = useState('');
+
+    useEffect(() => {
+        if (isOpen) {
+            setPhone('');
+            setSelectedUserId('');
+            setManagementType('simple');
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -158,19 +301,16 @@ const ReferralModal = ({
                         </div>
                     </div>
 
-                    {/* Input Teléfono */}
-                    <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">WhatsApp del Responsable</label>
-                        <input
-                            type="tel"
-                            maxLength={10}
-                            placeholder="Ej: 2645438114"
-                            className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-sanatorio-primary transition-all font-mono text-sm"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                        />
-                        <p className="text-[10px] text-gray-400 mt-1">10 dígitos sin 0 ni 15. Incluir código de área.</p>
-                    </div>
+                    {/* Hybrid Phone Selector */}
+                    <ResponsablePhoneSelector
+                        responsables={responsables}
+                        loadingResponsables={loadingResponsables}
+                        phone={phone}
+                        setPhone={setPhone}
+                        selectedUserId={selectedUserId}
+                        setSelectedUserId={setSelectedUserId}
+                        reportSector={reportSector}
+                    />
                 </div>
 
                 <div className="flex gap-3 w-full">
@@ -236,29 +376,49 @@ const FeedbackModal = ({
     );
 };
 
-// Reopen Case Modal Component
+// Reopen Case Modal Component (Hybrid)
 const ReopenModal = ({
     isOpen,
     onClose,
     onConfirm,
     initialPhone,
-    isSubmitting
+    isSubmitting,
+    responsables,
+    loadingResponsables,
+    reportSector,
 }: {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: (reason: string, phone: string) => void;
     initialPhone: string;
     isSubmitting: boolean;
+    responsables: UserProfile[];
+    loadingResponsables: boolean;
+    reportSector?: string;
 }) => {
     const [reason, setReason] = useState('');
     const [phone, setPhone] = useState(initialPhone || '');
+    const [selectedUserId, setSelectedUserId] = useState('');
 
     useEffect(() => {
         if (isOpen) {
             setReason('');
-            setPhone(initialPhone || '');
+            // Try to find the responsable by their phone (for pre-selection)
+            if (initialPhone) {
+                const found = responsables.find(r => r.phone_number === initialPhone);
+                if (found) {
+                    setSelectedUserId(found.user_id);
+                    setPhone(found.phone_number || '');
+                } else {
+                    setSelectedUserId('__manual__');
+                    setPhone(initialPhone);
+                }
+            } else {
+                setSelectedUserId('');
+                setPhone('');
+            }
         }
-    }, [isOpen, initialPhone]);
+    }, [isOpen, initialPhone, responsables]);
 
     if (!isOpen) return null;
 
@@ -285,18 +445,15 @@ const ReopenModal = ({
                         />
                     </div>
 
-                    <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">WhatsApp Responsable</label>
-                        <input
-                            type="tel"
-                            maxLength={10}
-                            className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-sanatorio-primary/50 transition-all font-mono text-sm bg-gray-50 focus:bg-white"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                            placeholder="Ej: 2645438114"
-                        />
-                        <p className="text-[10px] text-gray-400 mt-1">10 dígitos sin 0 ni 15. Se notificará la reapertura a este número.</p>
-                    </div>
+                    <ResponsablePhoneSelector
+                        responsables={responsables}
+                        loadingResponsables={loadingResponsables}
+                        phone={phone}
+                        setPhone={setPhone}
+                        selectedUserId={selectedUserId}
+                        setSelectedUserId={setSelectedUserId}
+                        reportSector={reportSector}
+                    />
                 </div>
 
                 <div className="flex gap-3 w-full">
@@ -313,7 +470,7 @@ const ReopenModal = ({
                         className="flex-1 py-2.5 px-4 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-500/30 flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                         {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
-                        Confirmar Reubertura
+                        Confirmar Reapertura
                     </button>
                 </div>
             </div>
@@ -321,29 +478,48 @@ const ReopenModal = ({
     );
 };
 
-// Quality Return Modal (Rechazo)
+// Quality Return Modal (Rechazo) — Hybrid
 const QualityReturnModal = ({
     isOpen,
     onClose,
     onConfirm,
     initialPhone,
-    isSubmitting
+    isSubmitting,
+    responsables,
+    loadingResponsables,
+    reportSector,
 }: {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: (reason: string, phone: string) => void;
     initialPhone: string;
     isSubmitting: boolean;
+    responsables: UserProfile[];
+    loadingResponsables: boolean;
+    reportSector?: string;
 }) => {
     const [reason, setReason] = useState('');
     const [phone, setPhone] = useState(initialPhone || '');
+    const [selectedUserId, setSelectedUserId] = useState('');
 
     useEffect(() => {
         if (isOpen) {
             setReason('');
-            setPhone(initialPhone || '');
+            if (initialPhone) {
+                const found = responsables.find(r => r.phone_number === initialPhone);
+                if (found) {
+                    setSelectedUserId(found.user_id);
+                    setPhone(found.phone_number || '');
+                } else {
+                    setSelectedUserId('__manual__');
+                    setPhone(initialPhone);
+                }
+            } else {
+                setSelectedUserId('');
+                setPhone('');
+            }
         }
-    }, [isOpen, initialPhone]);
+    }, [isOpen, initialPhone, responsables]);
 
     if (!isOpen) return null;
 
@@ -370,18 +546,15 @@ const QualityReturnModal = ({
                         />
                     </div>
 
-                    <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">WhatsApp Responsable</label>
-                        <input
-                            type="tel"
-                            maxLength={10}
-                            className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-purple-500/50 transition-all font-mono text-sm bg-gray-50 focus:bg-white"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                            placeholder="Ej: 2645438114"
-                        />
-                        <p className="text-[10px] text-gray-400 mt-1">10 dígitos sin 0 ni 15. Se notificará la devolución a este número.</p>
-                    </div>
+                    <ResponsablePhoneSelector
+                        responsables={responsables}
+                        loadingResponsables={loadingResponsables}
+                        phone={phone}
+                        setPhone={setPhone}
+                        selectedUserId={selectedUserId}
+                        setSelectedUserId={setSelectedUserId}
+                        reportSector={reportSector}
+                    />
                 </div>
 
                 <div className="flex gap-3 w-full">
@@ -460,6 +633,8 @@ import { useAuth } from '../contexts/AuthContext';
 export const Dashboard = () => {
     const { role, sectors, isAdmin } = useAuth();
     const [reports, setReports] = useState<any[]>([]);
+    const [responsables, setResponsables] = useState<UserProfile[]>([]);
+    const [loadingResponsables, setLoadingResponsables] = useState(false);
     const [loading, setLoading] = useState(true);
     const [selectedReport, setSelectedReport] = useState<any>(null);
     const [, setUpdatingColor] = useState(false);
@@ -582,8 +757,34 @@ export const Dashboard = () => {
         setIsProcessingQuality(false);
     };
 
+    // Fetch responsables for the hybrid selector (only for admins)
+    const fetchResponsables = useCallback(async () => {
+        if (!isAdmin) return;
+        setLoadingResponsables(true);
+        try {
+            const { data, error } = await supabase
+                .from('user_profiles')
+                .select('*')
+                .eq('role', 'responsable')
+                .order('display_name', { ascending: true });
+
+            if (error) {
+                console.error('[Dashboard] Error fetching responsables:', error);
+            } else {
+                setResponsables(data || []);
+            }
+        } catch (err) {
+            console.error('[Dashboard] Unexpected error fetching responsables:', err);
+        } finally {
+            setLoadingResponsables(false);
+        }
+    }, [isAdmin]);
+
     useEffect(() => {
-        if (role) fetchReports();
+        if (role) {
+            fetchReports();
+            fetchResponsables();
+        }
     }, [role, sectors]);
 
     const fetchReports = async () => {
@@ -1806,6 +2007,9 @@ export const Dashboard = () => {
                 onClose={() => setShowReferralModal(false)}
                 onConfirm={handleSendReferral}
                 isSending={isSendingReferral}
+                responsables={responsables}
+                loadingResponsables={loadingResponsables}
+                reportSector={selectedReport?.sector}
             />
 
             <ReopenModal
@@ -1814,6 +2018,9 @@ export const Dashboard = () => {
                 onConfirm={handleReopenCase}
                 initialPhone={selectedReport?.assigned_to || ''}
                 isSubmitting={isReopening}
+                responsables={responsables}
+                loadingResponsables={loadingResponsables}
+                reportSector={selectedReport?.sector}
             />
 
             <QualityReturnModal
@@ -1822,6 +2029,9 @@ export const Dashboard = () => {
                 onConfirm={handleQualityReturn}
                 initialPhone={selectedReport?.assigned_to || ''}
                 isSubmitting={isProcessingQuality}
+                responsables={responsables}
+                loadingResponsables={loadingResponsables}
+                reportSector={selectedReport?.sector}
             />
 
             <QualityApproveModal
