@@ -153,19 +153,27 @@ export const UserManagement = () => {
             if (user.phone_number) {
                 try {
                     const cleanPhone = user.phone_number.replace(/\D/g, '');
-                    // Ensure format is 549XXXXXXXXXX
+                    // Format: 549 + area code + number (e.g. "2645438114" → "5492645438114")
                     const botNumber = cleanPhone.startsWith('549') ? cleanPhone : `549${cleanPhone}`;
                     const appUrl = window.location.origin;
 
-                    await supabase.functions.invoke('send-whatsapp', {
+                    console.log('[Approve] Sending WhatsApp to:', botNumber, '(raw:', user.phone_number, ')');
+
+                    const { error: waError } = await supabase.functions.invoke('send-whatsapp', {
                         body: {
                             number: botNumber,
                             message: `✅ *Cuenta Autorizada - Calidad*\n\nEstimado/a ${user.display_name || 'Usuario'}, su cuenta ha sido autorizada exitosamente.\n\nYa puede acceder al sistema con su email y contraseña.\n\n👉 *Ingrese aquí:* ${appUrl}/login\n\n_Sanatorio Argentino - Departamento de Calidad_`
                         }
                     });
-                    whatsappSent = true;
+
+                    if (waError) {
+                        console.error('[Approve] WhatsApp error:', waError);
+                    } else {
+                        whatsappSent = true;
+                        console.log('[Approve] WhatsApp sent successfully to:', botNumber);
+                    }
                 } catch (waErr) {
-                    console.error('Error sending WhatsApp (non-blocking):', waErr);
+                    console.error('[Approve] WhatsApp exception:', waErr);
                 }
             }
 
@@ -750,7 +758,7 @@ export const UserManagement = () => {
                                 {deletingUser.display_name || 'Sin Nombre'}
                             </p>
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${deletingUser.role === 'directivo' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                    'bg-green-50 text-green-700 border-green-200'
+                                'bg-green-50 text-green-700 border-green-200'
                                 }`}>
                                 {deletingUser.role === 'directivo' ? '🏥 Directivo' : '🛠️ Responsable'}
                             </span>
