@@ -1197,14 +1197,14 @@ export const MetricsDashboard = () => {
                 )}
             </div>
 
-            {/* ── SLA Alerts ── */}
+            {/* ── Alertas de Tiempo de Respuesta ── */}
             <SlaAlertBanner
                 reports={rawReports}
                 onResendWhatsApp={async (report) => {
                     if (!report.assigned_to) return;
                     const botNumber = `549${report.assigned_to}`;
                     const resolutionLink = `${window.location.origin}/resolver-caso/${report.tracking_id}`;
-                    const message = `⏰ *Recordatorio SLA - Calidad*\n\nEl caso *${report.tracking_id}* del sector *${report.sector}* requiere su atención urgente.\n\n📝 "${(report.ai_summary || report.content || '').substring(0, 150)}"\n\n👉 *Gestione el caso aquí:* ${resolutionLink}\n\n⚠️ Este caso ha superado el tiempo de respuesta esperado.`;
+                    const message = `⏰ *Recordatorio de Tiempo de Respuesta - Calidad*\n\nEl caso *${report.tracking_id}* del sector *${report.sector}* requiere su atención urgente.\n\n📝 "${(report.ai_summary || report.content || '').substring(0, 150)}"\n\n👉 *Gestione el caso aquí:* ${resolutionLink}\n\n⚠️ Este caso ha superado el tiempo de respuesta esperado.`;
                     await supabase.functions.invoke('send-whatsapp', {
                         body: {
                             number: botNumber,

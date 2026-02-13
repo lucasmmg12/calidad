@@ -216,7 +216,7 @@ const AdminGuide = () => (
                 />
                 <FeatureCard
                     icon={<AlertTriangle className="w-5 h-5 text-amber-600" />}
-                    title="Alertas SLA"
+                    title="Alertas de Tiempo de Respuesta"
                     description="El sistema te avisa con bandas rojas cuando un caso supera los plazos establecidos."
                     accent="bg-amber-100"
                 />
@@ -338,7 +338,7 @@ const ResponsableGuide = () => (
                 <FeatureCard
                     icon={<Clock className="w-5 h-5 text-amber-600" />}
                     title="Tiempos de Respuesta"
-                    description="Observá cuánto tarda en resolverse cada caso y compará contra los SLA establecidos."
+                    description="Observá cuánto tarda en resolverse cada caso y compará contra los tiempos de respuesta establecidos."
                     accent="bg-amber-100"
                 />
                 <FeatureCard
@@ -453,7 +453,7 @@ const DirectivoGuide = () => (
                         <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                         <div>
                             <p className="font-bold text-sm text-gray-800">Tiempos de Resolución</p>
-                            <p className="text-xs text-gray-500">Promedio de días para cerrar un caso. Comparación contra SLAs establecidos.</p>
+                            <p className="text-xs text-gray-500">Promedio de días para cerrar un caso. Comparación contra los tiempos de respuesta establecidos.</p>
                         </div>
                     </div>
                     <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-red-50 to-transparent rounded-xl border border-red-100">

@@ -217,7 +217,7 @@ const Onboarding = () => {
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
-                                            <span>Visualiza <strong>indicadores, SLA y KPIs</strong></span>
+                                            <span>Visualiza <strong>indicadores, tiempos de respuesta y KPIs</strong></span>
                                         </li>
                                         <li className="flex items-start gap-2">
                                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />

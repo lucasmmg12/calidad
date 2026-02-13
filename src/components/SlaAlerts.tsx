@@ -62,8 +62,8 @@ export const SlaAlertBanner = ({ reports, onResendWhatsApp }: Props) => {
                 hoursElapsed,
                 level,
                 message: level === 'critical'
-                    ? `${Math.round(hoursElapsed - threshold)}hs fuera de SLA`
-                    : `${Math.round(threshold - hoursElapsed)}hs para vencer SLA`
+                    ? `${Math.round(hoursElapsed - threshold)}hs fuera de plazo`
+                    : `${Math.round(threshold - hoursElapsed)}hs para vencer plazo`
             });
         });
         return result.sort((a, b) => {
@@ -109,13 +109,13 @@ export const SlaAlertBanner = ({ reports, onResendWhatsApp }: Props) => {
                 )}
                 <h3 className={`text-sm font-black uppercase tracking-wider ${criticalCount > 0 ? 'text-red-700' : 'text-amber-700'
                     }`}>
-                    Alertas de SLA
+                    Alertas de Tiempo de Respuesta
                 </h3>
                 <button
                     onClick={() => setShowInfo(!showInfo)}
                     className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${showInfo ? 'bg-white/80 text-gray-600' : 'bg-white/50 text-gray-400 hover:bg-white/70'
                         }`}
-                    title="¿Qué es SLA?"
+                    title="¿Qué es el Tiempo de Respuesta?"
                 >
                     <HelpCircle className="w-3.5 h-3.5" />
                     ¿Qué es esto?
@@ -137,7 +137,7 @@ export const SlaAlertBanner = ({ reports, onResendWhatsApp }: Props) => {
 
             {showInfo && (
                 <div className="mb-3 p-4 bg-white/70 rounded-xl border border-gray-200 text-xs text-gray-600 space-y-2 animate-in fade-in slide-in-from-top-1 duration-300">
-                    <p className="font-bold text-gray-800 text-sm">📋 SLA = Acuerdo de Nivel de Servicio</p>
+                    <p className="font-bold text-gray-800 text-sm">📋 Tiempo de Respuesta (Acuerdo de Nivel de Servicio)</p>
                     <p>Es el <strong>tiempo máximo</strong> que tiene un responsable para responder un incidente desde que fue reportado. Funciona como el triage de una guardia: cada caso tiene un plazo según su urgencia.</p>
                     <div className="grid grid-cols-3 gap-2 mt-2">
                         <div className="bg-red-50 p-2 rounded-lg text-center">
@@ -153,7 +153,7 @@ export const SlaAlertBanner = ({ reports, onResendWhatsApp }: Props) => {
                             <p className="text-green-700 font-bold">48 horas máx.</p>
                         </div>
                     </div>
-                    <p className="mt-2"><strong>"Xhs fuera de SLA"</strong> = horas que pasaron desde que venció el plazo. <strong>"Xhs para vencer"</strong> = horas que quedan antes del deadline.</p>
+                    <p className="mt-2"><strong>"Xhs fuera de plazo"</strong> = horas que pasaron desde que venció el tiempo límite. <strong>"Xhs para vencer plazo"</strong> = horas que quedan antes de que venza el tiempo de respuesta.</p>
                 </div>
             )}
 
@@ -181,8 +181,8 @@ export const SlaAlertBanner = ({ reports, onResendWhatsApp }: Props) => {
                                 disabled={sendingId === alert.report.id}
                                 title={`Reenviar WhatsApp a ${alert.report.assigned_to}`}
                                 className={`shrink-0 p-1.5 rounded-lg transition-all ${sentIds.has(alert.report.id)
-                                        ? 'bg-green-200 text-green-700'
-                                        : 'bg-green-100 text-green-600 hover:bg-green-200 hover:text-green-700 hover:shadow-sm'
+                                    ? 'bg-green-200 text-green-700'
+                                    : 'bg-green-100 text-green-600 hover:bg-green-200 hover:text-green-700 hover:shadow-sm'
                                     }`}
                             >
                                 {sendingId === alert.report.id ? (
