@@ -826,6 +826,67 @@ export const MetricsDashboard = () => {
                                                 </div>
                                             )}
 
+                                            {/* Gravity Breakdown per Sector */}
+                                            {sectorReports.length > 0 && (() => {
+                                                const sGreen = sectorReports.filter(r => r.ai_urgency === 'Verde').length;
+                                                const sYellow = sectorReports.filter(r => r.ai_urgency === 'Amarillo').length;
+                                                const sRed = sectorReports.filter(r => r.ai_urgency === 'Rojo').length;
+                                                const sTotal = sectorReports.length;
+                                                const pGreen = (sGreen / sTotal) * 100;
+                                                const pYellow = (sYellow / sTotal) * 100;
+                                                const pRed = (sRed / sTotal) * 100;
+
+                                                return (
+                                                    <div className="bg-white rounded-xl border border-gray-100 p-3.5">
+                                                        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">Gravedad del Sector</h4>
+
+                                                        {/* Segmented Bar */}
+                                                        <div className="flex w-full h-3 rounded-full overflow-hidden mb-3">
+                                                            {sGreen > 0 && (
+                                                                <div
+                                                                    style={{ width: `${pGreen}%` }}
+                                                                    className="h-full bg-green-500 transition-all duration-700"
+                                                                    title={`Leve: ${sGreen}`}
+                                                                />
+                                                            )}
+                                                            {sYellow > 0 && (
+                                                                <div
+                                                                    style={{ width: `${pYellow}%` }}
+                                                                    className="h-full bg-yellow-400 transition-all duration-700"
+                                                                    title={`Medio: ${sYellow}`}
+                                                                />
+                                                            )}
+                                                            {sRed > 0 && (
+                                                                <div
+                                                                    style={{ width: `${pRed}%` }}
+                                                                    className="h-full bg-red-500 transition-all duration-700"
+                                                                    title={`Crítico: ${sRed}`}
+                                                                />
+                                                            )}
+                                                        </div>
+
+                                                        {/* Legend */}
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                                                                <span className="text-[10px] font-bold text-gray-600">Leve</span>
+                                                                <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">{sGreen}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                                                                <span className="text-[10px] font-bold text-gray-600">Medio</span>
+                                                                <span className="text-[10px] font-bold text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded-full">{sYellow}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                                                                <span className="text-[10px] font-bold text-gray-600">Crítico</span>
+                                                                <span className="text-[10px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full">{sRed}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
+
                                             {/* Claims Table */}
                                             <div>
                                                 <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Casos Activos ({sectorActive.length})</h4>
