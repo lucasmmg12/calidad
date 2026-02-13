@@ -1137,7 +1137,22 @@ export const MetricsDashboard = () => {
             </div>
 
             {/* ── SLA Alerts ── */}
-            <SlaAlertBanner reports={rawReports} />
+            <SlaAlertBanner
+                reports={rawReports}
+                onResendWhatsApp={async (report) => {
+                    if (!report.assigned_to) return;
+                    const botNumber = `549${report.assigned_to}`;
+                    const resolutionLink = `${window.location.origin}/resolver-caso/${report.tracking_id}`;
+                    const message = `⏰ *Recordatorio SLA - Calidad*\n\nEl caso *${report.tracking_id}* del sector *${report.sector}* requiere su atención urgente.\n\n📝 "${(report.ai_summary || report.content || '').substring(0, 150)}"\n\n👉 *Gestione el caso aquí:* ${resolutionLink}\n\n⚠️ Este caso ha superado el tiempo de respuesta esperado.`;
+                    await supabase.functions.invoke('send-whatsapp', {
+                        body: {
+                            number: botNumber,
+                            message,
+                            mediaUrl: "https://i.imgur.com/JGQlbiJ.jpeg"
+                        }
+                    });
+                }}
+            />
 
             {/* ── Advanced Analytics ── */}
             <div>

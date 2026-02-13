@@ -165,6 +165,29 @@ BEGIN
 END $$;
 
 
+-- ============ 4. REPORTS: Quality Observations & Finding Type ============
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'reports' AND column_name = 'quality_observations'
+    ) THEN
+        ALTER TABLE public.reports ADD COLUMN quality_observations TEXT;
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'reports' AND column_name = 'finding_type'
+    ) THEN
+        ALTER TABLE public.reports ADD COLUMN finding_type TEXT;
+    END IF;
+END $$;
+
+
 -- ============================================================
 -- ✅ DONE! All migrations applied successfully.
 -- ============================================================

@@ -19,10 +19,13 @@ import {
     Bell,
     XCircle,
     User,
-    Phone
+    Phone,
+    MessageSquare,
+    Save
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { CLASSIFICATION_CATEGORIES } from '../constants/classification_categories';
+import { SECTOR_OPTIONS } from '../constants/sectors';
 import type { UserProfile } from '../contexts/AuthContext';
 
 // Discard Confirmation Modal Component
@@ -76,7 +79,7 @@ const DiscardConfirmationModal = ({
 
 
 // ==========================================================
-// Shared Responsable Phone Selector (Hybrid: Dropdown + Manual)
+// Shared Responsable Phone Selector (Cascading: Sector → Responsable)
 // ==========================================================
 const ResponsablePhoneSelector = ({
     responsables,
@@ -95,17 +98,20 @@ const ResponsablePhoneSelector = ({
     setSelectedUserId: (v: string) => void;
     reportSector?: string;
 }) => {
+    const [selectedSector, setSelectedSector] = useState(reportSector || '');
     const isManual = selectedUserId === '__manual__';
 
-    // Filter responsables who have at least one matching sector
-    const filtered = reportSector
-        ? responsables.filter(r => r.assigned_sectors?.includes(reportSector))
-        : responsables;
-
-    // Also keep a list of "other" responsables (not matching sector)
-    const others = reportSector
-        ? responsables.filter(r => !r.assigned_sectors?.includes(reportSector))
+    // Filter responsables by selected sector
+    const filteredBySecor = selectedSector
+        ? responsables.filter(r => r.assigned_sectors?.includes(selectedSector))
         : [];
+
+    const handleSectorChange = (sector: string) => {
+        setSelectedSector(sector);
+        // Reset responsable selection when sector changes
+        setSelectedUserId('');
+        setPhone('');
+    };
 
     const handleSelect = (value: string) => {
         setSelectedUserId(value);
@@ -122,47 +128,73 @@ const ResponsablePhoneSelector = ({
 
     return (
         <div className="space-y-3">
-            {/* Selector */}
+            {/* STEP 1: Sector Selector */}
             <div>
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block flex items-center gap-1.5">
-                    <User className="w-3.5 h-3.5" />
-                    Responsable
+                    <LayoutDashboard className="w-3.5 h-3.5" />
+                    Sector
                 </label>
-                {loadingResponsables ? (
-                    <div className="flex items-center gap-2 p-3 text-sm text-gray-400">
-                        <Loader2 className="w-4 h-4 animate-spin" /> Cargando responsables...
-                    </div>
-                ) : (
-                    <select
-                        value={selectedUserId}
-                        onChange={(e) => handleSelect(e.target.value)}
-                        className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-sanatorio-primary/50 transition-all text-sm bg-gray-50 focus:bg-white appearance-none cursor-pointer"
-                    >
-                        <option value="">-- Seleccionar responsable --</option>
-                        {filtered.length > 0 && (
-                            <optgroup label={reportSector ? `📍 Sector: ${reportSector}` : 'Responsables'}>
-                                {filtered.map(r => (
-                                    <option key={r.user_id} value={r.user_id}>
-                                        {r.display_name || r.user_id}{r.phone_number ? ` (${r.phone_number})` : ' ⚠️ Sin teléfono'}
-                                    </option>
-                                ))}
-                            </optgroup>
-                        )}
-                        {others.length > 0 && (
-                            <optgroup label="Otros responsables">
-                                {others.map(r => (
-                                    <option key={r.user_id} value={r.user_id}>
-                                        {r.display_name || r.user_id}{r.phone_number ? ` (${r.phone_number})` : ' ⚠️ Sin teléfono'}
-                                    </option>
-                                ))}
-                            </optgroup>
-                        )}
-                        <optgroup label="──────────">
-                            <option value="__manual__">✏️ Ingresar número manualmente</option>
-                        </optgroup>
-                    </select>
-                )}
+                <select
+                    value={selectedSector}
+                    onChange={(e) => handleSectorChange(e.target.value)}
+                    className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-sanatorio-primary/50 transition-all text-sm bg-gray-50 focus:bg-white appearance-none cursor-pointer"
+                >
+                    <option value="">-- Seleccionar sector --</option>
+                    {SECTOR_OPTIONS.map(s => (
+                        <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                </select>
             </div>
+
+            {/* STEP 2: Responsable Selector (filtered by sector) */}
+            {selectedSector && (
+                <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block flex items-center gap-1.5">
+                        <User className="w-3.5 h-3.5" />
+                        Responsable
+                        {filteredBySecor.length > 0 && (
+                            <span className="text-[10px] font-normal text-gray-400 ml-1">
+                                ({filteredBySecor.length} disponible{filteredBySecor.length !== 1 ? 's' : ''})
+                            </span>
+                        )}
+                    </label>
+                    {loadingResponsables ? (
+                        <div className="flex items-center gap-2 p-3 text-sm text-gray-400">
+                            <Loader2 className="w-4 h-4 animate-spin" /> Cargando responsables...
+                        </div>
+                    ) : filteredBySecor.length > 0 ? (
+                        <select
+                            value={selectedUserId}
+                            onChange={(e) => handleSelect(e.target.value)}
+                            className="w-full p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-sanatorio-primary/50 transition-all text-sm bg-gray-50 focus:bg-white appearance-none cursor-pointer"
+                        >
+                            <option value="">-- Seleccionar responsable --</option>
+                            {filteredBySecor.map(r => (
+                                <option key={r.user_id} value={r.user_id}>
+                                    {r.display_name || r.user_id}{r.phone_number ? ` (${r.phone_number})` : ' ⚠️ Sin teléfono'}
+                                </option>
+                            ))}
+                            <optgroup label="──────────">
+                                <option value="__manual__">✏️ Ingresar número manualmente</option>
+                            </optgroup>
+                        </select>
+                    ) : (
+                        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm space-y-2">
+                            <div className="flex items-center gap-2 text-amber-700 font-medium">
+                                <AlertTriangle className="w-4 h-4 shrink-0" />
+                                No hay responsables asignados a este sector.
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => handleSelect('__manual__')}
+                                className="text-xs font-bold text-sanatorio-primary hover:underline"
+                            >
+                                ✏️ Ingresar número manualmente
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Warning if selected responsable has no phone */}
             {selectedHasNoPhone && (
@@ -183,8 +215,8 @@ const ResponsablePhoneSelector = ({
                     maxLength={10}
                     placeholder="Ej: 2645438114"
                     className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-sanatorio-primary/50 transition-all font-mono text-sm ${(isManual || selectedHasNoPhone)
-                            ? 'border-gray-200 bg-gray-50 focus:bg-white'
-                            : 'border-gray-100 bg-gray-100 text-gray-500 cursor-not-allowed'
+                        ? 'border-gray-200 bg-gray-50 focus:bg-white'
+                        : 'border-gray-100 bg-gray-100 text-gray-500 cursor-not-allowed'
                         }`}
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
@@ -200,6 +232,7 @@ const ResponsablePhoneSelector = ({
         </div>
     );
 };
+
 
 // Referral Modal Component
 const ReferralModal = ({
@@ -650,6 +683,19 @@ export const Dashboard = () => {
     const [showQualityReturnModal, setShowQualityReturnModal] = useState(false);
     const [showQualityApproveModal, setShowQualityApproveModal] = useState(false);
     const [isProcessingQuality, setIsProcessingQuality] = useState(false);
+
+    // Observations state
+    const [observationText, setObservationText] = useState('');
+    const [isSavingObservation, setIsSavingObservation] = useState(false);
+    const [observationSaved, setObservationSaved] = useState(false);
+
+    // Sync observation text when a report is selected
+    useEffect(() => {
+        if (selectedReport) {
+            setObservationText(selectedReport.quality_observations || '');
+            setObservationSaved(false);
+        }
+    }, [selectedReport?.id]);
 
     const [feedbackModal, setFeedbackModal] = useState<{
         isOpen: boolean;
@@ -1383,6 +1429,45 @@ export const Dashboard = () => {
                                         )}
                                     </div>
 
+                                    {/* Tipo de Hallazgo (1st Dropdown - Admin Only) */}
+                                    <div className="mt-4">
+                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Tipo de Hallazgo</h3>
+                                        {isAdmin ? (
+                                            <>
+                                                <select
+                                                    value={selectedReport.finding_type || ''}
+                                                    onChange={async (e) => {
+                                                        const newType = e.target.value;
+                                                        const { error } = await supabase.from('reports').update({ finding_type: newType }).eq('id', selectedReport.id);
+                                                        if (!error) {
+                                                            const updatedReport = { ...selectedReport, finding_type: newType };
+                                                            setReports(reports.map(r => r.id === selectedReport.id ? updatedReport : r));
+                                                            setSelectedReport(updatedReport);
+                                                        }
+                                                    }}
+                                                    className={`w-full bg-white border text-sm rounded-lg p-2.5 outline-none focus:border-sanatorio-primary focus:ring-1 focus:ring-sanatorio-primary ${!selectedReport.finding_type
+                                                        ? 'border-amber-300 bg-amber-50'
+                                                        : 'border-gray-200 text-gray-700'
+                                                        }`}
+                                                >
+                                                    <option value="">⚠️ Seleccionar tipo...</option>
+                                                    <option value="Oportunidad de Mejora">Oportunidad de Mejora</option>
+                                                    <option value="Reclamo">Reclamo</option>
+                                                    <option value="Evento Adverso">Evento Adverso</option>
+                                                    <option value="Evento Cuasi Adverso">Evento Cuasi Adverso</option>
+                                                    <option value="Desvío">Desvío</option>
+                                                </select>
+                                                {!selectedReport.finding_type && (
+                                                    <p className="text-[10px] text-amber-600 mt-1 font-medium">⚠ Este ticket necesita clasificación de hallazgo</p>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <p className="text-sm text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                                                {selectedReport.finding_type || 'Sin clasificar'}
+                                            </p>
+                                        )}
+                                    </div>
+
                                     {/* Origin Field (Editable - Admin Only) */}
                                     <div className="mt-4">
                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Origen (Calidad)</h3>
@@ -1468,6 +1553,70 @@ export const Dashboard = () => {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* ========== OBSERVACIONES DE CALIDAD ========== */}
+                                <div className="border-t border-gray-100 pt-6">
+                                    <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                                        <MessageSquare className="w-4 h-4 text-indigo-500" />
+                                        Observaciones de Calidad
+                                    </h3>
+                                    {isAdmin ? (
+                                        <div className="space-y-3">
+                                            <textarea
+                                                value={observationText}
+                                                onChange={(e) => {
+                                                    setObservationText(e.target.value);
+                                                    setObservationSaved(false);
+                                                }}
+                                                placeholder="Escribí observaciones internas sobre este caso...&#10;(Solo visible para el equipo de Calidad)"
+                                                className="w-full min-h-[120px] p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl text-sm text-gray-700 placeholder-gray-400 outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 transition-all resize-y leading-relaxed"
+                                            />
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-[10px] text-gray-400 italic">🔒 Visible solo para administradores de Calidad</p>
+                                                <button
+                                                    onClick={async () => {
+                                                        if (!selectedReport) return;
+                                                        setIsSavingObservation(true);
+                                                        const { error } = await supabase
+                                                            .from('reports')
+                                                            .update({ quality_observations: observationText })
+                                                            .eq('id', selectedReport.id);
+                                                        if (!error) {
+                                                            const updatedReport = { ...selectedReport, quality_observations: observationText };
+                                                            setReports(reports.map(r => r.id === selectedReport.id ? updatedReport : r));
+                                                            setSelectedReport(updatedReport);
+                                                            setObservationSaved(true);
+                                                            setTimeout(() => setObservationSaved(false), 3000);
+                                                        }
+                                                        setIsSavingObservation(false);
+                                                    }}
+                                                    disabled={isSavingObservation}
+                                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${observationSaved
+                                                        ? 'bg-green-100 text-green-700 border border-green-200'
+                                                        : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm hover:shadow-md'
+                                                        }`}
+                                                >
+                                                    {isSavingObservation ? (
+                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    ) : observationSaved ? (
+                                                        <CheckCircle className="w-3.5 h-3.5" />
+                                                    ) : (
+                                                        <Save className="w-3.5 h-3.5" />
+                                                    )}
+                                                    {isSavingObservation ? 'Guardando...' : observationSaved ? '¡Guardado!' : 'Guardar'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        selectedReport.quality_observations ? (
+                                            <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl">
+                                                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{selectedReport.quality_observations}</p>
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm text-gray-400 italic p-4 bg-gray-50 rounded-xl border border-gray-100">Sin observaciones registradas.</p>
+                                        )
+                                    )}
+                                </div>
 
                                 <div className="border-t border-gray-100 pt-6">
                                     <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">

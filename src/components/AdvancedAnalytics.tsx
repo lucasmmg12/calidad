@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { TrendingUp, Repeat2, Flame, ChevronDown } from 'lucide-react';
+import { TrendingUp, Repeat2, Flame, ChevronDown, AlertTriangle, Shield } from 'lucide-react';
 
 interface Report {
     id: string;
@@ -70,19 +70,35 @@ export const AdvancedAnalytics = ({ reports }: Props) => {
     }, [reports]);
 
     // ────────────────────────────────────────
-    // RECURRENCE: Same category in same sector
+    // RECURRENCE: Map BY SECTOR → classifications
     // ────────────────────────────────────────
     const recurrenceData = useMemo(() => {
+        // Step 1: Count occurrences per sector+classification combo
         const combos: Record<string, { count: number; sector: string; category: string }> = {};
         reports.forEach(r => {
             const key = `${r.sector}__${r.ai_category || 'Sin clasificar'}`;
             if (!combos[key]) combos[key] = { count: 0, sector: r.sector || 'Otros', category: r.ai_category || 'Sin clasificar' };
             combos[key].count++;
         });
-        return Object.values(combos)
+
+        // Step 2: Group by sector — only classifications with ≥2 occurrences
+        const sectorMap: Record<string, { category: string; count: number }[]> = {};
+        Object.values(combos)
             .filter(c => c.count >= 2)
-            .sort((a, b) => b.count - a.count)
-            .slice(0, 10);
+            .forEach(c => {
+                if (!sectorMap[c.sector]) sectorMap[c.sector] = [];
+                sectorMap[c.sector].push({ category: c.category, count: c.count });
+            });
+
+        // Step 3: Build sector cards, sorted by total recurrence score
+        return Object.entries(sectorMap)
+            .map(([sector, items]) => {
+                const sortedItems = items.sort((a, b) => b.count - a.count);
+                const totalRecurrences = sortedItems.reduce((sum, i) => sum + i.count, 0);
+                const maxSeverity = Math.max(...sortedItems.map(i => i.count));
+                return { sector, items: sortedItems, totalRecurrences, maxSeverity };
+            })
+            .sort((a, b) => b.totalRecurrences - a.totalRecurrences);
     }, [reports]);
 
     const heatColor = (val: number, max: number) => {
@@ -234,42 +250,85 @@ export const AdvancedAnalytics = ({ reports }: Props) => {
                 {/* ── RECURRENCE ── */}
                 {activeTab === 'recurrence' && (
                     <div>
-                        <h3 className="font-bold text-gray-800 mb-1">Análisis de Recurrencia</h3>
-                        <p className="text-xs text-gray-400 mb-4">Problemas que se repiten en el mismo sector (≥2 ocurrencias)</p>
+                        <div className="flex items-center justify-between mb-1">
+                            <h3 className="font-bold text-gray-800">Análisis de Recurrencia por Sector</h3>
+                            {recurrenceData.length > 0 && (
+                                <span className="text-[10px] font-bold px-2.5 py-1 bg-red-50 text-red-600 rounded-full">
+                                    {recurrenceData.length} sectores con recurrencias
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-xs text-gray-400 mb-5">Clasificaciones que se reinciden dentro del mismo sector (≥2 ocurrencias)</p>
 
                         {recurrenceData.length === 0 ? (
                             <div className="text-center py-12 text-gray-400">
-                                <Repeat2 className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                                <Shield className="w-10 h-10 mx-auto mb-3 opacity-30" />
                                 <p className="text-sm font-medium">No se detectaron patrones recurrentes</p>
+                                <p className="text-xs text-gray-300 mt-1">Buena señal: los problemas no se están repitiendo</p>
                             </div>
                         ) : (
-                            <div className="space-y-2">
-                                {recurrenceData.map((item, i) => {
-                                    const maxCount = recurrenceData[0].count;
-                                    const width = (item.count / maxCount) * 100;
+                            <div className="space-y-4">
+                                {recurrenceData.map((sectorData, idx) => {
+                                    const severityLevel = sectorData.maxSeverity >= 5 ? 'critical' : sectorData.maxSeverity >= 3 ? 'warning' : 'moderate';
+                                    const borderColor = severityLevel === 'critical' ? 'border-red-200' : severityLevel === 'warning' ? 'border-orange-200' : 'border-yellow-200';
+                                    const bgColor = severityLevel === 'critical' ? 'bg-red-50/40' : severityLevel === 'warning' ? 'bg-orange-50/30' : 'bg-yellow-50/20';
+                                    const headerBg = severityLevel === 'critical' ? 'bg-red-500' : severityLevel === 'warning' ? 'bg-orange-500' : 'bg-yellow-500';
+
                                     return (
-                                        <div key={i} className="group">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black text-white ${item.count >= 5 ? 'bg-red-500' : item.count >= 3 ? 'bg-orange-500' : 'bg-yellow-500'
-                                                        }`}>
-                                                        {item.count}
-                                                    </span>
-                                                    <span className="text-xs font-bold text-gray-700">{item.sector}</span>
-                                                    <span className="text-[10px] text-gray-400">→</span>
-                                                    <span className="text-xs text-gray-500">{item.category}</span>
+                                        <div key={idx} className={`rounded-xl border ${borderColor} ${bgColor} overflow-hidden transition-all hover:shadow-sm`}>
+                                            {/* Sector Header */}
+                                            <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100/60">
+                                                <div className={`w-8 h-8 rounded-lg ${headerBg} flex items-center justify-center shrink-0`}>
+                                                    {severityLevel === 'critical' ? (
+                                                        <AlertTriangle className="w-4 h-4 text-white" />
+                                                    ) : (
+                                                        <Repeat2 className="w-4 h-4 text-white" />
+                                                    )}
                                                 </div>
-                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.count >= 5 ? 'bg-red-50 text-red-600' : item.count >= 3 ? 'bg-orange-50 text-orange-600' : 'bg-yellow-50 text-yellow-600'
-                                                    }`}>
-                                                    {item.count}x repetido
-                                                </span>
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="text-sm font-black text-gray-800 truncate">{sectorData.sector}</h4>
+                                                    <p className="text-[10px] text-gray-400">
+                                                        {sectorData.items.length} clasificación{sectorData.items.length > 1 ? 'es' : ''} recurrente{sectorData.items.length > 1 ? 's' : ''}
+                                                    </p>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <p className="text-lg font-black text-gray-800">{sectorData.totalRecurrences}</p>
+                                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">casos totales</p>
+                                                </div>
                                             </div>
-                                            <div className="w-full bg-gray-100 rounded-full h-1.5">
-                                                <div
-                                                    className={`h-1.5 rounded-full transition-all duration-700 ${item.count >= 5 ? 'bg-red-400' : item.count >= 3 ? 'bg-orange-400' : 'bg-yellow-400'
-                                                        }`}
-                                                    style={{ width: `${width}%` }}
-                                                />
+
+                                            {/* Classifications within this sector */}
+                                            <div className="px-4 py-3 space-y-2.5">
+                                                {sectorData.items.map((item, i) => {
+                                                    const maxInSector = sectorData.items[0].count;
+                                                    const barWidth = (item.count / maxInSector) * 100;
+                                                    const itemSeverity = item.count >= 5 ? 'critical' : item.count >= 3 ? 'warning' : 'moderate';
+                                                    const countBg = itemSeverity === 'critical' ? 'bg-red-500' : itemSeverity === 'warning' ? 'bg-orange-500' : 'bg-yellow-500';
+                                                    const badgeBg = itemSeverity === 'critical' ? 'bg-red-50 text-red-600' : itemSeverity === 'warning' ? 'bg-orange-50 text-orange-600' : 'bg-yellow-50 text-yellow-600';
+                                                    const barBg = itemSeverity === 'critical' ? 'bg-red-400' : itemSeverity === 'warning' ? 'bg-orange-400' : 'bg-yellow-400';
+
+                                                    return (
+                                                        <div key={i}>
+                                                            <div className="flex items-center justify-between mb-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-black text-white ${countBg}`}>
+                                                                        {item.count}
+                                                                    </span>
+                                                                    <span className="text-xs font-medium text-gray-600">{item.category}</span>
+                                                                </div>
+                                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeBg}`}>
+                                                                    {item.count}x reincidencia
+                                                                </span>
+                                                            </div>
+                                                            <div className="w-full bg-gray-100 rounded-full h-1.5">
+                                                                <div
+                                                                    className={`h-1.5 rounded-full transition-all duration-700 ${barBg}`}
+                                                                    style={{ width: `${barWidth}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     );

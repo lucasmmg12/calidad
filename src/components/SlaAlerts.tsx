@@ -1,4 +1,4 @@
-import { AlertTriangle, Clock, AlertOctagon, CheckCircle2, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertTriangle, Clock, AlertOctagon, CheckCircle2, HelpCircle, ChevronDown, ChevronUp, MessageCircle, Loader2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 interface Report {
@@ -9,10 +9,15 @@ interface Report {
     status: string;
     created_at: string;
     assigned_to_phone?: string;
+    assigned_to?: string;
+    ai_summary?: string;
+    content?: string;
+    is_adverse_event?: boolean;
 }
 
 interface Props {
     reports: Report[];
+    onResendWhatsApp?: (report: Report) => Promise<void>;
 }
 
 interface SlaAlert {
@@ -40,8 +45,11 @@ export const getSlaLevel = (report: Report): { level: 'critical' | 'warning' | '
     return { level: 'ok', hoursElapsed };
 };
 
-export const SlaAlertBanner = ({ reports }: Props) => {
+export const SlaAlertBanner = ({ reports, onResendWhatsApp }: Props) => {
     const [showInfo, setShowInfo] = useState(false);
+    const [sendingId, setSendingId] = useState<string | null>(null);
+    const [sentIds, setSentIds] = useState<Set<string>>(new Set());
+
     const alerts = useMemo(() => {
         const result: SlaAlert[] = [];
         reports.forEach(report => {
@@ -67,6 +75,26 @@ export const SlaAlertBanner = ({ reports }: Props) => {
 
     const criticalCount = alerts.filter(a => a.level === 'critical').length;
     const warningCount = alerts.filter(a => a.level === 'warning').length;
+
+    const handleResend = async (report: Report) => {
+        if (!onResendWhatsApp || !report.assigned_to) return;
+        setSendingId(report.id);
+        try {
+            await onResendWhatsApp(report);
+            setSentIds(prev => new Set(prev).add(report.id));
+            setTimeout(() => {
+                setSentIds(prev => {
+                    const next = new Set(prev);
+                    next.delete(report.id);
+                    return next;
+                });
+            }, 3000);
+        } catch (err) {
+            console.error('Error resending WhatsApp:', err);
+        } finally {
+            setSendingId(null);
+        }
+    };
 
     if (alerts.length === 0) return null;
 
@@ -143,6 +171,29 @@ export const SlaAlertBanner = ({ reports }: Props) => {
                         <span className="ml-auto font-black whitespace-nowrap">
                             {alert.message}
                         </span>
+                        {/* WhatsApp Resend Button */}
+                        {alert.report.assigned_to && onResendWhatsApp && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleResend(alert.report);
+                                }}
+                                disabled={sendingId === alert.report.id}
+                                title={`Reenviar WhatsApp a ${alert.report.assigned_to}`}
+                                className={`shrink-0 p-1.5 rounded-lg transition-all ${sentIds.has(alert.report.id)
+                                        ? 'bg-green-200 text-green-700'
+                                        : 'bg-green-100 text-green-600 hover:bg-green-200 hover:text-green-700 hover:shadow-sm'
+                                    }`}
+                            >
+                                {sendingId === alert.report.id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : sentIds.has(alert.report.id) ? (
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                ) : (
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                )}
+                            </button>
+                        )}
                     </div>
                 ))}
             </div>
