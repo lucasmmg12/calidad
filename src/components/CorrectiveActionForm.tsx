@@ -26,7 +26,7 @@ interface CorrectiveActionFormProps {
 }
 
 interface CorrectiveActionFormData {
-    origin: 'auditoria' | 'reclamo' | 'seguridad' | 'otro';
+    origin: 'auditoria' | 'observacion' | 'seguridad' | 'otro';
     sector: string;
     findingType: 'desvio' | 'oportunidad' | 'no_conformidad' | 'evento_adverso';
     description: string;
@@ -48,7 +48,7 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
 
     const { register, handleSubmit, formState: { errors } } = useForm<CorrectiveActionFormData>({
         defaultValues: {
-            origin: 'reclamo',
+            origin: 'observacion',
             sector: initialData?.sector || '',
             findingType: 'evento_adverso', // Default for this context
             description: initialData?.description || '',
@@ -151,7 +151,7 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                                     disabled={true}
                                     className="w-full bg-gray-100 border border-gray-200 text-gray-500 text-sm rounded-lg cursor-not-allowed focus:ring-0 block p-2.5 outline-none font-medium"
                                 >
-                                    <option value="reclamo">Reclamo / Queja</option>
+                                    <option value="observacion">Observación / Hallazgo</option>
                                     <option value="auditoria">Hallazgo Auditoría</option>
                                     <option value="seguridad">Ronda de Seguridad</option>
                                     <option value="otro">Otro</option>
@@ -171,7 +171,7 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                                     <option value="evento_adverso">Evento adverso</option>
                                     <option value="cuasi_evento">Cuasi evento adverso</option>
                                     <option value="felicitaciones">Felicitaciones</option>
-                                    <option value="reclamo">Reclamo</option>
+                                    <option value="observacion">Observación</option>
                                 </select>
                             </div>
 

@@ -35,7 +35,7 @@ export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
             <div className="grid grid-cols-2 gap-6 mb-6">
                 <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-500 uppercase block">Origen</label>
-                    <div className="text-sm border-b border-gray-200 pb-1">{data.origin || 'Reclamo / Gestión'}</div>
+                    <div className="text-sm border-b border-gray-200 pb-1">{data.origin || 'Observación / Gestión'}</div>
                 </div>
                 <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-500 uppercase block">Sector</label>

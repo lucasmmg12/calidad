@@ -234,7 +234,145 @@ const ResponsablePhoneSelector = ({
 };
 
 
-// Referral Modal Component
+// =====================================================
+// Multi-Sector Referral Modal — Allows assigning to N sectors
+// =====================================================
+interface SectorAssignmentRow {
+    id: string;
+    sector: string;
+    selectedUserId: string;
+    phone: string;
+}
+
+const MultiSectorRowSelector = ({
+    row,
+    onUpdate,
+    onRemove,
+    canRemove,
+    responsables,
+    loadingResponsables,
+}: {
+    row: SectorAssignmentRow;
+    onUpdate: (updated: SectorAssignmentRow) => void;
+    onRemove: () => void;
+    canRemove: boolean;
+    responsables: UserProfile[];
+    loadingResponsables: boolean;
+}) => {
+    const isManual = row.selectedUserId === '__manual__';
+
+    const filteredBySector = row.sector
+        ? responsables.filter(r => r.assigned_sectors?.includes(row.sector))
+        : [];
+
+    const selectedProfile = responsables.find(r => r.user_id === row.selectedUserId);
+    const selectedHasNoPhone = row.selectedUserId && row.selectedUserId !== '__manual__' && !selectedProfile?.phone_number;
+
+    return (
+        <div className="relative bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3 transition-all hover:border-gray-300">
+            {canRemove && (
+                <button
+                    type="button"
+                    onClick={onRemove}
+                    className="absolute top-2 right-2 p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                    title="Quitar sector"
+                >
+                    <X className="w-4 h-4" />
+                </button>
+            )}
+
+            {/* Sector */}
+            <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Sector</label>
+                <select
+                    value={row.sector}
+                    onChange={(e) => onUpdate({ ...row, sector: e.target.value, selectedUserId: '', phone: '' })}
+                    className="w-full p-2.5 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-sanatorio-primary/50 transition-all text-sm bg-white"
+                >
+                    <option value="">-- Seleccionar sector --</option>
+                    {SECTOR_OPTIONS.map(s => (
+                        <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                </select>
+            </div>
+
+            {/* Responsable */}
+            {row.sector && (
+                <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">
+                        Responsable
+                        {filteredBySector.length > 0 && (
+                            <span className="text-[9px] font-normal text-gray-400 ml-1">
+                                ({filteredBySector.length} disponible{filteredBySector.length !== 1 ? 's' : ''})
+                            </span>
+                        )}
+                    </label>
+                    {loadingResponsables ? (
+                        <div className="flex items-center gap-2 p-2 text-xs text-gray-400">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Cargando...
+                        </div>
+                    ) : filteredBySector.length > 0 ? (
+                        <select
+                            value={row.selectedUserId}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '__manual__') {
+                                    onUpdate({ ...row, selectedUserId: val, phone: '' });
+                                } else {
+                                    const found = responsables.find(r => r.user_id === val);
+                                    onUpdate({ ...row, selectedUserId: val, phone: found?.phone_number || '' });
+                                }
+                            }}
+                            className="w-full p-2.5 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-sanatorio-primary/50 transition-all text-sm bg-white"
+                        >
+                            <option value="">-- Seleccionar --</option>
+                            {filteredBySector.map(r => (
+                                <option key={r.user_id} value={r.user_id}>
+                                    {r.display_name || r.user_id}{r.phone_number ? ` (${r.phone_number})` : ' ⚠️ Sin tel'}
+                                </option>
+                            ))}
+                            <optgroup label="──────────">
+                                <option value="__manual__">✏️ Ingresar manualmente</option>
+                            </optgroup>
+                        </select>
+                    ) : (
+                        <div className="flex items-center justify-between p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs">
+                            <span className="text-amber-700 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Sin responsables</span>
+                            <button type="button" onClick={() => onUpdate({ ...row, selectedUserId: '__manual__', phone: '' })} className="text-sanatorio-primary font-bold hover:underline">Manual</button>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Phone */}
+            {row.sector && (
+                <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">WhatsApp</label>
+                    <input
+                        type="tel"
+                        maxLength={10}
+                        placeholder="2645438114"
+                        className={`w-full p-2.5 rounded-lg border outline-none focus:ring-2 focus:ring-sanatorio-primary/50 transition-all font-mono text-sm ${(isManual || selectedHasNoPhone)
+                            ? 'border-gray-200 bg-white'
+                            : 'border-gray-100 bg-gray-100 text-gray-500 cursor-not-allowed'
+                            }`}
+                        value={row.phone}
+                        onChange={(e) => onUpdate({ ...row, phone: e.target.value.replace(/\D/g, '') })}
+                        readOnly={!isManual && !selectedHasNoPhone}
+                    />
+                </div>
+            )}
+
+            {/* Sector badge indicator */}
+            {row.sector && row.phone.length >= 8 && (
+                <div className="flex items-center gap-1.5 text-[10px] text-green-600 font-bold">
+                    <CheckCircle className="w-3 h-3" /> Listo para enviar
+                </div>
+            )}
+        </div>
+    );
+};
+
 const ReferralModal = ({
     isOpen,
     onClose,
@@ -246,121 +384,134 @@ const ReferralModal = ({
 }: {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: (type: 'simple' | 'desvio' | 'adverse', responsiblePhone: string) => void;
+    onConfirm: (type: 'simple' | 'desvio' | 'adverse', responsiblePhone: string, sectorAssignments?: SectorAssignmentRow[]) => void;
     isSending: boolean;
     responsables: UserProfile[];
     loadingResponsables: boolean;
     reportSector?: string;
 }) => {
     const [managementType, setManagementType] = useState<'simple' | 'desvio' | 'adverse'>('simple');
-    const [phone, setPhone] = useState('');
-    const [selectedUserId, setSelectedUserId] = useState('');
+    const [rows, setRows] = useState<SectorAssignmentRow[]>([
+        { id: crypto.randomUUID(), sector: reportSector || '', selectedUserId: '', phone: '' }
+    ]);
 
     useEffect(() => {
         if (isOpen) {
-            setPhone('');
-            setSelectedUserId('');
             setManagementType('simple');
+            setRows([{ id: crypto.randomUUID(), sector: reportSector || '', selectedUserId: '', phone: '' }]);
         }
     }, [isOpen]);
+
+    const addRow = () => {
+        setRows(prev => [...prev, { id: crypto.randomUUID(), sector: '', selectedUserId: '', phone: '' }]);
+    };
+
+    const updateRow = (id: string, updated: SectorAssignmentRow) => {
+        setRows(prev => prev.map(r => r.id === id ? updated : r));
+    };
+
+    const removeRow = (id: string) => {
+        setRows(prev => prev.filter(r => r.id !== id));
+    };
+
+    const validRows = rows.filter(r => r.sector && r.phone.length >= 8);
+    const isMultiSector = rows.length > 1;
 
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 transform transition-all scale-100 animate-in zoom-in-95">
-                <h3 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-                    <Send className="w-5 h-5 text-sanatorio-primary" />
-                    Derivar Caso
-                </h3>
-                <p className="text-sm text-gray-500 mb-6">
-                    Se enviará un enlace de gestión vía WhatsApp al responsable.
+            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6 transform transition-all scale-100 animate-in zoom-in-95 max-h-[90vh] flex flex-col">
+                <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                        <Send className="w-5 h-5 text-sanatorio-primary" />
+                        Derivar Caso
+                    </h3>
+                    {isMultiSector && (
+                        <span className="px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold uppercase tracking-wider">
+                            Multi-Sector
+                        </span>
+                    )}
+                </div>
+                <p className="text-sm text-gray-500 mb-5">
+                    {isMultiSector
+                        ? 'Se enviará un enlace individual a cada responsable asignado.'
+                        : 'Se enviará un enlace de gestión vía WhatsApp al responsable.'
+                    }
                 </p>
 
-                <div className="space-y-4 mb-6">
-                    {/* Selector de Tipo de Gestión */}
+                <div className="flex-1 overflow-y-auto pr-1 space-y-4 mb-5 custom-scrollbar">
+                    {/* Tipo de Gestión (shared) */}
                     <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                         <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Tipo de Gestión Requerida</label>
-
                         <div className="grid grid-cols-3 gap-2">
-                            <button
-                                onClick={() => setManagementType('simple')}
-                                className={`p-2 rounded-lg text-xs font-bold transition-all border ${managementType === 'simple'
-                                    ? 'bg-white border-blue-500 text-blue-700 shadow-sm ring-1 ring-blue-500'
-                                    : 'border-transparent text-gray-500 hover:bg-gray-100'
-                                    }`}
-                            >
-                                ⚡ Simple
-                            </button>
-                            <button
-                                onClick={() => setManagementType('desvio')}
-                                className={`p-2 rounded-lg text-xs font-bold transition-all border ${managementType === 'desvio'
-                                    ? 'bg-white border-orange-500 text-orange-700 shadow-sm ring-1 ring-orange-500'
-                                    : 'border-transparent text-gray-500 hover:bg-gray-100'
-                                    }`}
-                            >
-                                🔧 Desvío
-                            </button>
-                            <button
-                                onClick={() => setManagementType('adverse')}
-                                className={`p-2 rounded-lg text-xs font-bold transition-all border ${managementType === 'adverse'
-                                    ? 'bg-white border-red-500 text-red-700 shadow-sm ring-1 ring-red-500'
-                                    : 'border-transparent text-gray-500 hover:bg-gray-100'
-                                    }`}
-                            >
-                                ⚠️ Evento A.
-                            </button>
+                            <button onClick={() => setManagementType('simple')} className={`p-2 rounded-lg text-xs font-bold transition-all border ${managementType === 'simple' ? 'bg-white border-blue-500 text-blue-700 shadow-sm ring-1 ring-blue-500' : 'border-transparent text-gray-500 hover:bg-gray-100'}`}>⚡ Simple</button>
+                            <button onClick={() => setManagementType('desvio')} className={`p-2 rounded-lg text-xs font-bold transition-all border ${managementType === 'desvio' ? 'bg-white border-orange-500 text-orange-700 shadow-sm ring-1 ring-orange-500' : 'border-transparent text-gray-500 hover:bg-gray-100'}`}>🔧 Desvío</button>
+                            <button onClick={() => setManagementType('adverse')} className={`p-2 rounded-lg text-xs font-bold transition-all border ${managementType === 'adverse' ? 'bg-white border-red-500 text-red-700 shadow-sm ring-1 ring-red-500' : 'border-transparent text-gray-500 hover:bg-gray-100'}`}>⚠️ Evento A.</button>
                         </div>
-
                         <div className="mt-3 p-3 bg-white rounded-lg border border-gray-100 text-xs text-gray-600">
-                            {managementType === 'simple' && (
-                                <p className="flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                    Solo solicita <strong>Acción Inmediata</strong>.
-                                </p>
-                            )}
-                            {managementType === 'desvio' && (
-                                <p className="flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
-                                    Solicita <strong>Acción Inmediata + RCA + Plan</strong>.
-                                </p>
-                            )}
-                            {managementType === 'adverse' && (
-                                <p className="flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                                    Solicita <strong>Acción Inmediata + RCA + Plan</strong> (Crítico).
-                                </p>
-                            )}
+                            {managementType === 'simple' && <p className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>Solo solicita <strong>Acción Inmediata</strong>.</p>}
+                            {managementType === 'desvio' && <p className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>Solicita <strong>Acción Inmediata + RCA + Plan</strong>.</p>}
+                            {managementType === 'adverse' && <p className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>Solicita <strong>Acción Inmediata + RCA + Plan</strong> (Crítico).</p>}
                         </div>
                     </div>
 
-                    {/* Hybrid Phone Selector */}
-                    <ResponsablePhoneSelector
-                        responsables={responsables}
-                        loadingResponsables={loadingResponsables}
-                        phone={phone}
-                        setPhone={setPhone}
-                        selectedUserId={selectedUserId}
-                        setSelectedUserId={setSelectedUserId}
-                        reportSector={reportSector}
-                    />
+                    {/* Sector Assignment Rows */}
+                    {rows.map((row, idx) => (
+                        <div key={row.id}>
+                            {rows.length > 1 && (
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
+                                    Asignación {idx + 1} de {rows.length}
+                                </p>
+                            )}
+                            <MultiSectorRowSelector
+                                row={row}
+                                onUpdate={(updated) => updateRow(row.id, updated)}
+                                onRemove={() => removeRow(row.id)}
+                                canRemove={rows.length > 1}
+                                responsables={responsables}
+                                loadingResponsables={loadingResponsables}
+                            />
+                        </div>
+                    ))}
+
+                    {/* Add Sector Button */}
+                    <button
+                        type="button"
+                        onClick={addRow}
+                        className="w-full py-2.5 px-4 border-2 border-dashed border-gray-200 rounded-xl text-sm font-bold text-gray-400 hover:text-sanatorio-primary hover:border-sanatorio-primary/30 hover:bg-sanatorio-primary/5 transition-all flex items-center justify-center gap-2"
+                    >
+                        <span className="text-lg leading-none">+</span> Agregar otro sector
+                    </button>
                 </div>
 
-                <div className="flex gap-3 w-full">
+                {/* Summary & Actions */}
+                {validRows.length > 1 && (
+                    <div className="mb-4 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+                        <p className="text-xs font-bold text-indigo-700 mb-1">Resumen Multi-Sector</p>
+                        <div className="flex flex-wrap gap-1.5">
+                            {validRows.map(r => {
+                                const sectorLabel = SECTOR_OPTIONS.find(s => s.value === r.sector)?.label || r.sector;
+                                return (
+                                    <span key={r.id} className="px-2 py-0.5 bg-white rounded-full text-[10px] font-bold text-indigo-600 border border-indigo-200">
+                                        {sectorLabel}
+                                    </span>
+                                );
+                            })}
+                        </div>
+                        <p className="text-[10px] text-indigo-500 mt-1.5">{validRows.length} sectores serán notificados simultáneamente</p>
+                    </div>
+                )}
+
+                <div className="flex gap-3 w-full flex-shrink-0">
+                    <button onClick={onClose} disabled={isSending} className="flex-1 py-2.5 px-4 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50">Cancelar</button>
                     <button
-                        onClick={onClose}
-                        disabled={isSending}
-                        className="flex-1 py-2.5 px-4 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        onClick={() => onConfirm(managementType, phone)}
-                        disabled={isSending || phone.length < 8}
+                        onClick={() => onConfirm(managementType, validRows[0]?.phone || '', validRows.length > 0 ? rows : undefined)}
+                        disabled={isSending || validRows.length === 0}
                         className="flex-1 py-2.5 px-4 bg-sanatorio-primary text-white font-bold rounded-xl hover:opacity-90 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                         {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                        Enviar Solicitud
+                        {validRows.length > 1 ? `Enviar a ${validRows.length} sectores` : 'Enviar Solicitud'}
                     </button>
                 </div>
             </div>
@@ -859,75 +1010,105 @@ export const Dashboard = () => {
         setLoading(false);
     };
 
-    const handleSendReferral = async (managementType: 'simple' | 'desvio' | 'adverse', responsiblePhone: string) => {
+    const handleSendReferral = async (managementType: 'simple' | 'desvio' | 'adverse', responsiblePhone: string, sectorAssignments?: SectorAssignmentRow[]) => {
         if (!selectedReport) return;
         setIsSendingReferral(true);
 
-        const isAdverse = managementType !== 'simple'; // Desvio and Adverse both require RCA
+        const isAdverse = managementType !== 'simple';
         const typeLabel = managementType === 'simple' ? 'Simple' : managementType === 'desvio' ? 'Desvío' : 'Evento Adverso';
-
-        // 1. Generar Link Único
-        const resolutionLink = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}`;
-        const botNumber = `549${responsiblePhone}`;
-
-        // 2. Enviar WhatsApp
-        console.log(`[Referral] Enviando a ${botNumber}. Link: ${resolutionLink}. Type: ${managementType}`);
-
-        let messageBody = `👋 *Solicitud de Gestión - Calidad*\n\nSe requiere su intervención para el caso: *${selectedReport.tracking_id}*\n📂 Sector: ${selectedReport.sector}\n\n📝 *Reporte:* "${selectedReport.ai_summary || selectedReport.content}"\n\n`;
-
-        if (managementType === 'simple') {
-            messageBody += `🛠️ *Tipo: Simple*\nSe solicita: *Contención / Acción Inmediata*.`;
-        } else if (managementType === 'desvio') {
-            messageBody += `🔧 *Tipo: Desvío*\nSe solicita: *Acción Inmediata + Análisis de Causa + Plan de Acción*.`;
-        } else {
-            messageBody += `⚠️ *Tipo: Evento Adverso*\nSe solicita: *Acción Inmediata + Análisis de Causa + Plan de Acción*.`;
-        }
-
-        messageBody += `\n\n👉 *Gestione el caso aquí:* ${resolutionLink}`;
-
-        const { error } = await supabase.functions.invoke('send-whatsapp', {
-            body: {
-                number: botNumber,
-                message: messageBody,
-                mediaUrl: managementType === 'adverse' ? "https://i.imgur.com/jgX2y4n.png" : "https://i.imgur.com/JGQlbiJ.jpeg"
-            }
-        });
-
-        // 3. Determinar estado del envío
-        const whatsappStatus = error ? 'failed' : 'sent';
         const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
-        const logEntry = error
-            ? `[${timestamp}] ❌ ERROR AL ENVIAR: Error al enviar WhatsApp a ${responsiblePhone}`
-            : `[${timestamp}] 📤 DERIVADO: Enviado a ${responsiblePhone} como [${typeLabel}]`;
-        const currentNotes = selectedReport.notes || '';
-        const updatedNotes = currentNotes ? `${currentNotes}\n\n${logEntry}` : logEntry;
 
-        if (error) {
-            console.error("Error al enviar WhatsApp:", error);
-            setFeedbackModal({
-                isOpen: true,
-                type: 'error',
-                title: 'Envío Fallido',
-                message: 'El sistema no pudo conectar con WhatsApp. Se ha registrado el error para su auditoría.'
+        // Determine the valid rows to process
+        const validRows = sectorAssignments
+            ? sectorAssignments.filter(r => r.sector && r.phone.length >= 8)
+            : [{ id: '', sector: selectedReport.sector || '', selectedUserId: '', phone: responsiblePhone }];
+
+        const isMultiSector = validRows.length > 1;
+        let allSuccess = true;
+        const logEntries: string[] = [];
+        const assignmentIds: string[] = [];
+
+        for (const row of validRows) {
+            // 1. Create sector_assignment record
+            const { data: assignmentData, error: insertError } = await supabase
+                .from('sector_assignments')
+                .insert({
+                    report_id: selectedReport.id,
+                    sector: row.sector,
+                    assigned_phone: row.phone,
+                    management_type: managementType,
+                    status: 'pending'
+                })
+                .select('id')
+                .single();
+
+            if (insertError) {
+                console.error('[MultiSector] Error creating assignment:', insertError);
+                logEntries.push(`[${timestamp}] ❌ ERROR: No se pudo crear asignación para ${row.sector}`);
+                allSuccess = false;
+                continue;
+            }
+
+            const assignmentId = assignmentData.id;
+            assignmentIds.push(assignmentId);
+
+            // 2. Generate unique resolution link per assignment
+            const resolutionLink = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}/${assignmentId}`;
+            const botNumber = `549${row.phone}`;
+
+            // 3. Build WhatsApp message
+            const sectorLabel = SECTOR_OPTIONS.find(s => s.value === row.sector)?.label || row.sector;
+            let messageBody = `👋 *Solicitud de Gestión - Calidad*\n\nSe requiere su intervención para el caso: *${selectedReport.tracking_id}*\n📂 Sector: ${sectorLabel}\n\n📝 *Reporte:* "${selectedReport.ai_summary || selectedReport.content}"\n\n`;
+
+            if (managementType === 'simple') {
+                messageBody += `🛠️ *Tipo: Simple*\nSe solicita: *Contención / Acción Inmediata*.`;
+            } else if (managementType === 'desvio') {
+                messageBody += `🔧 *Tipo: Desvío*\nSe solicita: *Acción Inmediata + Análisis de Causa + Plan de Acción*.`;
+            } else {
+                messageBody += `⚠️ *Tipo: Evento Adverso*\nSe solicita: *Acción Inmediata + Análisis de Causa + Plan de Acción*.`;
+            }
+
+            if (isMultiSector) {
+                messageBody += `\n\n🏥 *Nota:* Este caso fue asignado a ${validRows.length} sectores simultáneamente. Su respuesta es independiente.`;
+            }
+
+            messageBody += `\n\n👉 *Gestione el caso aquí:* ${resolutionLink}`;
+
+            // 4. Send WhatsApp
+            console.log(`[MultiSector] Enviando a ${botNumber} (${sectorLabel}). Link: ${resolutionLink}`);
+            const { error: waError } = await supabase.functions.invoke('send-whatsapp', {
+                body: {
+                    number: botNumber,
+                    message: messageBody,
+                    mediaUrl: managementType === 'adverse' ? "https://i.imgur.com/jgX2y4n.png" : "https://i.imgur.com/JGQlbiJ.jpeg"
+                }
             });
-        } else {
-            setFeedbackModal({
-                isOpen: true,
-                type: 'success',
-                title: 'Solicitud Enviada',
-                message: `Solicitud de gestión (${typeLabel}) enviada correctamente.`
-            });
+
+            if (waError) {
+                console.error(`[MultiSector] WhatsApp error for ${sectorLabel}:`, waError);
+                logEntries.push(`[${timestamp}] ❌ ERROR AL ENVIAR: Fallo WhatsApp a ${row.phone} (${sectorLabel})`);
+                allSuccess = false;
+            } else {
+                logEntries.push(`[${timestamp}] 📤 DERIVADO: Enviado a ${row.phone} como [${typeLabel}] → ${sectorLabel}`);
+            }
         }
 
-        // 4. Actualizar Base de Datos
+        // 5. Update report status and notes
+        const currentNotes = selectedReport.notes || '';
+        const updatedNotes = currentNotes
+            ? `${currentNotes}\n\n${logEntries.join('\n\n')}`
+            : logEntries.join('\n\n');
+
+        const newStatus = isMultiSector ? 'multi_sector_pending' : 'pending_resolution';
+
         const { error: dbError } = await supabase
             .from('reports')
             .update({
-                status: 'pending_resolution',
+                status: newStatus,
                 notes: updatedNotes,
                 is_adverse_event: isAdverse,
-                assigned_to: responsiblePhone,
-                last_whatsapp_status: whatsappStatus,
+                assigned_to: isMultiSector ? `${validRows.length} sectores` : validRows[0]?.phone || responsiblePhone,
+                last_whatsapp_status: allSuccess ? 'sent' : 'failed',
                 last_whatsapp_sent_at: new Date().toISOString()
             })
             .eq('id', selectedReport.id);
@@ -935,16 +1116,34 @@ export const Dashboard = () => {
         if (!dbError) {
             setReports(reports.map(r => r.id === selectedReport.id ? {
                 ...r,
-                status: 'pending_resolution',
+                status: newStatus,
                 notes: updatedNotes,
-                assigned_to: responsiblePhone,
-                last_whatsapp_status: whatsappStatus,
+                assigned_to: isMultiSector ? `${validRows.length} sectores` : validRows[0]?.phone || responsiblePhone,
+                last_whatsapp_status: allSuccess ? 'sent' : 'failed',
                 last_whatsapp_sent_at: new Date().toISOString()
             } : r));
             setShowReferralModal(false);
         } else {
-            // Si falla la BD, mostramos alerta o log, pero ya mostramos el modal de envío.
             console.error("Error DB:", dbError);
+        }
+
+        // Show feedback
+        if (allSuccess) {
+            setFeedbackModal({
+                isOpen: true,
+                type: 'success',
+                title: isMultiSector ? 'Derivación Multi-Sector Exitosa' : 'Solicitud Enviada',
+                message: isMultiSector
+                    ? `Se derivó el caso a ${validRows.length} sectores exitosamente.`
+                    : `Solicitud de gestión (${typeLabel}) enviada correctamente.`
+            });
+        } else {
+            setFeedbackModal({
+                isOpen: true,
+                type: 'error',
+                title: 'Envío Parcial',
+                message: 'Algunos sectores no pudieron ser notificados. Revise el historial del caso.'
+            });
         }
 
         setIsSendingReferral(false);
@@ -1071,7 +1270,7 @@ export const Dashboard = () => {
 
     // FILTROS
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation' | 'discarded' | 'assignment_rejected'>('all');
+    const [statusFilter, setStatusFilter] = useState<'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation' | 'discarded' | 'assignment_rejected' | 'multi_sector_pending'>('all');
 
 
 
@@ -1080,7 +1279,7 @@ export const Dashboard = () => {
         const matchesStatus =
             statusFilter === 'all' ? (report.status !== 'discarded' && report.status !== 'assignment_rejected') :
                 statusFilter === 'pending' ? (report.status === 'pending' || report.status === 'analyzed') :
-                    statusFilter === 'in_progress' ? report.status === 'pending_resolution' :
+                    statusFilter === 'in_progress' ? (report.status === 'pending_resolution' || report.status === 'multi_sector_pending') :
                         statusFilter === 'quality_validation' ? report.status === 'quality_validation' :
                             statusFilter === 'resolved' ? report.status === 'resolved' :
                                 statusFilter === 'discarded' ? report.status === 'discarded' :
@@ -1296,6 +1495,10 @@ export const Dashboard = () => {
                                             <td className="px-6 py-4">
                                                 {report.status === 'resolved' ? (
                                                     <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><CheckCircle className="w-3 h-3" /></div>
+                                                ) : report.status === 'multi_sector_pending' ? (
+                                                    <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center animate-pulse" title="Multi-Sector">
+                                                        <span className="text-[9px] font-black">MS</span>
+                                                    </div>
                                                 ) : report.status === 'pending_resolution' ? (
                                                     <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center animate-pulse"><Clock className="w-3 h-3" /></div>
                                                 ) : report.status === 'quality_validation' ? (
@@ -1452,7 +1655,7 @@ export const Dashboard = () => {
                                                 >
                                                     <option value="">⚠️ Seleccionar tipo...</option>
                                                     <option value="Oportunidad de Mejora">Oportunidad de Mejora</option>
-                                                    <option value="Reclamo">Reclamo</option>
+                                                    <option value="Observación">Observación</option>
                                                     <option value="Evento Adverso">Evento Adverso</option>
                                                     <option value="Evento Cuasi Adverso">Evento Cuasi Adverso</option>
                                                     <option value="Desvío">Desvío</option>
@@ -1473,7 +1676,7 @@ export const Dashboard = () => {
                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Origen (Calidad)</h3>
                                         {isAdmin ? (
                                             <select
-                                                value={selectedReport.resolution_notes?.split('Origen: ')[1]?.split('.')[0] || 'Reclamo/Queja'}
+                                                value={selectedReport.resolution_notes?.split('Origen: ')[1]?.split('.')[0] || 'Observación/Hallazgo'}
                                                 onChange={async (e) => {
                                                     const newOrigin = e.target.value;
                                                     let currentNotes = selectedReport.resolution_notes || '';
@@ -1492,7 +1695,7 @@ export const Dashboard = () => {
                                                 }}
                                                 className="w-full bg-white border border-gray-200 text-gray-700 text-sm rounded-lg p-2.5 outline-none focus:border-sanatorio-primary focus:ring-1 focus:ring-sanatorio-primary"
                                             >
-                                                <option value="Reclamo/Queja">Reclamo/Queja</option>
+                                                <option value="Observación/Hallazgo">Observación/Hallazgo</option>
                                                 <option value="Auditoría fin de semana">Auditoría fin de semana</option>
                                                 <option value="Auditoría de proceso">Auditoría de proceso</option>
                                                 <option value="5S">5S</option>
@@ -1500,7 +1703,7 @@ export const Dashboard = () => {
                                             </select>
                                         ) : (
                                             <p className="text-sm text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                                                {selectedReport.resolution_notes?.split('Origen: ')[1]?.split('.')[0] || 'Reclamo/Queja'}
+                                                {selectedReport.resolution_notes?.split('Origen: ')[1]?.split('.')[0] || 'Observación/Hallazgo'}
                                             </p>
                                         )}
                                     </div>
@@ -1834,317 +2037,480 @@ export const Dashboard = () => {
                                             </div>
                                         )}
                                     </div>
-                                ) : selectedReport.status === 'pending_resolution' ? (
-                                    // VISTA ESPERANDO RESPUESTA
-                                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 text-center">
-                                        <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-3" />
-                                        <h4 className="font-bold text-blue-900">Esperando Resolución</h4>
-                                        <p className="text-sm text-blue-700 mt-1 mb-4">
-                                            La solicitud ha sido enviada al responsable. <br />
-                                            El sistema te notificará cuando haya respuesta.
-                                        </p>
-                                        {isAdmin && (
-                                            <button
-                                                onClick={() => setShowReferralModal(true)}
-                                                className="text-xs font-bold text-blue-600 hover:underline"
-                                            >
-                                                Reenviar Solicitud
-                                            </button>
-                                        )}
-                                    </div>
-                                ) : selectedReport.status === 'quality_validation' ? (
-                                    // VISTA VALIDACIÓN CALIDAD
-                                    // VISTA VALIDACIÓN CALIDAD
-                                    <div className="bg-purple-50 p-6 rounded-2xl shadow-sm border border-purple-100 flex flex-col h-full overflow-hidden">
-                                        <div className="flex items-center gap-3 mb-4 flex-shrink-0">
-                                            <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
-                                                <BrainCircuit className="w-6 h-6" />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-bold text-gray-900">Validación de Calidad</h4>
-                                                <p className="text-xs text-purple-600">Revisión requerida para cierre</p>
-                                            </div>
-                                        </div>
+                                ) : selectedReport.status === 'multi_sector_pending' ? (() => {
+                                    // VISTA MULTI-SECTOR — Progress Panel
+                                    const [sectorAssignmentsData, setSectorAssignmentsData] = useState<any[]>([]);
+                                    const [loadingAssignments, setLoadingAssignments] = useState(true);
 
-                                        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 mb-6">
-                                            {/* 1. Acción Inmediata (Siempre visible) */}
-                                            <div className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm">
-                                                <h5 className="text-xs font-bold text-blue-600 uppercase mb-2 flex items-center gap-2">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                                    Acción Inmediata
-                                                </h5>
-                                                <p className="text-sm text-gray-700 leading-relaxed">
-                                                    {selectedReport.resolution_notes || <span className="text-gray-400 italic">Sin datos registrados.</span>}
-                                                </p>
+                                    useEffect(() => {
+                                        const fetchAssignments = async () => {
+                                            setLoadingAssignments(true);
+                                            const { data, error } = await supabase
+                                                .from('sector_assignments')
+                                                .select('*')
+                                                .eq('report_id', selectedReport.id)
+                                                .order('created_at', { ascending: true });
+
+                                            if (!error && data) {
+                                                setSectorAssignmentsData(data);
+                                            }
+                                            setLoadingAssignments(false);
+                                        };
+                                        fetchAssignments();
+                                    }, [selectedReport.id]);
+
+                                    const totalAssignments = sectorAssignmentsData.length;
+                                    const resolvedCount = sectorAssignmentsData.filter(a => a.status === 'resolved' || a.status === 'quality_validation').length;
+                                    const partialCount = sectorAssignmentsData.filter(a => a.status === 'partial').length;
+                                    const pendingCount = sectorAssignmentsData.filter(a => a.status === 'pending').length;
+                                    const rejectedCount = sectorAssignmentsData.filter(a => a.status === 'rejected').length;
+                                    const progressPercent = totalAssignments > 0 ? Math.round(((resolvedCount + partialCount) / totalAssignments) * 100) : 0;
+
+                                    const statusConfig: Record<string, { label: string; color: string; bg: string; icon: string }> = {
+                                        pending: { label: 'Pendiente', color: 'text-yellow-700', bg: 'bg-yellow-100', icon: '⏳' },
+                                        resolved: { label: 'Resuelto', color: 'text-green-700', bg: 'bg-green-100', icon: '✅' },
+                                        quality_validation: { label: 'Validación', color: 'text-purple-700', bg: 'bg-purple-100', icon: '🔍' },
+                                        partial: { label: 'Parcial', color: 'text-orange-700', bg: 'bg-orange-100', icon: '⚠️' },
+                                        rejected: { label: 'Rechazado', color: 'text-red-700', bg: 'bg-red-100', icon: '❌' },
+                                    };
+
+                                    return (
+                                        <div className="space-y-4">
+                                            {/* Header */}
+                                            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl p-5">
+                                                <div className="flex items-center gap-3 mb-4">
+                                                    <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                                                        <span className="text-lg font-black">MS</span>
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-bold text-gray-900">Derivación Multi-Sector</h4>
+                                                        <p className="text-xs text-indigo-600">
+                                                            {totalAssignments} sector{totalAssignments !== 1 ? 'es' : ''} asignado{totalAssignments !== 1 ? 's' : ''}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Progress Bar */}
+                                                <div className="mb-2">
+                                                    <div className="flex justify-between items-center mb-1.5">
+                                                        <span className="text-xs font-bold text-gray-600">Progreso General</span>
+                                                        <span className="text-xs font-bold text-indigo-700">{progressPercent}%</span>
+                                                    </div>
+                                                    <div className="w-full h-2.5 bg-white rounded-full overflow-hidden border border-gray-100">
+                                                        <div
+                                                            className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
+                                                            style={{ width: `${progressPercent}%` }}
+                                                        />
+                                                    </div>
+                                                    <div className="flex gap-3 mt-2 text-[10px] font-medium text-gray-500">
+                                                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> {resolvedCount} resuelto{resolvedCount !== 1 ? 's' : ''}</span>
+                                                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400"></span> {partialCount} parcial{partialCount !== 1 ? 'es' : ''}</span>
+                                                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-400"></span> {pendingCount} pendiente{pendingCount !== 1 ? 's' : ''}</span>
+                                                        {rejectedCount > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500"></span> {rejectedCount} rechazado{rejectedCount !== 1 ? 's' : ''}</span>}
+                                                    </div>
+                                                </div>
                                             </div>
 
-                                            {/* 2. Causa Raíz (Condicional) */}
-                                            {selectedReport.root_cause && (
-                                                <div className="bg-white p-4 rounded-xl border border-amber-100 shadow-sm relative overflow-hidden">
-                                                    <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>
-                                                    <h5 className="text-xs font-bold text-amber-700 uppercase mb-2 flex items-center gap-2">
-                                                        <BrainCircuit className="w-3 h-3" />
-                                                        Causa Raíz Identificada
-                                                    </h5>
-                                                    <p className="text-sm text-gray-700 leading-relaxed">
-                                                        {selectedReport.root_cause}
-                                                    </p>
+                                            {/* Sector Cards */}
+                                            {loadingAssignments ? (
+                                                <div className="flex items-center justify-center p-6 text-gray-400">
+                                                    <Loader2 className="w-5 h-5 animate-spin mr-2" /> Cargando asignaciones...
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2.5">
+                                                    {sectorAssignmentsData.map((assignment) => {
+                                                        const config = statusConfig[assignment.status] || statusConfig.pending;
+                                                        const sectorLabel = SECTOR_OPTIONS.find(s => s.value === assignment.sector)?.label || assignment.sector;
+
+                                                        return (
+                                                            <div key={assignment.id} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow">
+                                                                <div className="flex items-center justify-between mb-2">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className={`text-sm px-2 py-0.5 rounded-lg ${config.bg} ${config.color} font-bold`}>
+                                                                            {config.icon} {sectorLabel}
+                                                                        </span>
+                                                                    </div>
+                                                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${config.bg} ${config.color}`}>
+                                                                        {config.label}
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className="text-xs text-gray-500 space-y-1">
+                                                                    <p className="flex items-center gap-1.5">
+                                                                        <Phone className="w-3 h-3" />
+                                                                        {assignment.assigned_phone || 'Sin teléfono'}
+                                                                    </p>
+                                                                    <p className="flex items-center gap-1.5">
+                                                                        <Clock className="w-3 h-3" />
+                                                                        Asignado: {new Date(assignment.created_at).toLocaleString('es-AR')}
+                                                                    </p>
+                                                                </div>
+
+                                                                {/* Show resolution data if available */}
+                                                                {(assignment.status === 'resolved' || assignment.status === 'quality_validation') && assignment.immediate_action && (
+                                                                    <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-100 text-xs text-gray-700">
+                                                                        <p className="font-bold text-green-700 mb-1">Acción Inmediata:</p>
+                                                                        <p>{assignment.immediate_action}</p>
+                                                                    </div>
+                                                                )}
+
+                                                                {assignment.status === 'partial' && assignment.notes && (
+                                                                    <div className="mt-3 p-3 bg-orange-50 rounded-lg border border-orange-100 text-xs text-gray-700">
+                                                                        <p className="font-bold text-orange-700 mb-1">Motivo (Parcial):</p>
+                                                                        <p>{assignment.notes}</p>
+                                                                    </div>
+                                                                )}
+
+                                                                {assignment.status === 'rejected' && assignment.notes && (
+                                                                    <div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-100 text-xs text-gray-700">
+                                                                        <p className="font-bold text-red-700 mb-1">Motivo Rechazo:</p>
+                                                                        <p>{assignment.notes}</p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
 
-                                            {/* 3. Plan de Acción (Condicional) */}
-                                            {selectedReport.corrective_plan && (
-                                                <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm relative overflow-hidden">
-                                                    <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
-                                                    <h5 className="text-xs font-bold text-green-700 uppercase mb-2 flex items-center gap-2">
-                                                        <CheckCircle className="w-3 h-3" />
-                                                        Plan de Acción
-                                                    </h5>
-                                                    <p className="text-sm text-gray-700 leading-relaxed mb-3">
-                                                        {selectedReport.corrective_plan}
-                                                    </p>
-                                                    {selectedReport.implementation_date && (
-                                                        <div className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-lg w-fit">
-                                                            <Clock className="w-3 h-3" />
-                                                            Implementación: {new Date(selectedReport.implementation_date).toLocaleDateString()}
-                                                        </div>
+                                            {/* Admin Actions */}
+                                            {isAdmin && (
+                                                <div className="space-y-3 pt-3 border-t border-gray-100">
+                                                    {/* Re-derive */}
+                                                    <button
+                                                        onClick={() => setShowReferralModal(true)}
+                                                        className="w-full py-2.5 px-4 bg-white border border-gray-200 text-gray-700 font-bold text-sm rounded-xl hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
+                                                    >
+                                                        <Send className="w-4 h-4" />
+                                                        Agregar más sectores
+                                                    </button>
+
+                                                    {/* Approve with partial */}
+                                                    {pendingCount === 0 && (resolvedCount > 0 || partialCount > 0) && (
+                                                        <button
+                                                            onClick={() => setShowQualityApproveModal(true)}
+                                                            className="w-full py-3 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2"
+                                                        >
+                                                            <CheckCircle className="w-4 h-4" />
+                                                            {partialCount > 0 ? 'Aprobar con Solución Parcial' : 'Aprobar y Cerrar'}
+                                                        </button>
                                                     )}
                                                 </div>
                                             )}
+                                        </div>
+                                    );
+                                })()
+                                    : selectedReport.status === 'pending_resolution' ? (
+                                        // VISTA ESPERANDO RESPUESTA
+                                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 text-center">
+                                            <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-3" />
+                                            <h4 className="font-bold text-blue-900">Esperando Resolución</h4>
+                                            <p className="text-sm text-blue-700 mt-1 mb-4">
+                                                La solicitud ha sido enviada al responsable. <br />
+                                                El sistema te notificará cuando haya respuesta.
+                                            </p>
+                                            {isAdmin && (
+                                                <button
+                                                    onClick={() => setShowReferralModal(true)}
+                                                    className="text-xs font-bold text-blue-600 hover:underline"
+                                                >
+                                                    Reenviar Solicitud
+                                                </button>
+                                            )}
+                                        </div>
+                                    ) : selectedReport.status === 'quality_validation' ? (
+                                        // VISTA VALIDACIÓN CALIDAD
+                                        // VISTA VALIDACIÓN CALIDAD
+                                        <div className="bg-purple-50 p-6 rounded-2xl shadow-sm border border-purple-100 flex flex-col h-full overflow-hidden">
+                                            <div className="flex items-center gap-3 mb-4 flex-shrink-0">
+                                                <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+                                                    <BrainCircuit className="w-6 h-6" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-gray-900">Validación de Calidad</h4>
+                                                    <p className="text-xs text-purple-600">Revisión requerida para cierre</p>
+                                                </div>
+                                            </div>
 
-                                            {/* 4. Evidencia de Resolución */}
-                                            {selectedReport.resolution_evidence_urls && selectedReport.resolution_evidence_urls.length > 0 && (
-                                                <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                                                    <h5 className="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
-                                                        <Camera className="w-3 h-3" />
-                                                        Evidencia Adjunta
+                                            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 mb-6">
+                                                {/* 1. Acción Inmediata (Siempre visible) */}
+                                                <div className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm">
+                                                    <h5 className="text-xs font-bold text-blue-600 uppercase mb-2 flex items-center gap-2">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                                        Acción Inmediata
                                                     </h5>
-                                                    <div className="grid grid-cols-3 gap-2">
-                                                        {selectedReport.resolution_evidence_urls.map((url: string, i: number) => (
-                                                            <a
-                                                                key={i}
-                                                                href={url}
-                                                                target="_blank"
-                                                                className="aspect-square rounded-lg bg-gray-100 bg-cover bg-center border border-gray-200 hover:ring-2 ring-purple-500 transition-all cursor-zoom-in"
-                                                                style={{ backgroundImage: `url(${url})` }}
-                                                            />
+                                                    <p className="text-sm text-gray-700 leading-relaxed">
+                                                        {selectedReport.resolution_notes || <span className="text-gray-400 italic">Sin datos registrados.</span>}
+                                                    </p>
+                                                </div>
+
+                                                {/* 2. Causa Raíz (Condicional) */}
+                                                {selectedReport.root_cause && (
+                                                    <div className="bg-white p-4 rounded-xl border border-amber-100 shadow-sm relative overflow-hidden">
+                                                        <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>
+                                                        <h5 className="text-xs font-bold text-amber-700 uppercase mb-2 flex items-center gap-2">
+                                                            <BrainCircuit className="w-3 h-3" />
+                                                            Causa Raíz Identificada
+                                                        </h5>
+                                                        <p className="text-sm text-gray-700 leading-relaxed">
+                                                            {selectedReport.root_cause}
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                {/* 3. Plan de Acción (Condicional) */}
+                                                {selectedReport.corrective_plan && (
+                                                    <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm relative overflow-hidden">
+                                                        <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
+                                                        <h5 className="text-xs font-bold text-green-700 uppercase mb-2 flex items-center gap-2">
+                                                            <CheckCircle className="w-3 h-3" />
+                                                            Plan de Acción
+                                                        </h5>
+                                                        <p className="text-sm text-gray-700 leading-relaxed mb-3">
+                                                            {selectedReport.corrective_plan}
+                                                        </p>
+                                                        {selectedReport.implementation_date && (
+                                                            <div className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-lg w-fit">
+                                                                <Clock className="w-3 h-3" />
+                                                                Implementación: {new Date(selectedReport.implementation_date).toLocaleDateString()}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* 4. Evidencia de Resolución */}
+                                                {selectedReport.resolution_evidence_urls && selectedReport.resolution_evidence_urls.length > 0 && (
+                                                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                                        <h5 className="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
+                                                            <Camera className="w-3 h-3" />
+                                                            Evidencia Adjunta
+                                                        </h5>
+                                                        <div className="grid grid-cols-3 gap-2">
+                                                            {selectedReport.resolution_evidence_urls.map((url: string, i: number) => (
+                                                                <a
+                                                                    key={i}
+                                                                    href={url}
+                                                                    target="_blank"
+                                                                    className="aspect-square rounded-lg bg-gray-100 bg-cover bg-center border border-gray-200 hover:ring-2 ring-purple-500 transition-all cursor-zoom-in"
+                                                                    style={{ backgroundImage: `url(${url})` }}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Info del Responsable */}
+                                                {selectedReport.assigned_to && (
+                                                    <div className="text-right">
+                                                        <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
+                                                            Responsable: {selectedReport.assigned_to}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* RENDERIZADO DE HISTORIAL DE RECHAZOS (SOLUCIONES INSUFICIENTES) */}
+                                            {selectedReport.resolution_history && selectedReport.resolution_history.length > 0 && (
+                                                <div className="bg-red-50 rounded-2xl p-6 border border-red-100 mt-6">
+                                                    <h3 className="text-sm font-bold text-red-800 flex items-center gap-2 mb-4">
+                                                        <AlertTriangle className="w-4 h-4" />
+                                                        Historial de Soluciones Insuficientes
+                                                    </h3>
+                                                    <div className="space-y-4">
+                                                        {selectedReport.resolution_history.map((entry: any, index: number) => (
+                                                            <div key={index} className="bg-white rounded-xl p-4 border border-red-100 shadow-sm relative overflow-hidden">
+                                                                <div className="absolute top-0 left-0 w-1 h-full bg-red-200"></div>
+
+                                                                <div className="flex justify-between items-start mb-3">
+                                                                    <div>
+                                                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                                                            Rechazado el {new Date(entry.rejected_at).toLocaleString()}
+                                                                        </span>
+                                                                        <p className="text-xs font-bold text-red-600 mt-1">
+                                                                            Motivo: "{entry.reject_reason}"
+                                                                        </p>
+                                                                    </div>
+                                                                    <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-bold rounded-full">
+                                                                        Intento #{index + 1}
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className="space-y-3 text-xs text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                                    <div>
+                                                                        <span className="font-bold text-gray-700 block mb-0.5">Acción Inmediata Propuesta:</span>
+                                                                        {entry.previous_data.immediate_action || '-'}
+                                                                    </div>
+                                                                    {entry.previous_data.root_cause && (
+                                                                        <div>
+                                                                            <span className="font-bold text-gray-700 block mb-0.5">Causa Raíz (RCA):</span>
+                                                                            {entry.previous_data.root_cause}
+                                                                        </div>
+                                                                    )}
+                                                                    <div>
+                                                                        <span className="font-bold text-gray-700 block mb-0.5">Plan de Acción:</span>
+                                                                        {entry.previous_data.corrective_plan || '-'}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         ))}
                                                     </div>
                                                 </div>
                                             )}
 
-                                            {/* Info del Responsable */}
-                                            {selectedReport.assigned_to && (
-                                                <div className="text-right">
-                                                    <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
-                                                        Responsable: {selectedReport.assigned_to}
-                                                    </span>
+                                            {isAdmin && (
+                                                <div className="flex gap-3 flex-shrink-0 pt-2 border-t border-purple-100">
+                                                    <button
+                                                        onClick={() => setShowQualityReturnModal(true)}
+                                                        className="flex-1 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold text-sm hover:bg-red-50 transition-colors"
+                                                    >
+                                                        Devolver (Rechazo)
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setShowQualityApproveModal(true)}
+                                                        className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 shadow-lg shadow-purple-500/20"
+                                                    >
+                                                        Aprobar y Cerrar
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>
+                                    ) : selectedReport.status === 'assignment_rejected' ? (
+                                        // VISTA RECHAZO DEL RESPONSABLE
+                                        <div className="space-y-4">
+                                            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 relative overflow-hidden">
+                                                <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500"></div>
+                                                <div className="flex items-center gap-3 mb-4">
+                                                    <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
+                                                        <XCircle className="w-6 h-6" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-bold text-red-900 text-lg">Asignación Rechazada</h4>
+                                                        <p className="text-xs text-red-600 font-medium">El responsable indica que este caso no le corresponde</p>
+                                                    </div>
+                                                </div>
 
-                                        {/* RENDERIZADO DE HISTORIAL DE RECHAZOS (SOLUCIONES INSUFICIENTES) */}
-                                        {selectedReport.resolution_history && selectedReport.resolution_history.length > 0 && (
-                                            <div className="bg-red-50 rounded-2xl p-6 border border-red-100 mt-6">
-                                                <h3 className="text-sm font-bold text-red-800 flex items-center gap-2 mb-4">
-                                                    <AlertTriangle className="w-4 h-4" />
-                                                    Historial de Soluciones Insuficientes
-                                                </h3>
-                                                <div className="space-y-4">
-                                                    {selectedReport.resolution_history.map((entry: any, index: number) => (
-                                                        <div key={index} className="bg-white rounded-xl p-4 border border-red-100 shadow-sm relative overflow-hidden">
-                                                            <div className="absolute top-0 left-0 w-1 h-full bg-red-200"></div>
+                                                {/* Extract rejection reason from notes */}
+                                                {(() => {
+                                                    const notes = selectedReport.notes || '';
+                                                    const rejectionMatch = notes.match(/RECHAZO DE ASIGNACIÓN:\s*(.+?)(?:\n|$)/);
+                                                    const rejectionReason = rejectionMatch ? rejectionMatch[1].trim() : null;
+                                                    // Extract timestamp
+                                                    const timestampMatch = notes.match(/\[([^\]]+)\]\s*🔴\s*RECHAZO/);
+                                                    const rejectionTime = timestampMatch ? timestampMatch[1] : null;
 
-                                                            <div className="flex justify-between items-start mb-3">
-                                                                <div>
-                                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                                                        Rechazado el {new Date(entry.rejected_at).toLocaleString()}
-                                                                    </span>
-                                                                    <p className="text-xs font-bold text-red-600 mt-1">
-                                                                        Motivo: "{entry.reject_reason}"
-                                                                    </p>
+                                                    return (
+                                                        <div className="space-y-3">
+                                                            {rejectionTime && (
+                                                                <div className="flex items-center gap-2 text-xs text-red-500 font-medium">
+                                                                    <Clock className="w-3 h-3" />
+                                                                    Rechazado el {rejectionTime}
                                                                 </div>
-                                                                <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-bold rounded-full">
-                                                                    Intento #{index + 1}
-                                                                </span>
-                                                            </div>
-
-                                                            <div className="space-y-3 text-xs text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                                                <div>
-                                                                    <span className="font-bold text-gray-700 block mb-0.5">Acción Inmediata Propuesta:</span>
-                                                                    {entry.previous_data.immediate_action || '-'}
-                                                                </div>
-                                                                {entry.previous_data.root_cause && (
-                                                                    <div>
-                                                                        <span className="font-bold text-gray-700 block mb-0.5">Causa Raíz (RCA):</span>
-                                                                        {entry.previous_data.root_cause}
-                                                                    </div>
-                                                                )}
-                                                                <div>
-                                                                    <span className="font-bold text-gray-700 block mb-0.5">Plan de Acción:</span>
-                                                                    {entry.previous_data.corrective_plan || '-'}
-                                                                </div>
+                                                            )}
+                                                            <div className="bg-white p-4 rounded-xl border border-red-100 shadow-sm">
+                                                                <h5 className="text-xs font-bold text-red-700 uppercase tracking-wider mb-2">Motivo del Rechazo</h5>
+                                                                <p className="text-sm text-gray-700 leading-relaxed italic">
+                                                                    "{rejectionReason || 'Motivo no especificado'}"
+                                                                </p>
                                                             </div>
                                                         </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {isAdmin && (
-                                            <div className="flex gap-3 flex-shrink-0 pt-2 border-t border-purple-100">
-                                                <button
-                                                    onClick={() => setShowQualityReturnModal(true)}
-                                                    className="flex-1 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold text-sm hover:bg-red-50 transition-colors"
-                                                >
-                                                    Devolver (Rechazo)
-                                                </button>
-                                                <button
-                                                    onClick={() => setShowQualityApproveModal(true)}
-                                                    className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 shadow-lg shadow-purple-500/20"
-                                                >
-                                                    Aprobar y Cerrar
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : selectedReport.status === 'assignment_rejected' ? (
-                                    // VISTA RECHAZO DEL RESPONSABLE
-                                    <div className="space-y-4">
-                                        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 relative overflow-hidden">
-                                            <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500"></div>
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
-                                                    <XCircle className="w-6 h-6" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-bold text-red-900 text-lg">Asignación Rechazada</h4>
-                                                    <p className="text-xs text-red-600 font-medium">El responsable indica que este caso no le corresponde</p>
-                                                </div>
+                                                    );
+                                                })()}
                                             </div>
 
-                                            {/* Extract rejection reason from notes */}
-                                            {(() => {
-                                                const notes = selectedReport.notes || '';
-                                                const rejectionMatch = notes.match(/RECHAZO DE ASIGNACIÓN:\s*(.+?)(?:\n|$)/);
-                                                const rejectionReason = rejectionMatch ? rejectionMatch[1].trim() : null;
-                                                // Extract timestamp
-                                                const timestampMatch = notes.match(/\[([^\]]+)\]\s*🔴\s*RECHAZO/);
-                                                const rejectionTime = timestampMatch ? timestampMatch[1] : null;
+                                            {/* Responsable info */}
+                                            {selectedReport.assigned_to && (
+                                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-500">
+                                                        <UserCog className="w-4 h-4" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-gray-400 font-bold uppercase">Rechazado por</p>
+                                                        <p className="text-sm font-bold text-gray-700">{selectedReport.assigned_to}</p>
+                                                    </div>
+                                                </div>
+                                            )}
 
-                                                return (
-                                                    <div className="space-y-3">
-                                                        {rejectionTime && (
-                                                            <div className="flex items-center gap-2 text-xs text-red-500 font-medium">
-                                                                <Clock className="w-3 h-3" />
-                                                                Rechazado el {rejectionTime}
+                                            {/* Actions - Admin Only */}
+                                            {isAdmin ? (
+                                                <>
+                                                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                                                        <h4 className="font-bold text-gray-800 mb-2">Rederivación Requerida</h4>
+                                                        <p className="text-xs text-gray-500 mb-4">
+                                                            Asigná este caso a otro responsable o al sector correcto enviando una nueva solicitud por WhatsApp.
+                                                        </p>
+                                                        <button
+                                                            onClick={() => setShowReferralModal(true)}
+                                                            className="w-full py-3 bg-sanatorio-primary text-white rounded-xl font-bold text-sm hover:opacity-90 shadow-lg shadow-blue-900/10 flex items-center justify-center gap-2"
+                                                        >
+                                                            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+                                                                <Send className="w-3 h-3" />
+                                                            </div>
+                                                            Rederivación (WhatsApp)
+                                                        </button>
+                                                    </div>
+                                                    <div className="text-center py-4 border-t border-gray-100">
+                                                        <p className="text-xs text-gray-400 mb-2">Otras acciones</p>
+                                                        <button
+                                                            onClick={handleDiscardClick}
+                                                            className="text-gray-400 hover:text-gray-600 text-xs font-bold transition-colors flex items-center justify-center gap-1 mx-auto"
+                                                        >
+                                                            <Archive className="w-3 h-3" /> Descartar Caso
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center">
+                                                    <p className="text-sm text-blue-700 font-medium">👀 Solo lectura — la gestión de este caso está a cargo del equipo de Calidad.</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        // VISTA ACCIONES INICIALES (DERIVAR) - Admin Only
+                                        <div className="space-y-4">
+                                            {isAdmin ? (
+                                                <>
+                                                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                                                        <h4 className="font-bold text-gray-800 mb-2">Derivar a Responsable</h4>
+                                                        <p className="text-xs text-gray-500 mb-4">
+                                                            Envía un formulario de gestión automático al encargado del sector.
+                                                        </p>
+                                                        <button
+                                                            onClick={() => setShowReferralModal(true)}
+                                                            className="w-full py-3 bg-sanatorio-primary text-white rounded-xl font-bold text-sm hover:opacity-90 shadow-lg shadow-blue-900/10 flex items-center justify-center gap-2"
+                                                        >
+                                                            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+                                                                <Send className="w-3 h-3" />
+                                                            </div>
+                                                            Solicitar Gestión (WhatsApp)
+                                                        </button>
+
+                                                        {selectedReport.last_whatsapp_status === 'sent' && selectedReport.last_whatsapp_sent_at && (
+                                                            <div className="flex items-center justify-center gap-1.5 mt-3 text-xs text-green-600 font-medium bg-green-50 py-2 rounded-lg border border-green-100">
+                                                                <CheckCircle className="w-3 h-3" />
+                                                                Enviado: {new Date(selectedReport.last_whatsapp_sent_at).toLocaleString()}
                                                             </div>
                                                         )}
-                                                        <div className="bg-white p-4 rounded-xl border border-red-100 shadow-sm">
-                                                            <h5 className="text-xs font-bold text-red-700 uppercase tracking-wider mb-2">Motivo del Rechazo</h5>
-                                                            <p className="text-sm text-gray-700 leading-relaxed italic">
-                                                                "{rejectionReason || 'Motivo no especificado'}"
-                                                            </p>
-                                                        </div>
                                                     </div>
-                                                );
-                                            })()}
+
+                                                    <div className="text-center py-4 border-t border-gray-100">
+                                                        <p className="text-xs text-gray-400 mb-2">Otras acciones</p>
+                                                        <button
+                                                            onClick={handleDiscardClick}
+                                                            className="text-gray-400 hover:text-gray-600 text-xs font-bold transition-colors flex items-center justify-center gap-1 mx-auto"
+                                                        >
+                                                            <Archive className="w-3 h-3" /> Descartar Caso
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 text-center space-y-2">
+                                                    <Eye className="w-8 h-8 text-blue-400 mx-auto" />
+                                                    <h4 className="font-bold text-blue-800 text-sm">Modo Visualización</h4>
+                                                    <p className="text-xs text-blue-600">Este caso está pendiente de derivación por el equipo de Calidad. Aquí podrás seguir su progreso.</p>
+                                                </div>
+                                            )}
                                         </div>
-
-                                        {/* Responsable info */}
-                                        {selectedReport.assigned_to && (
-                                            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                                <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-500">
-                                                    <UserCog className="w-4 h-4" />
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs text-gray-400 font-bold uppercase">Rechazado por</p>
-                                                    <p className="text-sm font-bold text-gray-700">{selectedReport.assigned_to}</p>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Actions - Admin Only */}
-                                        {isAdmin ? (
-                                            <>
-                                                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                                                    <h4 className="font-bold text-gray-800 mb-2">Rederivación Requerida</h4>
-                                                    <p className="text-xs text-gray-500 mb-4">
-                                                        Asigná este caso a otro responsable o al sector correcto enviando una nueva solicitud por WhatsApp.
-                                                    </p>
-                                                    <button
-                                                        onClick={() => setShowReferralModal(true)}
-                                                        className="w-full py-3 bg-sanatorio-primary text-white rounded-xl font-bold text-sm hover:opacity-90 shadow-lg shadow-blue-900/10 flex items-center justify-center gap-2"
-                                                    >
-                                                        <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                                                            <Send className="w-3 h-3" />
-                                                        </div>
-                                                        Rederivación (WhatsApp)
-                                                    </button>
-                                                </div>
-                                                <div className="text-center py-4 border-t border-gray-100">
-                                                    <p className="text-xs text-gray-400 mb-2">Otras acciones</p>
-                                                    <button
-                                                        onClick={handleDiscardClick}
-                                                        className="text-gray-400 hover:text-gray-600 text-xs font-bold transition-colors flex items-center justify-center gap-1 mx-auto"
-                                                    >
-                                                        <Archive className="w-3 h-3" /> Descartar Caso
-                                                    </button>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center">
-                                                <p className="text-sm text-blue-700 font-medium">👀 Solo lectura — la gestión de este caso está a cargo del equipo de Calidad.</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    // VISTA ACCIONES INICIALES (DERIVAR) - Admin Only
-                                    <div className="space-y-4">
-                                        {isAdmin ? (
-                                            <>
-                                                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                                                    <h4 className="font-bold text-gray-800 mb-2">Derivar a Responsable</h4>
-                                                    <p className="text-xs text-gray-500 mb-4">
-                                                        Envía un formulario de gestión automático al encargado del sector.
-                                                    </p>
-                                                    <button
-                                                        onClick={() => setShowReferralModal(true)}
-                                                        className="w-full py-3 bg-sanatorio-primary text-white rounded-xl font-bold text-sm hover:opacity-90 shadow-lg shadow-blue-900/10 flex items-center justify-center gap-2"
-                                                    >
-                                                        <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                                                            <Send className="w-3 h-3" />
-                                                        </div>
-                                                        Solicitar Gestión (WhatsApp)
-                                                    </button>
-
-                                                    {selectedReport.last_whatsapp_status === 'sent' && selectedReport.last_whatsapp_sent_at && (
-                                                        <div className="flex items-center justify-center gap-1.5 mt-3 text-xs text-green-600 font-medium bg-green-50 py-2 rounded-lg border border-green-100">
-                                                            <CheckCircle className="w-3 h-3" />
-                                                            Enviado: {new Date(selectedReport.last_whatsapp_sent_at).toLocaleString()}
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <div className="text-center py-4 border-t border-gray-100">
-                                                    <p className="text-xs text-gray-400 mb-2">Otras acciones</p>
-                                                    <button
-                                                        onClick={handleDiscardClick}
-                                                        className="text-gray-400 hover:text-gray-600 text-xs font-bold transition-colors flex items-center justify-center gap-1 mx-auto"
-                                                    >
-                                                        <Archive className="w-3 h-3" /> Descartar Caso
-                                                    </button>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 text-center space-y-2">
-                                                <Eye className="w-8 h-8 text-blue-400 mx-auto" />
-                                                <h4 className="font-bold text-blue-800 text-sm">Modo Visualización</h4>
-                                                <p className="text-xs text-blue-600">Este caso está pendiente de derivación por el equipo de Calidad. Aquí podrás seguir su progreso.</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+                                    )}
                             </div>
                         </div>
                     </div>

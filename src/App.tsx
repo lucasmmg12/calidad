@@ -179,6 +179,7 @@ function App() {
               <Route path="/privacidad" element={<LegalContent />} />
               <Route path="/terminos" element={<LegalContent />} />
               <Route path="/resolver-caso/:ticketId" element={<ResolutionPage />} />
+              <Route path="/resolver-caso/:ticketId/:assignmentId" element={<ResolutionPage />} />
               <Route path="/presentacion" element={<Presentation />} />
               <Route path="/changelog" element={<Changelog />} />
 

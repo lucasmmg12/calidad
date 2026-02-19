@@ -8,13 +8,14 @@ import { SECTOR_OPTIONS } from '../constants/sectors';
 export const ReportingForm = () => {
     const [loading, setLoading] = useState(false);
     const [successId, setSuccessId] = useState<string | null>(null);
-    const [isAnonymous, setIsAnonymous] = useState(true);
+    const [isAnonymous, setIsAnonymous] = useState(false);
     const [files, setFiles] = useState<File[]>([]);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
     const [formData, setFormData] = useState({
         originSector: '',
         sector: '',
         content: '',
+        contactName: '',
         contactNumber: ''
     });
 
@@ -68,13 +69,21 @@ export const ReportingForm = () => {
         // DB: 2645438114 (Clean digits only)
         const rawNumber = formData.contactNumber.replace(/\D/g, '');
 
-        if (!isAnonymous && rawNumber.length !== 10) {
-            alert("El número de teléfono debe tener exactamente 10 dígitos (cod. área + número), sin 0 ni 15. Ej: 2645438114");
-            setLoading(false);
-            return;
+        if (!isAnonymous) {
+            if (!formData.contactName.trim()) {
+                alert("Por favor, ingresa tu nombre completo.");
+                setLoading(false);
+                return;
+            }
+            if (rawNumber.length !== 10) {
+                alert("El número de teléfono debe tener exactamente 10 dígitos (cod. área + número), sin 0 ni 15. Ej: 2645438114");
+                setLoading(false);
+                return;
+            }
         }
 
-        const dbNumber = isAnonymous ? null : (rawNumber || null);
+        const dbNumber = rawNumber.length >= 8 ? rawNumber : null;
+        const dbName = formData.contactName.trim() || null;
 
         // Bot: 549 + Number (e.g. 5492645438114)
         const botNumber = dbNumber ? `549${dbNumber}` : null;
@@ -108,6 +117,7 @@ export const ReportingForm = () => {
                     origin_sector: formData.originSector || null,
                     content: formData.content,
                     is_anonymous: isAnonymous,
+                    contact_name: dbName,
                     contact_number: dbNumber,
                     status: 'pending',
                     evidence_urls: evidenceUrls
@@ -166,7 +176,7 @@ export const ReportingForm = () => {
                     <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-widest">Guarda este código para consultas futuras</p>
                 </div>
                 <button
-                    onClick={() => { setSuccessId(null); setFormData({ originSector: '', sector: '', content: '', contactNumber: '' }); setFiles([]); setPreviewUrls([]); }}
+                    onClick={() => { setSuccessId(null); setFormData({ originSector: '', sector: '', content: '', contactName: '', contactNumber: '' }); setFiles([]); setPreviewUrls([]); setIsAnonymous(false); }}
                     className="btn-primary w-full"
                 >
                     Enviar Nuevo Reporte
@@ -216,8 +226,8 @@ export const ReportingForm = () => {
                         <div className="w-10 h-10 bg-sanatorio-secondary/10 rounded-xl flex items-center justify-center">
                             <ShieldAlert className="w-5 h-5 text-sanatorio-secondary" />
                         </div>
-                        <p className="font-bold text-slate-800 text-sm">Privacidad</p>
-                        <p className="text-xs text-slate-500 leading-relaxed">Usa el modo anónimo para proteger tu identidad.</p>
+                        <p className="font-bold text-slate-800 text-sm">Identificación</p>
+                        <p className="text-xs text-slate-500 leading-relaxed">Identificarte nos permite darte feedback directo y hacer seguimiento.</p>
                     </div>
                 </div>
             </div>
@@ -225,32 +235,60 @@ export const ReportingForm = () => {
             <div className="glass-card rounded-[2.5rem] p-6 md:p-12">
                 <form onSubmit={handleSubmit} className="space-y-10">
 
-                    {/* Toggle Anónimo */}
-                    <div
-                        className={`group relative overflow-hidden rounded-2xl border-2 transition-all duration-500 cursor-pointer ${isAnonymous
-                            ? 'border-sanatorio-primary/20 bg-sanatorio-primary/5'
-                            : 'border-slate-100 bg-slate-50/50 hover:border-slate-200'
-                            }`}
-                        onClick={() => setIsAnonymous(!isAnonymous)}
-                    >
-                        <div className="p-6 flex items-center justify-between relative z-10">
-                            <div className="flex items-center gap-5">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${isAnonymous ? 'bg-sanatorio-primary text-white rotate-[360deg] shadow-lg shadow-sanatorio-primary/20' : 'bg-white text-slate-400 border border-slate-200'}`}>
-                                    {isAnonymous ? <Lock className="w-6 h-6" /> : <User className="w-6 h-6" />}
+                    {/* Identified Mode Header */}
+                    <div className={`group relative overflow-hidden rounded-2xl border-2 transition-all duration-500 ${!isAnonymous
+                        ? 'border-green-200 bg-green-50/50'
+                        : 'border-amber-200 bg-amber-50/50'
+                        }`}>
+                        <div className="p-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-5">
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${!isAnonymous ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-amber-400 text-white shadow-lg shadow-amber-400/20'}`}>
+                                        {!isAnonymous ? <User className="w-6 h-6" /> : <Lock className="w-6 h-6" />}
+                                    </div>
+                                    <div className="text-left">
+                                        <p className={`font-bold text-lg ${!isAnonymous ? 'text-green-700' : 'text-amber-700'}`}>
+                                            {!isAnonymous ? 'Modo Identificado' : 'Modo Anónimo'}
+                                        </p>
+                                        <p className="text-sm text-slate-500 font-medium tracking-tight">
+                                            {!isAnonymous ? 'Podremos contactarte para darte seguimiento y feedback.' : 'Tu identidad estará protegida.'}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="text-left">
-                                    <p className={`font-bold text-lg ${isAnonymous ? 'text-sanatorio-primary' : 'text-slate-600'}`}>
-                                        {isAnonymous ? 'Modo Anónimo Activo' : 'Modo Identificado'}
-                                    </p>
-                                    <p className="text-sm text-slate-400 font-medium tracking-tight">
-                                        {isAnonymous ? 'Tu identidad está 100% protegida.' : 'Podremos contactarte para darte feedback.'}
-                                    </p>
+
+                                <div
+                                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-500 cursor-pointer ${isAnonymous ? 'bg-amber-400' : 'bg-green-500'}`}
+                                    onClick={() => setIsAnonymous(!isAnonymous)}
+                                >
+                                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-500 shadow-md ${isAnonymous ? 'translate-x-6' : 'translate-x-1'}`} />
                                 </div>
                             </div>
 
-                            <div className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-500 ${isAnonymous ? 'bg-sanatorio-primary' : 'bg-slate-300'}`}>
-                                <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-500 shadow-md ${isAnonymous ? 'translate-x-6' : 'translate-x-1'}`} />
-                            </div>
+                            {/* Persuasive message when anonymous */}
+                            {isAnonymous && (
+                                <div className="mt-4 p-4 bg-white rounded-xl border border-amber-100 animate-in slide-in-from-top-2 duration-300">
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                            <Info className="w-4 h-4 text-amber-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-amber-800 mb-1">¿Sabías que identificarte tiene ventajas?</p>
+                                            <ul className="text-xs text-amber-700 space-y-1">
+                                                <li className="flex items-center gap-1.5">✅ Recibís notificaciones del avance de tu caso por WhatsApp</li>
+                                                <li className="flex items-center gap-1.5">✅ Podemos contactarte para resolver tu inquietud más rápido</li>
+                                                <li className="flex items-center gap-1.5">✅ Tu información se trata con <strong>estricta confidencialidad</strong></li>
+                                            </ul>
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsAnonymous(false)}
+                                                className="mt-3 text-xs font-bold text-sanatorio-primary hover:underline flex items-center gap-1"
+                                            >
+                                                <User className="w-3 h-3" /> Quiero identificarme
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -286,7 +324,7 @@ export const ReportingForm = () => {
                         {/* Selector de Sector Destino */}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                Sector al cual va dirigido su reclamo
+                                Sector al cual va dirigida su observación
                                 <div className="group relative">
                                     <Info className="w-4 h-4 text-gray-400 cursor-help" />
                                     <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
@@ -373,23 +411,88 @@ export const ReportingForm = () => {
                             />
                         </div>
 
-                        {!isAnonymous && (
-                            <div className="space-y-2 animate-in slide-in-from-top-4">
-                                <label className="label-text">WhatsApp de Contacto</label>
-                                <div className="relative group">
-                                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 group-focus-within:text-sanatorio-primary transition-colors" />
-                                    <input
-                                        type="tel"
-                                        placeholder="Ej: 2645438114"
-                                        className="input-field pl-12"
-                                        value={formData.contactNumber}
-                                        onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
-                                        maxLength={10}
-                                    />
+                        {/* Contact Fields — Required when not anonymous, optional when anonymous */}
+                        {!isAnonymous ? (
+                            <div className="space-y-5 p-5 bg-green-50/50 rounded-2xl border border-green-100 animate-in slide-in-from-top-4">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <User className="w-4 h-4 text-green-600" />
+                                    <span className="text-xs font-bold text-green-700 uppercase tracking-wider">Datos de Contacto (Obligatorio)</span>
                                 </div>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider ml-1">
-                                    Ingresa 10 dígitos sin 0 ni 15. Ej: 2645438114
+                                <div className="space-y-2">
+                                    <label className="label-text">Nombre Completo <span className="text-red-500">*</span></label>
+                                    <div className="relative group">
+                                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 group-focus-within:text-sanatorio-primary transition-colors" />
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="Ej: Juan Pérez"
+                                            className="input-field pl-12"
+                                            value={formData.contactName}
+                                            onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="label-text">WhatsApp de Contacto <span className="text-red-500">*</span></label>
+                                    <div className="relative group">
+                                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 group-focus-within:text-sanatorio-primary transition-colors" />
+                                        <input
+                                            type="tel"
+                                            required
+                                            placeholder="Ej: 2645438114"
+                                            className="input-field pl-12"
+                                            value={formData.contactNumber}
+                                            onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+                                            maxLength={10}
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider ml-1">
+                                        Ingresa 10 dígitos sin 0 ni 15. Ej: 2645438114
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-5 p-5 bg-slate-50/50 rounded-2xl border border-slate-100 animate-in slide-in-from-top-4">
+                                <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-2">
+                                        <Lock className="w-4 h-4 text-slate-400" />
+                                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Datos de Contacto (Opcional)</span>
+                                    </div>
+                                    <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Modo Anónimo</span>
+                                </div>
+                                <p className="text-xs text-slate-500 -mt-2">
+                                    Aunque elegiste el modo anónimo, dejarnos tu nombre o teléfono nos permite darte un mejor seguimiento. <strong>Es completamente opcional.</strong>
                                 </p>
+                                <div className="space-y-2">
+                                    <label className="label-text">Nombre (Opcional)</label>
+                                    <div className="relative group">
+                                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 group-focus-within:text-sanatorio-primary transition-colors" />
+                                        <input
+                                            type="text"
+                                            placeholder="Si querés, dejanos tu nombre..."
+                                            className="input-field pl-12"
+                                            value={formData.contactName}
+                                            onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="label-text">WhatsApp (Opcional)</label>
+                                    <div className="relative group">
+                                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 group-focus-within:text-sanatorio-primary transition-colors" />
+                                        <input
+                                            type="tel"
+                                            placeholder="Ej: 2645438114"
+                                            className="input-field pl-12"
+                                            value={formData.contactNumber}
+                                            onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+                                            maxLength={10}
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider ml-1">
+                                        Si lo ingresás, te notificaremos el avance de tu caso.
+                                    </p>
+                                </div>
                             </div>
                         )}
                     </div>

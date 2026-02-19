@@ -143,7 +143,7 @@ const Presentation = () => {
                                 </div>
                                 <div>
                                     <h3 className="text-2xl font-bold text-slate-700">Sin Trazabilidad</h3>
-                                    <p className="text-xl text-slate-500 mt-2">¿En qué quedó mi reclamo? Nadie sabe.</p>
+                                    <p className="text-xl text-slate-500 mt-2">¿En qué quedó mi reporte? Nadie sabe.</p>
                                 </div>
                             </div>
                             <div className="glass-panel p-8 rounded-2xl border-l-8 border-orange-500 flex items-start gap-6 transform -rotate-1 relative left-8">

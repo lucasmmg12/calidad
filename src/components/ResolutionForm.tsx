@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { supabase } from '../utils/supabase'; // Import supabase
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { supabase } from '../utils/supabase';
 import {
     CheckCircle2,
     AlertTriangle,
@@ -12,6 +12,10 @@ import {
     X,
     XCircle,
     Loader2,
+    Save,
+    Clock,
+    ChevronRight,
+    Image,
 } from 'lucide-react';
 import type { ResolutionFormData, ResolutionStatus } from '../types/resolution';
 
@@ -22,97 +26,268 @@ interface Props {
         description: string;
         isAdverseEvent: boolean;
         sector: string;
+        resolutionStep?: string;
+        draftData?: any;
+        draftUpdatedAt?: string;
+        immediateAction?: string;
+        step1EvidenceUrls?: string[];
     };
     onSubmit: (data: ResolutionFormData) => Promise<void>;
     onReject?: () => void;
 }
 
 export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
-    const [formData, setFormData] = useState<ResolutionFormData>({
-        reportId: reportData.id,
-        isAdverseEvent: reportData.isAdverseEvent,
-        reportSummary: reportData.description,
-        immediateAction: '',
-        evidenceUrls: [],
-        rootCause: '',
-        correctivePlan: '',
-        implementationDate: ''
+    // Determine initial step from DB
+    const getInitialStep = (): 'step1' | 'step2' | 'completed' => {
+        const dbStep = reportData.resolutionStep;
+        if (dbStep === 'step1_completed' || dbStep === 'step2_draft') return 'step2';
+        if (dbStep === 'step2_submitted') return 'completed';
+        return 'step1';
+    };
+
+    const [currentStep, setCurrentStep] = useState<'step1' | 'step2' | 'completed'>(getInitialStep());
+
+    // Step 1 state
+    const [immediateAction, setImmediateAction] = useState(reportData.immediateAction || '');
+    const [step1Files, setStep1Files] = useState<File[]>([]);
+    const [step1ExistingUrls, setStep1ExistingUrls] = useState<string[]>(reportData.step1EvidenceUrls || []);
+    const step1FileInputRef = useRef<HTMLInputElement>(null);
+
+    // Step 2 state — load from draft if available
+    const [step2Data, setStep2Data] = useState({
+        rootCause: reportData.draftData?.rootCause || '',
+        correctivePlan: reportData.draftData?.correctivePlan || '',
+        implementationDate: reportData.draftData?.implementationDate || '',
     });
+    const [step2Files, setStep2Files] = useState<File[]>([]);
+    const [step2ExistingUrls] = useState<string[]>(reportData.draftData?.step2EvidenceUrls || []);
+    const step2FileInputRef = useRef<HTMLInputElement>(null);
 
-    const [files, setFiles] = useState<File[]>([]);
-    const [status, setStatus] = useState<ResolutionStatus>('pending');
+    // UI state
     const [isUploading, setIsUploading] = useState(false);
+    const [status, setStatus] = useState<ResolutionStatus>('pending');
+    const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+    const [lastSavedAt, setLastSavedAt] = useState<string | null>(reportData.draftUpdatedAt || null);
+    const [showDraftBanner, setShowDraftBanner] = useState(!!reportData.draftData);
+    const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // ═══════════════════════════════════════════
+    //  FILE UPLOAD LOGIC (shared)
+    // ═══════════════════════════════════════════
+    const handleFileChange = (
+        e: React.ChangeEvent<HTMLInputElement>,
+        setFiles: React.Dispatch<React.SetStateAction<File[]>>
+    ) => {
         if (e.target.files) {
-            const newFiles = Array.from(e.target.files);
+            const newFiles = Array.from(e.target.files).filter(f => {
+                if (f.size > 5 * 1024 * 1024) {
+                    alert(`${f.name} es demasiado grande. Máximo 5MB.`);
+                    return false;
+                }
+                return true;
+            });
             setFiles(prev => [...prev, ...newFiles]);
         }
     };
 
-    const removeFile = (index: number) => {
+    const removeFile = (
+        index: number,
+        setFiles: React.Dispatch<React.SetStateAction<File[]>>
+    ) => {
         setFiles(prev => prev.filter((_, i) => i !== index));
     };
 
-    const uploadFiles = async (): Promise<string[]> => {
-        const uploadedUrls: string[] = [];
-
+    const uploadFiles = async (files: File[], prefix: string): Promise<string[]> => {
+        const urls: string[] = [];
         for (const file of files) {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${reportData.trackingId}_resolution_${Math.random()}.${fileExt}`;
-            const filePath = `${fileName}`;
-
+            const ext = file.name.split('.').pop();
+            const name = `${reportData.trackingId}_${prefix}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
             try {
-                const { error: uploadError } = await supabase.storage
-                    .from('evidence')
-                    .upload(filePath, file);
-
-                if (uploadError) throw uploadError;
-
-                const { data } = supabase.storage
-                    .from('evidence')
-                    .getPublicUrl(filePath);
-
-                if (data) {
-                    uploadedUrls.push(data.publicUrl);
-                }
-            } catch (error) {
-                console.error("Error uploading file:", error);
-                // Continue with other files if one fails? Or abort? 
-                // For now, simple logging and continue.
+                const { error } = await supabase.storage.from('evidence').upload(name, file);
+                if (error) throw error;
+                const { data } = supabase.storage.from('evidence').getPublicUrl(name);
+                if (data) urls.push(data.publicUrl);
+            } catch (err) {
+                console.error('Upload error:', err);
             }
         }
-        return uploadedUrls;
+        return urls;
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    // ═══════════════════════════════════════════
+    //  STEP 1: SUBMIT IMMEDIATE ACTION
+    // ═══════════════════════════════════════════
+    const handleStep1Submit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!immediateAction.trim()) return;
 
+        setIsUploading(true);
         try {
-            setIsUploading(true);
+            // Upload step1 files
+            const newUrls = await uploadFiles(step1Files, 'step1');
+            const allStep1Urls = [...step1ExistingUrls, ...newUrls];
 
-            // 1. Subir archivos si existen
-            const evidenceUrls = await uploadFiles();
+            // Save to DB
+            const { error } = await supabase
+                .from('reports')
+                .update({
+                    resolution_notes: immediateAction.trim(),
+                    step1_evidence_urls: allStep1Urls,
+                    resolution_step: reportData.isAdverseEvent ? 'step1_completed' : 'step2_submitted',
+                    // For non-adverse events, step 1 IS the full resolution
+                    ...(reportData.isAdverseEvent ? {} : {
+                        resolved_at: new Date().toISOString(),
+                        status: 'quality_validation',
+                        resolution_evidence_urls: allStep1Urls,
+                    })
+                })
+                .eq('id', reportData.id);
 
-            // 2. Preparar datos finales
-            const finalData = {
-                ...formData,
-                evidenceUrls: evidenceUrls
-            };
+            if (error) throw error;
 
-            // 3. Enviar al padre
-            await onSubmit(finalData);
-            setStatus('submitted');
-
-        } catch (error) {
-            console.error("Error en submission:", error);
-            alert("Hubo un error al enviar el formulario. Por favor intente nuevamente.");
+            if (reportData.isAdverseEvent) {
+                // Move to step 2
+                setStep1ExistingUrls(allStep1Urls);
+                setStep1Files([]);
+                setCurrentStep('step2');
+            } else {
+                // For simple cases, we're done
+                setStatus('submitted');
+                setCurrentStep('completed');
+            }
+        } catch (err: any) {
+            console.error('Step 1 error:', err);
+            alert('Error al guardar: ' + err.message);
         } finally {
             setIsUploading(false);
         }
     };
 
-    if (status === 'submitted') {
+    // ═══════════════════════════════════════════
+    //  STEP 2: AUTO-SAVE LOGIC
+    // ═══════════════════════════════════════════
+    const saveDraft = useCallback(async (silent = true) => {
+        if (currentStep !== 'step2') return;
+
+        try {
+            if (!silent) setAutoSaveStatus('saving');
+
+            const draftPayload = {
+                rootCause: step2Data.rootCause,
+                correctivePlan: step2Data.correctivePlan,
+                implementationDate: step2Data.implementationDate,
+                step2EvidenceUrls: step2ExistingUrls,
+            };
+
+            const now = new Date().toISOString();
+            const { error } = await supabase
+                .from('reports')
+                .update({
+                    draft_data: draftPayload,
+                    draft_updated_at: now,
+                    resolution_step: 'step2_draft',
+                })
+                .eq('id', reportData.id);
+
+            if (error) throw error;
+
+            setLastSavedAt(now);
+            setAutoSaveStatus('saved');
+
+            // Reset to idle after 3s
+            setTimeout(() => setAutoSaveStatus('idle'), 3000);
+        } catch (err) {
+            console.error('Auto-save error:', err);
+            setAutoSaveStatus('error');
+        }
+    }, [currentStep, step2Data, step2ExistingUrls, reportData.id]);
+
+    // Debounced auto-save: triggers 3s after last keystroke
+    useEffect(() => {
+        if (currentStep !== 'step2') return;
+        // Don't auto-save if all fields are empty
+        if (!step2Data.rootCause && !step2Data.correctivePlan && !step2Data.implementationDate) return;
+
+        if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+        autoSaveTimer.current = setTimeout(() => {
+            saveDraft(false);
+        }, 3000);
+
+        return () => {
+            if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+        };
+    }, [step2Data, currentStep, saveDraft]);
+
+    // ═══════════════════════════════════════════
+    //  STEP 2: MANUAL SAVE DRAFT
+    // ═══════════════════════════════════════════
+    const handleSaveDraft = async () => {
+        await saveDraft(false);
+    };
+
+    // ═══════════════════════════════════════════
+    //  STEP 2: SUBMIT TO QUALITY
+    // ═══════════════════════════════════════════
+    const handleStep2Submit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!step2Data.rootCause.trim() || !step2Data.correctivePlan.trim()) {
+            alert('Por favor, completa el Análisis de Causa Raíz y el Plan de Acción antes de enviar.');
+            return;
+        }
+
+        setIsUploading(true);
+        try {
+            // Upload step2 files
+            const newUrls = await uploadFiles(step2Files, 'step2');
+            const allStep2Urls = [...step2ExistingUrls, ...newUrls];
+
+            // Build the full resolution data for the parent handler
+            const fullData: ResolutionFormData = {
+                reportId: reportData.id,
+                isAdverseEvent: true,
+                reportSummary: reportData.description,
+                immediateAction: immediateAction || reportData.immediateAction || '',
+                evidenceUrls: [...step1ExistingUrls, ...allStep2Urls],
+                rootCause: step2Data.rootCause,
+                correctivePlan: step2Data.correctivePlan,
+                implementationDate: step2Data.implementationDate,
+            };
+
+            // Update DB with step2 data + clear draft
+            const { error } = await supabase
+                .from('reports')
+                .update({
+                    root_cause: step2Data.rootCause,
+                    corrective_plan: step2Data.correctivePlan,
+                    implementation_date: step2Data.implementationDate || null,
+                    step2_evidence_urls: allStep2Urls,
+                    resolution_evidence_urls: [...step1ExistingUrls, ...allStep2Urls],
+                    resolution_step: 'step2_submitted',
+                    status: 'quality_validation',
+                    resolved_at: new Date().toISOString(),
+                    draft_data: null, // Clear draft
+                    draft_updated_at: null,
+                })
+                .eq('id', reportData.id);
+
+            if (error) throw error;
+
+            await onSubmit(fullData);
+            setStatus('submitted');
+            setCurrentStep('completed');
+        } catch (err: any) {
+            console.error('Step 2 submit error:', err);
+            alert('Error al enviar: ' + err.message);
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    // ═══════════════════════════════════════════
+    //  RENDER: SUCCESS STATE
+    // ═══════════════════════════════════════════
+    if (status === 'submitted' || currentStep === 'completed') {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-xl border border-green-100 animate-in zoom-in-95 duration-300">
@@ -132,9 +307,116 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
         );
     }
 
+    // ═══════════════════════════════════════════
+    //  HELPER: File Preview Grid
+    // ═══════════════════════════════════════════
+    const FileUploadSection = ({
+        files, existingUrls, fileInputRef, setFiles, label
+    }: {
+        files: File[];
+        existingUrls: string[];
+        fileInputRef: React.RefObject<HTMLInputElement>;
+        setFiles: React.Dispatch<React.SetStateAction<File[]>>;
+        label?: string;
+    }) => (
+        <div>
+            <label className="block text-sm font-medium text-gray-600 mb-2">
+                {label || 'Evidencia Fotográfica'}
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                {/* Existing uploaded images */}
+                {existingUrls.map((url, idx) => (
+                    <div key={`existing-${idx}`} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200">
+                        <img src={url} alt={`Evidencia ${idx + 1}`} className="w-full h-full object-cover" />
+                        <div className="absolute bottom-1 left-1 bg-green-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">
+                            ✓ Subida
+                        </div>
+                    </div>
+                ))}
+
+                {/* New files pending upload */}
+                {files.map((file, idx) => (
+                    <div key={`new-${idx}`} className="relative aspect-square rounded-xl overflow-hidden border border-blue-200 group">
+                        <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-full object-cover" />
+                        <button
+                            type="button"
+                            onClick={() => removeFile(idx, setFiles)}
+                            className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 hover:bg-red-500 transition-colors"
+                        >
+                            <X className="w-3 h-3" />
+                        </button>
+                        <div className="absolute bottom-1 left-1 bg-blue-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">
+                            Pendiente
+                        </div>
+                    </div>
+                ))}
+
+                {/* Add button */}
+                <label className="aspect-square rounded-xl border-2 border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-blue-500">
+                    <Camera className="w-6 h-6" />
+                    <span className="text-[10px] font-bold">Agregar</span>
+                    <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        className="hidden"
+                        ref={fileInputRef}
+                        onChange={(e) => handleFileChange(e, setFiles)}
+                    />
+                </label>
+            </div>
+            <p className="text-[10px] text-gray-400">Puede subir múltiples fotos como evidencia. Máximo 5MB por imagen.</p>
+        </div>
+    );
+
+    // ═══════════════════════════════════════════
+    //  HELPER: Auto-Save Indicator
+    // ═══════════════════════════════════════════
+    const AutoSaveIndicator = () => {
+        if (currentStep !== 'step2') return null;
+
+        const formatTime = (iso: string) => {
+            try {
+                return new Date(iso).toLocaleTimeString('es-AR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'America/Argentina/Buenos_Aires'
+                });
+            } catch { return ''; }
+        };
+
+        return (
+            <div className="flex items-center gap-2 text-xs">
+                {autoSaveStatus === 'saving' && (
+                    <span className="flex items-center gap-1 text-blue-500 animate-pulse">
+                        <Loader2 className="w-3 h-3 animate-spin" /> Guardando...
+                    </span>
+                )}
+                {autoSaveStatus === 'saved' && (
+                    <span className="flex items-center gap-1 text-green-600 animate-in fade-in duration-300">
+                        <CheckCircle2 className="w-3 h-3" /> Borrador guardado
+                    </span>
+                )}
+                {autoSaveStatus === 'error' && (
+                    <span className="flex items-center gap-1 text-red-500">
+                        <AlertTriangle className="w-3 h-3" /> Error al guardar
+                    </span>
+                )}
+                {autoSaveStatus === 'idle' && lastSavedAt && (
+                    <span className="flex items-center gap-1 text-gray-400">
+                        <Clock className="w-3 h-3" /> Último guardado: {formatTime(lastSavedAt)}
+                    </span>
+                )}
+            </div>
+        );
+    };
+
+    // ═══════════════════════════════════════════
+    //  RENDER: MAIN FORM
+    // ═══════════════════════════════════════════
     return (
         <div className="min-h-screen bg-[#F8FAFC] font-sans selection:bg-blue-100">
-            {/* Header Clínico */}
+            {/* Header */}
             <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
                 <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -146,114 +428,236 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                             <p className="text-xs text-gray-500 font-medium">#{reportData.trackingId} • {reportData.sector}</p>
                         </div>
                     </div>
+                    <AutoSaveIndicator />
                 </div>
             </header>
 
             <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
 
-                {/* Tarjeta del Incidente Original */}
+                {/* Step Progress Indicator (only for adverse events) */}
+                {reportData.isAdverseEvent && (
+                    <div className="flex items-center gap-0 bg-white rounded-2xl p-4 shadow-sm border border-gray-200/60">
+                        {/* Step 1 */}
+                        <div className={`flex items-center gap-2 flex-1 ${currentStep === 'step1' ? 'text-blue-600' : 'text-green-600'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${currentStep === 'step1'
+                                ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-500/30'
+                                : 'bg-green-100 text-green-700'
+                                }`}>
+                                {currentStep === 'step1' ? '1' : '✓'}
+                            </div>
+                            <div className="hidden sm:block">
+                                <p className="text-xs font-bold">Respuesta Rápida</p>
+                                <p className="text-[10px] text-gray-400">Acción inmediata</p>
+                            </div>
+                        </div>
+
+                        {/* Connector */}
+                        <div className={`flex-shrink-0 w-12 h-0.5 mx-1 transition-colors ${currentStep === 'step2' ? 'bg-green-400' : 'bg-gray-200'}`} />
+
+                        {/* Step 2 */}
+                        <div className={`flex items-center gap-2 flex-1 ${currentStep === 'step2'
+                            ? 'text-amber-600'
+                            : currentStep === 'step1' ? 'text-gray-300' : 'text-green-600'
+                            }`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${currentStep === 'step2'
+                                ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-500/30'
+                                : currentStep === 'step1' ? 'bg-gray-100 text-gray-300' : 'bg-green-100 text-green-700'
+                                }`}>
+                                2
+                            </div>
+                            <div className="hidden sm:block">
+                                <p className="text-xs font-bold">Análisis Profundo</p>
+                                <p className="text-[10px] text-gray-400">Causa raíz + Plan</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Report Summary Card */}
                 <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-200/60">
                     <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Reporte Original</h3>
                     <div className="bg-gray-50 rounded-xl p-4 text-gray-700 text-sm leading-relaxed border border-gray-100 italic">
                         "{reportData.description}"
                     </div>
-
                     {reportData.isAdverseEvent && (
                         <div className="mt-3 flex items-center gap-2 text-amber-700 bg-amber-50 px-3 py-2 rounded-lg text-xs font-bold border border-amber-100/50">
                             <AlertTriangle className="w-4 h-4" />
-                            Requiere Análisis de Causa Raíz
+                            Requiere Análisis de Causa Raíz (Paso 2)
                         </div>
                     )}
                 </section>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                {/* ═══════════════════════════════════
+                    STEP 1: IMMEDIATE ACTION
+                ═══════════════════════════════════ */}
+                {currentStep === 'step1' && (
+                    <form onSubmit={handleStep1Submit} className="space-y-6 animate-in slide-in-from-bottom-4 duration-300">
+                        <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200/60 transition-all focus-within:ring-2 focus-within:ring-blue-500/20">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-sm">1</div>
+                                <div>
+                                    <h2 className="font-bold text-gray-800">Respuesta Rápida</h2>
+                                    <p className="text-xs text-gray-400">¿Qué hiciste en el momento para resolver o contener la situación?</p>
+                                </div>
+                            </div>
 
-                    {/* Bloque 1: Acción Inmediata (Siempre visible) */}
-                    <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200/60 transition-all focus-within:ring-2 focus-within:ring-blue-500/20">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-sm">1</div>
-                            <h2 className="font-bold text-gray-800">Acción Correctiva Inmediata</h2>
-                        </div>
+                            {/* Tip */}
+                            <div className="mb-4 bg-blue-50/50 p-3 rounded-lg border border-blue-100 flex gap-3">
+                                <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                                <p className="text-xs text-blue-600 leading-relaxed">
+                                    <strong>Contanos la acción inmediata.</strong> No necesitás un análisis profundo ahora — solo qué se hizo para contener el problema (ej: se reemplazó la luminaria, se notificó al proveedor, se limpió el derrame).
+                                </p>
+                            </div>
 
-                        {/* Helper Tip */}
-                        <div className="mb-4 bg-blue-50/50 p-3 rounded-lg border border-blue-100 flex gap-3">
-                            <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                            <p className="text-xs text-blue-600 leading-relaxed">
-                                <strong>¿Qué es esto?</strong> Describa la medida que tomó <em>en el momento</em> para mitigar el riesgo o solucionar el problema temporalmente (ej: limpiar el derrame, aislar el equipo, llamar a mantenimiento).
-                            </p>
-                        </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-600 mb-2">
+                                        Descripción de la solución inmediata <span className="text-red-500">*</span>
+                                    </label>
+                                    <textarea
+                                        required
+                                        className="w-full p-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all resize-none h-32 text-sm"
+                                        placeholder="Ej: Se reemplazó la luminaria afectada y se reportó a mantenimiento..."
+                                        value={immediateAction}
+                                        onChange={e => setImmediateAction(e.target.value)}
+                                    />
+                                </div>
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-2">
-                                    Descripción de la solución
-                                </label>
-                                <textarea
-                                    required
-                                    className="w-full p-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all resize-none h-32 text-sm"
-                                    placeholder="Ej: Se reemplazó la luminaria afectada / Se colocó señalización provisoria..."
-                                    value={formData.immediateAction}
-                                    onChange={e => setFormData({ ...formData, immediateAction: e.target.value })}
+                                <FileUploadSection
+                                    files={step1Files}
+                                    existingUrls={step1ExistingUrls}
+                                    fileInputRef={step1FileInputRef as React.RefObject<HTMLInputElement>}
+                                    setFiles={setStep1Files}
+                                    label="Evidencia Fotográfica (Paso 1)"
                                 />
                             </div>
+                        </section>
 
-                            {/* Manejo de Evidencia */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-2">
-                                    Evidencia Fotográfica
-                                </label>
+                        {/* Step 1 Action Bar */}
+                        <div className="pt-2 pb-12 space-y-4">
+                            <button
+                                type="submit"
+                                disabled={isUploading || !immediateAction.trim()}
+                                className="w-full py-4 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 transform transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                            >
+                                {isUploading ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Guardando...
+                                    </>
+                                ) : (
+                                    <>
+                                        {reportData.isAdverseEvent ? (
+                                            <>
+                                                Enviar y Continuar al Paso 2
+                                                <ChevronRight className="w-4 h-4" />
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Send className="w-4 h-4" />
+                                                Confirmar Resolución
+                                            </>
+                                        )}
+                                    </>
+                                )}
+                            </button>
 
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-                                    {files.map((file, idx) => (
-                                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 group">
-                                            <img
-                                                src={URL.createObjectURL(file)}
-                                                alt="preview"
-                                                className="w-full h-full object-cover"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => removeFile(idx)}
-                                                className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-100 hover:bg-red-500 transition-colors"
-                                            >
-                                                <X className="w-3 h-3" />
-                                            </button>
+                            {reportData.isAdverseEvent && (
+                                <p className="text-center text-xs text-gray-400">
+                                    Después de este paso, podrás completar el Análisis de Causa Raíz en el momento que quieras.
+                                </p>
+                            )}
+
+                            {/* Reject Option */}
+                            {onReject && (
+                                <div className="border-2 border-dashed border-red-200 rounded-xl p-4 bg-red-50/30">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <XCircle className="w-4 h-4 text-red-400" />
+                                            <span className="text-sm text-gray-600">¿Este caso no te corresponde?</span>
                                         </div>
-                                    ))}
-
-                                    <label className="aspect-square rounded-xl border-2 border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-blue-500">
-                                        <Camera className="w-6 h-6" />
-                                        <span className="text-[10px] font-bold">Agregar</span>
-                                        <input
-                                            type="file"
-                                            multiple
-                                            accept="image/*"
-                                            className="hidden"
-                                            onChange={handleFileChange}
-                                        />
-                                    </label>
+                                        <button
+                                            type="button"
+                                            onClick={onReject}
+                                            className="px-4 py-2 bg-white border border-red-200 text-red-600 font-bold text-xs rounded-lg hover:bg-red-50 transition-all"
+                                        >
+                                            Rechazar Asignación
+                                        </button>
+                                    </div>
                                 </div>
-                                <p className="text-[10px] text-gray-400">Puede subir múltiples fotos para evidenciar el "Antes" y "Después".</p>
+                            )}
+
+                            <p className="text-center text-xs text-gray-400 mt-4">
+                                Sanatorio Argentino • Sistema de Gestión de Calidad
+                            </p>
+                        </div>
+                    </form>
+                )}
+
+                {/* ═══════════════════════════════════
+                    STEP 2: RCA + ACTION PLAN (auto-save)
+                ═══════════════════════════════════ */}
+                {currentStep === 'step2' && (
+                    <form onSubmit={handleStep2Submit} className="space-y-6 animate-in slide-in-from-right-4 duration-500">
+
+                        {/* Draft Recovery Banner */}
+                        {showDraftBanner && (
+                            <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100 flex items-start gap-3 animate-in slide-in-from-top-2 duration-300">
+                                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <Save className="w-4 h-4 text-blue-600" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-sm font-bold text-blue-800">Borrador recuperado</p>
+                                    <p className="text-xs text-blue-600">
+                                        Tenés un borrador guardado{lastSavedAt ? ` del ${new Date(lastSavedAt).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}` : ''}. Podés continuar donde lo dejaste.
+                                    </p>
+                                </div>
+                                <button type="button" onClick={() => setShowDraftBanner(false)} className="p-1 hover:bg-blue-100 rounded-lg transition-colors">
+                                    <X className="w-4 h-4 text-blue-400" />
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Step 1 Summary (completed) */}
+                        <section className="bg-green-50/50 rounded-2xl p-5 border border-green-100">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs font-bold">✓</div>
+                                <h3 className="text-sm font-bold text-green-800">Paso 1 Completado — Respuesta Rápida</h3>
+                            </div>
+                            <p className="text-sm text-green-700 bg-white rounded-lg p-3 border border-green-100 italic">
+                                "{immediateAction || reportData.immediateAction}"
+                            </p>
+                            {step1ExistingUrls.length > 0 && (
+                                <div className="mt-2 flex items-center gap-1 text-xs text-green-600">
+                                    <Image className="w-3 h-3" />
+                                    {step1ExistingUrls.length} imagen{step1ExistingUrls.length > 1 ? 'es' : ''} adjunta{step1ExistingUrls.length > 1 ? 's' : ''}
+                                </div>
+                            )}
+                        </section>
+
+                        {/* Auto-save info banner */}
+                        <div className="bg-amber-50/50 rounded-xl p-3 border border-amber-100 flex gap-3">
+                            <Save className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                            <div className="text-xs text-amber-700 leading-relaxed">
+                                <strong>Autoguardado activo.</strong> Tu progreso se guarda automáticamente mientras escribís. Podés cerrar esta página y volver en cualquier momento — tu borrador estará aquí.
                             </div>
                         </div>
-                    </section>
 
-                    {/* Bloque 2: Análisis de Fondo (Condicional) */}
-                    {reportData.isAdverseEvent && (
-                        <section className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 shadow-sm border border-amber-100 animate-in slide-in-from-bottom-4 duration-500">
+                        {/* RCA Section */}
+                        <section className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 shadow-sm border border-amber-100">
                             <div className="flex items-center gap-3 mb-6">
                                 <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-sm">2</div>
                                 <div>
-                                    <h2 className="font-bold text-gray-800">Análisis y Prevención</h2>
-                                    <p className="text-xs text-gray-500">Requerido por Calidad para prevenir recurrencia</p>
+                                    <h2 className="font-bold text-gray-800">Análisis Profundo</h2>
+                                    <p className="text-xs text-gray-500">Completá cuando estés listo — no hay apuro</p>
                                 </div>
                             </div>
 
-                            {/* Helper Tip RCA */}
+                            {/* RCA Tip */}
                             <div className="mb-6 bg-white/60 p-3 rounded-lg border border-amber-200/50 flex gap-3">
                                 <BrainCircuit className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                                 <div className="text-xs text-amber-900 leading-relaxed space-y-1">
-                                    <p><strong>Análisis de Causa Raíz:</strong> No se detenga en el síntoma visible. Pregunte "¿Por qué?" al menos 5 veces.</p>
+                                    <p><strong>Análisis de Causa Raíz:</strong> No te detengas en el síntoma visible. Preguntá "¿Por qué?" al menos 5 veces.</p>
                                     <ul className="list-disc pl-3 opacity-80">
                                         <li>¿Por qué falló el equipo? (Porque no tuvo mantenimiento)</li>
                                         <li>¿Por qué no tuvo mantenimiento? (Porque no estaba en el cronograma)</li>
@@ -264,94 +668,97 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                             <div className="space-y-5">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Causa Raíz Identificada
+                                        Causa Raíz Identificada <span className="text-red-500">*</span>
                                     </label>
                                     <textarea
-                                        required
                                         className="w-full p-3 rounded-xl border border-amber-200 bg-white/80 focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all resize-none h-32 text-sm"
-                                        placeholder="Detalle la causa fundamental del desvío..."
-                                        value={formData.rootCause}
-                                        onChange={e => setFormData({ ...formData, rootCause: e.target.value })}
+                                        placeholder="Detallá la causa fundamental del desvío..."
+                                        value={step2Data.rootCause}
+                                        onChange={e => setStep2Data(prev => ({ ...prev, rootCause: e.target.value }))}
                                     />
                                 </div>
 
-                                <div className="grid md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Plan de Acción (Largo Plazo)</label>
-                                        <textarea
-                                            required
-                                            className="w-full p-3 rounded-xl border border-amber-200 bg-white/80 focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all resize-none h-24 text-sm"
-                                            placeholder="Qué se hará para que esto NO vuelva a ocurrir..."
-                                            value={formData.correctivePlan}
-                                            onChange={e => setFormData({ ...formData, correctivePlan: e.target.value })}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Plan de Acción Correctivo <span className="text-red-500">*</span>
+                                    </label>
+                                    <textarea
+                                        className="w-full p-3 rounded-xl border border-amber-200 bg-white/80 focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all resize-none h-24 text-sm"
+                                        placeholder="¿Qué se hará para que esto NO vuelva a ocurrir?"
+                                        value={step2Data.correctivePlan}
+                                        onChange={e => setStep2Data(prev => ({ ...prev, correctivePlan: e.target.value }))}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Estimada Implementación</label>
+                                    <div className="relative">
+                                        <Calendar className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+                                        <input
+                                            type="date"
+                                            className="w-full p-3 pl-10 rounded-xl border border-amber-200 bg-white/80 focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all text-sm"
+                                            value={step2Data.implementationDate}
+                                            onChange={e => setStep2Data(prev => ({ ...prev, implementationDate: e.target.value }))}
                                         />
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Estimada Implementación</label>
-                                        <div className="relative">
-                                            <Calendar className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
-                                            <input
-                                                type="date"
-                                                required
-                                                className="w-full p-3 pl-10 rounded-xl border border-amber-200 bg-white/80 focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all text-sm"
-                                                value={formData.implementationDate}
-                                                onChange={e => setFormData({ ...formData, implementationDate: e.target.value })}
-                                            />
-                                        </div>
-                                    </div>
                                 </div>
+
+                                {/* Step 2 Evidence */}
+                                <FileUploadSection
+                                    files={step2Files}
+                                    existingUrls={step2ExistingUrls}
+                                    fileInputRef={step2FileInputRef as React.RefObject<HTMLInputElement>}
+                                    setFiles={setStep2Files}
+                                    label="Evidencia Fotográfica (Análisis)"
+                                />
                             </div>
                         </section>
-                    )}
 
-                    {/* Action Bar */}
-                    <div className="pt-4 pb-12 space-y-4">
-                        <button
-                            type="submit"
-                            disabled={isUploading}
-                            className={`w-full py-4 rounded-xl font-bold text-white shadow-lg shadow-blue-500/20 transform transition-all active:scale-95 flex items-center justify-center gap-2 
-                ${reportData.isAdverseEvent ? 'bg-gradient-to-r from-blue-700 to-blue-900 hover:from-blue-800 hover:to-slate-900' : 'bg-blue-600 hover:bg-blue-700'}
-                disabled:opacity-70 disabled:cursor-not-allowed
-              `}
-                        >
-                            {isUploading ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    <span>Subiendo archivos...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span>Confirmar Resolución</span>
-                                    <Send className="w-4 h-4" />
-                                </>
-                            )}
-                        </button>
+                        {/* Step 2 Action Bar */}
+                        <div className="pt-2 pb-12 space-y-4">
+                            <div className="flex gap-3">
+                                {/* Save Draft */}
+                                <button
+                                    type="button"
+                                    onClick={handleSaveDraft}
+                                    disabled={autoSaveStatus === 'saving'}
+                                    className="flex-1 py-4 rounded-xl font-bold text-gray-700 bg-white border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 shadow-sm transition-all flex items-center justify-center gap-2 text-sm"
+                                >
+                                    <Save className="w-4 h-4" />
+                                    Guardar Borrador
+                                </button>
 
-                        {/* Reject Option */}
-                        {onReject && (
-                            <div className="border-2 border-dashed border-red-200 rounded-xl p-4 bg-red-50/30">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <XCircle className="w-4 h-4 text-red-400" />
-                                        <span className="text-sm text-gray-600">¿Este caso no te corresponde?</span>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={onReject}
-                                        className="px-4 py-2 bg-white border border-red-200 text-red-600 font-bold text-xs rounded-lg hover:bg-red-50 transition-all"
-                                    >
-                                        Rechazar Reclamo
-                                    </button>
-                                </div>
+                                {/* Submit to Quality */}
+                                <button
+                                    type="submit"
+                                    disabled={isUploading || !step2Data.rootCause.trim() || !step2Data.correctivePlan.trim()}
+                                    className="flex-[2] py-4 rounded-xl font-bold text-white bg-gradient-to-r from-blue-700 to-blue-900 hover:from-blue-800 hover:to-slate-900 shadow-lg shadow-blue-500/20 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                                >
+                                    {isUploading ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            Enviando...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Send className="w-4 h-4" />
+                                            Enviar a Calidad
+                                        </>
+                                    )}
+                                </button>
                             </div>
-                        )}
 
-                        <p className="text-center text-xs text-gray-400 mt-4">
-                            Sanatorio Argentino • Sistema de Gestión de Calidad
-                        </p>
-                    </div>
+                            <p className="text-center text-xs text-gray-400">
+                                Tu borrador se guarda automáticamente. Podés volver en cualquier momento.
+                            </p>
 
-                </form>
+                            <p className="text-center text-xs text-gray-400 mt-4">
+                                Sanatorio Argentino • Sistema de Gestión de Calidad
+                            </p>
+                        </div>
+                    </form>
+                )}
+
             </main>
         </div>
     );
