@@ -30,6 +30,7 @@ export const SECTOR_OPTIONS = [
     { value: "MAN-Mantenimiento", label: "🔨 MAN-Mantenimiento" },
     { value: "MEM-Mantenimiento-Equipamiento-Medico", label: "🥼 MEM-Mantenimiento-Equipamiento-Medico" },
     { value: "NEO-Neonatologia", label: "👶 NEO-Neonatologia" },
+    { value: "PYT-Pagos-y-Tesoreria", label: "💰 PYT-Pagos-y-Tesoreria" },
     { value: "QUI-Quirofano", label: "👨‍⚕️ QUI-Quirofano" },
     { value: "REC-Recepcion-de-Pacientes", label: "🤒 REC-Recepcion-de-Pacientes" },
     { value: "RES-Residencias-Medicas", label: "🩺 RES-Residencias-Medicas" },
