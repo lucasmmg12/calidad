@@ -117,44 +117,69 @@ Deno.serve(async (req) => {
 
         if (cleanColor === 'Rojo') {
             const builderbotToken = Deno.env.get('BUILDERBOT_TOKEN')
-            const alertNumber = '5492644396596';
 
             if (builderbotToken) {
-                console.log(`[Analyze] Enviando Alerta Roja a ${alertNumber}`)
+                // Fetch all active alert recipients from DB
+                const { data: recipientsData, error: recipientsError } = await supabase
+                    .from('alert_recipients')
+                    .select('phone_number, display_name')
+                    .eq('is_active', true);
+
+                // Fallback to hardcoded number if DB query fails
+                const alertRecipients = (recipientsError || !recipientsData || recipientsData.length === 0)
+                    ? [{ phone_number: '2644396596', display_name: 'Claudia (fallback)' }]
+                    : recipientsData;
+
+                if (recipientsError) {
+                    console.error('[Analyze] Error fetching alert_recipients, using fallback:', recipientsError);
+                }
+
+                console.log(`[Analyze] Enviando Alerta Roja a ${alertRecipients.length} destinatario(s)`);
+
                 const evidenceTxt = evidenceUrls && evidenceUrls.length > 0 ? `\n📸 Evidencia: ${evidenceUrls[0]}` : '';
 
-                const payload: any = {
-                    number: alertNumber,
-                    messages: {
-                        content: `⚠️ *NOTIFICACIÓN DE RIESGO CRÍTICO* ⚠️\n\nSe ha detectado un reporte con prioridad *ROJA* que requiere atención inmediata.\n\n📝 *Resumen:* ${cleanString(result.summary)}\n📍 *Clasificación:* ${cleanString(result.category)}\n🆔 *ID de Seguimiento:* ${reportId}\n\n🚨 *Consecuencia Potencial:* ${cleanString(result.consequences)}\n\n━━━━━━━━━━━━━━━━\n📢 *Acción Requerida:* Por favor, inicie el protocolo de respuesta ante incidentes y verifique el estado en el Dashboard de Calidad.\n\n${evidenceTxt}`,
-                    },
-                    checkIfExists: false
-                };
+                const alertMessage = `⚠️ *NOTIFICACIÓN DE RIESGO CRÍTICO* ⚠️\n\nSe ha detectado un reporte con prioridad *ROJA* que requiere atención inmediata.\n\n📝 *Resumen:* ${cleanString(result.summary)}\n📍 *Clasificación:* ${cleanString(result.category)}\n🆔 *ID de Seguimiento:* ${reportId}\n\n🚨 *Consecuencia Potencial:* ${cleanString(result.consequences)}\n\n━━━━━━━━━━━━━━━━\n📢 *Acción Requerida:* Por favor, inicie el protocolo de respuesta ante incidentes y verifique el estado en el Dashboard de Calidad.\n\n${evidenceTxt}`;
 
-                // Add mediaUrl ONLY if it's not empty
-                if (evidenceUrls && evidenceUrls.length > 0) {
-                    payload.messages.mediaUrl = evidenceUrls[0];
-                }
+                // Send to ALL active recipients in parallel
+                const sendPromises = alertRecipients.map(async (recipient) => {
+                    const botFormatNumber = `549${recipient.phone_number}`;
+                    console.log(`[Analyze] → Enviando a ${recipient.display_name} (${botFormatNumber})`);
 
-                try {
-                    const resp = await fetch('https://app.builderbot.cloud/api/v2/c3fd918b-b736-40dc-a841-cbb73d3b2a8d/messages', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'x-api-builderbot': builderbotToken
+                    const payload: any = {
+                        number: botFormatNumber,
+                        messages: {
+                            content: alertMessage,
                         },
-                        body: JSON.stringify(payload)
-                    });
+                        checkIfExists: false
+                    };
 
-                    if (!resp.ok) {
-                        const errText = await resp.text();
-                        console.error(`[Analyze] Error de BuilderBot (Alert): ${resp.status} - ${errText}`);
-                    } else {
-                        console.log(`[Analyze] Alerta Roja enviada con éxito.`);
+                    if (evidenceUrls && evidenceUrls.length > 0) {
+                        payload.messages.mediaUrl = evidenceUrls[0];
                     }
-                } catch (fetchErr) {
-                    console.error(`[Analyze] Fallo fetch alerta:`, fetchErr);
-                }
+
+                    try {
+                        const resp = await fetch('https://app.builderbot.cloud/api/v2/c3fd918b-b736-40dc-a841-cbb73d3b2a8d/messages', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'x-api-builderbot': builderbotToken
+                            },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!resp.ok) {
+                            const errText = await resp.text();
+                            console.error(`[Analyze] Error enviando a ${recipient.display_name}: ${resp.status} - ${errText}`);
+                        } else {
+                            console.log(`[Analyze] ✅ Alerta enviada a ${recipient.display_name}`);
+                        }
+                    } catch (fetchErr) {
+                        console.error(`[Analyze] Fallo fetch alerta a ${recipient.display_name}:`, fetchErr);
+                    }
+                });
+
+                await Promise.allSettled(sendPromises);
+                console.log(`[Analyze] Proceso de alertas rojas completado.`);
             } else {
                 console.error('[Analyze] Missing BUILDERBOT_TOKEN for alert')
             }

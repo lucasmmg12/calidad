@@ -9,6 +9,7 @@ import { AdminLogin } from './components/AdminLogin';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import LegalContent from './components/LegalContent';
 import { Changelog } from './components/Changelog';
+import { AlertRecipientsManager } from './components/AlertRecipientsManager';
 import { UserManagement } from './pages/UserManagement';
 import { ResolutionPage } from './pages/ResolutionPage';
 import Presentation from './pages/Presentation';
@@ -26,7 +27,8 @@ import {
   LogIn,
   UserCog,
   Shield,
-  Users
+  Users,
+  Bell
 } from 'lucide-react';
 import { supabase } from './utils/supabase';
 
@@ -79,12 +81,20 @@ function Navbar() {
               <>
                 {/* Admin Users Link */}
                 {isAdmin && (
-                  <Link
-                    to="/admin/users"
-                    className="hidden sm:flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all"
-                  >
-                    <Users className="w-4 h-4" /> Usuarios
-                  </Link>
+                  <>
+                    <Link
+                      to="/admin/users"
+                      className="hidden sm:flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all"
+                    >
+                      <Users className="w-4 h-4" /> Usuarios
+                    </Link>
+                    <Link
+                      to="/admin/alertas"
+                      className="hidden sm:flex items-center gap-2 px-4 py-2 text-red-500 font-bold text-sm hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                    >
+                      <Bell className="w-4 h-4" /> Alertas
+                    </Link>
+                  </>
                 )}
 
                 {/* Dashboard link — Admin & Responsable only */}
@@ -186,6 +196,7 @@ function App() {
               {/* Admin Routes */}
               <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
                 <Route path="/admin/users" element={<UserManagement />} />
+                <Route path="/admin/alertas" element={<AlertRecipientsManager />} />
               </Route>
 
               {/* Dashboard — Admin & Responsable */}
