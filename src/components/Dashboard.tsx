@@ -840,6 +840,44 @@ export const Dashboard = () => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    // Sector assignments state (shared by multi_sector_pending & quality_validation views)
+    const [sectorAssignmentsData, setSectorAssignmentsData] = useState<any[]>([]);
+    const [loadingAssignments, setLoadingAssignments] = useState(true);
+    const [expandedSector, setExpandedSector] = useState<string | null>(null);
+
+    // Fetch sector assignments when a report is selected
+    useEffect(() => {
+        if (!selectedReport?.id) {
+            setSectorAssignmentsData([]);
+            setLoadingAssignments(false);
+            setExpandedSector(null);
+            return;
+        }
+        // Only fetch if the report could have sector assignments
+        if (selectedReport.status === 'multi_sector_pending' || selectedReport.status === 'quality_validation') {
+            const fetchAssignments = async () => {
+                setLoadingAssignments(true);
+                setExpandedSector(null);
+                const { data, error } = await supabase
+                    .from('sector_assignments')
+                    .select('*')
+                    .eq('report_id', selectedReport.id)
+                    .order('created_at', { ascending: true });
+
+                if (!error && data) {
+                    setSectorAssignmentsData(data);
+                } else {
+                    setSectorAssignmentsData([]);
+                }
+                setLoadingAssignments(false);
+            };
+            fetchAssignments();
+        } else {
+            setSectorAssignmentsData([]);
+            setLoadingAssignments(false);
+        }
+    }, [selectedReport?.id, selectedReport?.status]);
+
     // Observations state
     const [observationText, setObservationText] = useState('');
     const [isSavingObservation, setIsSavingObservation] = useState(false);
@@ -2054,27 +2092,7 @@ export const Dashboard = () => {
                                         )}
                                     </div>
                                 ) : selectedReport.status === 'multi_sector_pending' ? (() => {
-                                    // VISTA MULTI-SECTOR — Progress Panel
-                                    const [sectorAssignmentsData, setSectorAssignmentsData] = useState<any[]>([]);
-                                    const [loadingAssignments, setLoadingAssignments] = useState(true);
-
-                                    useEffect(() => {
-                                        const fetchAssignments = async () => {
-                                            setLoadingAssignments(true);
-                                            const { data, error } = await supabase
-                                                .from('sector_assignments')
-                                                .select('*')
-                                                .eq('report_id', selectedReport.id)
-                                                .order('created_at', { ascending: true });
-
-                                            if (!error && data) {
-                                                setSectorAssignmentsData(data);
-                                            }
-                                            setLoadingAssignments(false);
-                                        };
-                                        fetchAssignments();
-                                    }, [selectedReport.id]);
-
+                                    // VISTA MULTI-SECTOR — Progress Panel (hooks are at top-level)
                                     const totalAssignments = sectorAssignmentsData.length;
                                     const resolvedCount = sectorAssignmentsData.filter(a => a.status === 'resolved' || a.status === 'quality_validation').length;
                                     const partialCount = sectorAssignmentsData.filter(a => a.status === 'partial').length;
@@ -2235,32 +2253,11 @@ export const Dashboard = () => {
                                             )}
                                         </div>
                                     ) : selectedReport.status === 'quality_validation' ? (() => {
-                                        // VISTA VALIDACIÓN CALIDAD — con soporte multi-sector
-                                        const [qvAssignments, setQvAssignments] = useState<any[]>([]);
-                                        const [qvLoading, setQvLoading] = useState(true);
-                                        const [expandedSector, setExpandedSector] = useState<string | null>(null);
-
-                                        useEffect(() => {
-                                            const fetchQvAssignments = async () => {
-                                                setQvLoading(true);
-                                                const { data, error } = await supabase
-                                                    .from('sector_assignments')
-                                                    .select('*')
-                                                    .eq('report_id', selectedReport.id)
-                                                    .order('created_at', { ascending: true });
-
-                                                if (!error && data) {
-                                                    setQvAssignments(data);
-                                                }
-                                                setQvLoading(false);
-                                            };
-                                            fetchQvAssignments();
-                                        }, [selectedReport.id]);
-
-                                        const isMultiSectorReport = qvAssignments.length > 0;
-                                        const resolvedAssignments = qvAssignments.filter(a => a.status === 'resolved' || a.status === 'quality_validation');
-                                        const pendingAssignments = qvAssignments.filter(a => a.status === 'pending');
-                                        const allSectorsComplete = qvAssignments.length > 0 && pendingAssignments.length === 0;
+                                        // VISTA VALIDACIÓN CALIDAD — con soporte multi-sector (hooks are at top-level)
+                                        const isMultiSectorReport = sectorAssignmentsData.length > 0;
+                                        const resolvedAssignments = sectorAssignmentsData.filter(a => a.status === 'resolved' || a.status === 'quality_validation');
+                                        const pendingAssignments = sectorAssignmentsData.filter(a => a.status === 'pending');
+                                        const allSectorsComplete = sectorAssignmentsData.length > 0 && pendingAssignments.length === 0;
 
                                         const statusConfig: Record<string, { label: string; color: string; bg: string; icon: string }> = {
                                             pending: { label: 'Pendiente', color: 'text-yellow-700', bg: 'bg-yellow-100', icon: '⏳' },
@@ -2280,25 +2277,25 @@ export const Dashboard = () => {
                                                         <h4 className="font-bold text-gray-900">Validación de Calidad</h4>
                                                         <p className="text-xs text-purple-600">
                                                             {isMultiSectorReport
-                                                                ? `${resolvedAssignments.length}/${qvAssignments.length} sectores respondieron`
+                                                                ? `${resolvedAssignments.length}/${sectorAssignmentsData.length} sectores respondieron`
                                                                 : 'Revisión requerida para cierre'}
                                                         </p>
                                                     </div>
                                                 </div>
 
                                                 {/* Multi-sector progress indicator */}
-                                                {isMultiSectorReport && !qvLoading && (
+                                                {isMultiSectorReport && !loadingAssignments && (
                                                     <div className="mb-4 flex-shrink-0">
                                                         <div className="flex justify-between items-center mb-1.5">
                                                             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Progreso de Sectores</span>
                                                             <span className="text-[10px] font-bold text-purple-700">
-                                                                {resolvedAssignments.length}/{qvAssignments.length}
+                                                                {resolvedAssignments.length}/{sectorAssignmentsData.length}
                                                             </span>
                                                         </div>
                                                         <div className="w-full h-2 bg-white rounded-full overflow-hidden border border-gray-100">
                                                             <div
                                                                 className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-500"
-                                                                style={{ width: `${qvAssignments.length > 0 ? Math.round((resolvedAssignments.length / qvAssignments.length) * 100) : 0}%` }}
+                                                                style={{ width: `${sectorAssignmentsData.length > 0 ? Math.round((resolvedAssignments.length / sectorAssignmentsData.length) * 100) : 0}%` }}
                                                             />
                                                         </div>
                                                         {!allSectorsComplete && (
@@ -2313,14 +2310,14 @@ export const Dashboard = () => {
                                                 )}
 
                                                 <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 mb-6">
-                                                    {qvLoading ? (
+                                                    {loadingAssignments ? (
                                                         <div className="flex items-center justify-center p-6 text-gray-400">
                                                             <Loader2 className="w-5 h-5 animate-spin mr-2" /> Cargando...
                                                         </div>
                                                     ) : isMultiSectorReport ? (
                                                         /* ========== MULTI-SECTOR VIEW ========== */
                                                         <div className="space-y-3">
-                                                            {qvAssignments.map((assignment) => {
+                                                            {sectorAssignmentsData.map((assignment: any) => {
                                                                 const config = statusConfig[assignment.status] || statusConfig.pending;
                                                                 const sectorLabel = SECTOR_OPTIONS.find(s => s.value === assignment.sector)?.label || assignment.sector;
                                                                 const isExpanded = expandedSector === assignment.id;
