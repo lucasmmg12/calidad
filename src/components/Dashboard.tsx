@@ -21,7 +21,8 @@ import {
     User,
     Phone,
     MessageSquare,
-    Save
+    Save,
+    ChevronDown
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { CLASSIFICATION_CATEGORIES } from '../constants/classification_categories';
@@ -2219,163 +2220,379 @@ export const Dashboard = () => {
                                                 </button>
                                             )}
                                         </div>
-                                    ) : selectedReport.status === 'quality_validation' ? (
-                                        // VISTA VALIDACIÓN CALIDAD
-                                        // VISTA VALIDACIÓN CALIDAD
-                                        <div className="bg-purple-50 p-6 rounded-2xl shadow-sm border border-purple-100 flex flex-col h-full overflow-hidden">
-                                            <div className="flex items-center gap-3 mb-4 flex-shrink-0">
-                                                <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
-                                                    <BrainCircuit className="w-6 h-6" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-bold text-gray-900">Validación de Calidad</h4>
-                                                    <p className="text-xs text-purple-600">Revisión requerida para cierre</p>
-                                                </div>
-                                            </div>
+                                    ) : selectedReport.status === 'quality_validation' ? (() => {
+                                        // VISTA VALIDACIÓN CALIDAD — con soporte multi-sector
+                                        const [qvAssignments, setQvAssignments] = useState<any[]>([]);
+                                        const [qvLoading, setQvLoading] = useState(true);
+                                        const [expandedSector, setExpandedSector] = useState<string | null>(null);
 
-                                            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 mb-6">
-                                                {/* 1. Acción Inmediata (Siempre visible) */}
-                                                <div className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm">
-                                                    <h5 className="text-xs font-bold text-blue-600 uppercase mb-2 flex items-center gap-2">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                                        Acción Inmediata
-                                                    </h5>
-                                                    <p className="text-sm text-gray-700 leading-relaxed">
-                                                        {selectedReport.resolution_notes || <span className="text-gray-400 italic">Sin datos registrados.</span>}
-                                                    </p>
-                                                </div>
+                                        useEffect(() => {
+                                            const fetchQvAssignments = async () => {
+                                                setQvLoading(true);
+                                                const { data, error } = await supabase
+                                                    .from('sector_assignments')
+                                                    .select('*')
+                                                    .eq('report_id', selectedReport.id)
+                                                    .order('created_at', { ascending: true });
 
-                                                {/* 2. Causa Raíz (Condicional) */}
-                                                {selectedReport.root_cause && (
-                                                    <div className="bg-white p-4 rounded-xl border border-amber-100 shadow-sm relative overflow-hidden">
-                                                        <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>
-                                                        <h5 className="text-xs font-bold text-amber-700 uppercase mb-2 flex items-center gap-2">
-                                                            <BrainCircuit className="w-3 h-3" />
-                                                            Causa Raíz Identificada
-                                                        </h5>
-                                                        <p className="text-sm text-gray-700 leading-relaxed">
-                                                            {selectedReport.root_cause}
+                                                if (!error && data) {
+                                                    setQvAssignments(data);
+                                                }
+                                                setQvLoading(false);
+                                            };
+                                            fetchQvAssignments();
+                                        }, [selectedReport.id]);
+
+                                        const isMultiSectorReport = qvAssignments.length > 0;
+                                        const resolvedAssignments = qvAssignments.filter(a => a.status === 'resolved' || a.status === 'quality_validation');
+                                        const pendingAssignments = qvAssignments.filter(a => a.status === 'pending');
+                                        const allSectorsComplete = qvAssignments.length > 0 && pendingAssignments.length === 0;
+
+                                        const statusConfig: Record<string, { label: string; color: string; bg: string; icon: string }> = {
+                                            pending: { label: 'Pendiente', color: 'text-yellow-700', bg: 'bg-yellow-100', icon: '⏳' },
+                                            resolved: { label: 'Resuelto', color: 'text-green-700', bg: 'bg-green-100', icon: '✅' },
+                                            quality_validation: { label: 'En Revisión', color: 'text-purple-700', bg: 'bg-purple-100', icon: '🔍' },
+                                            partial: { label: 'Parcial', color: 'text-orange-700', bg: 'bg-orange-100', icon: '⚠️' },
+                                            rejected: { label: 'Rechazado', color: 'text-red-700', bg: 'bg-red-100', icon: '❌' },
+                                        };
+
+                                        return (
+                                            <div className="bg-purple-50 p-6 rounded-2xl shadow-sm border border-purple-100 flex flex-col h-full overflow-hidden">
+                                                <div className="flex items-center gap-3 mb-4 flex-shrink-0">
+                                                    <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+                                                        <BrainCircuit className="w-6 h-6" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-bold text-gray-900">Validación de Calidad</h4>
+                                                        <p className="text-xs text-purple-600">
+                                                            {isMultiSectorReport
+                                                                ? `${resolvedAssignments.length}/${qvAssignments.length} sectores respondieron`
+                                                                : 'Revisión requerida para cierre'}
                                                         </p>
                                                     </div>
-                                                )}
+                                                </div>
 
-                                                {/* 3. Plan de Acción (Condicional) */}
-                                                {selectedReport.corrective_plan && (
-                                                    <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm relative overflow-hidden">
-                                                        <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
-                                                        <h5 className="text-xs font-bold text-green-700 uppercase mb-2 flex items-center gap-2">
-                                                            <CheckCircle className="w-3 h-3" />
-                                                            Plan de Acción
-                                                        </h5>
-                                                        <p className="text-sm text-gray-700 leading-relaxed mb-3">
-                                                            {selectedReport.corrective_plan}
-                                                        </p>
-                                                        {selectedReport.implementation_date && (
-                                                            <div className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-lg w-fit">
-                                                                <Clock className="w-3 h-3" />
-                                                                Implementación: {new Date(selectedReport.implementation_date).toLocaleDateString()}
+                                                {/* Multi-sector progress indicator */}
+                                                {isMultiSectorReport && !qvLoading && (
+                                                    <div className="mb-4 flex-shrink-0">
+                                                        <div className="flex justify-between items-center mb-1.5">
+                                                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Progreso de Sectores</span>
+                                                            <span className="text-[10px] font-bold text-purple-700">
+                                                                {resolvedAssignments.length}/{qvAssignments.length}
+                                                            </span>
+                                                        </div>
+                                                        <div className="w-full h-2 bg-white rounded-full overflow-hidden border border-gray-100">
+                                                            <div
+                                                                className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-500"
+                                                                style={{ width: `${qvAssignments.length > 0 ? Math.round((resolvedAssignments.length / qvAssignments.length) * 100) : 0}%` }}
+                                                            />
+                                                        </div>
+                                                        {!allSectorsComplete && (
+                                                            <div className="mt-2 p-2 bg-amber-50 rounded-lg border border-amber-100">
+                                                                <p className="text-[10px] text-amber-700 font-bold flex items-center gap-1">
+                                                                    <AlertTriangle className="w-3 h-3" />
+                                                                    {pendingAssignments.length} sector{pendingAssignments.length !== 1 ? 'es' : ''} aún no respondió
+                                                                </p>
                                                             </div>
                                                         )}
                                                     </div>
                                                 )}
 
-                                                {/* 4. Evidencia de Resolución */}
-                                                {selectedReport.resolution_evidence_urls && selectedReport.resolution_evidence_urls.length > 0 && (
-                                                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                                                        <h5 className="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
-                                                            <Camera className="w-3 h-3" />
-                                                            Evidencia Adjunta
-                                                        </h5>
-                                                        <div className="grid grid-cols-3 gap-2">
-                                                            {selectedReport.resolution_evidence_urls.map((url: string, i: number) => (
-                                                                <a
-                                                                    key={i}
-                                                                    href={url}
-                                                                    target="_blank"
-                                                                    className="aspect-square rounded-lg bg-gray-100 bg-cover bg-center border border-gray-200 hover:ring-2 ring-purple-500 transition-all cursor-zoom-in"
-                                                                    style={{ backgroundImage: `url(${url})` }}
-                                                                />
+                                                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 mb-6">
+                                                    {qvLoading ? (
+                                                        <div className="flex items-center justify-center p-6 text-gray-400">
+                                                            <Loader2 className="w-5 h-5 animate-spin mr-2" /> Cargando...
+                                                        </div>
+                                                    ) : isMultiSectorReport ? (
+                                                        /* ========== MULTI-SECTOR VIEW ========== */
+                                                        <div className="space-y-3">
+                                                            {qvAssignments.map((assignment) => {
+                                                                const config = statusConfig[assignment.status] || statusConfig.pending;
+                                                                const sectorLabel = SECTOR_OPTIONS.find(s => s.value === assignment.sector)?.label || assignment.sector;
+                                                                const isExpanded = expandedSector === assignment.id;
+                                                                const hasResponse = assignment.status === 'resolved' || assignment.status === 'quality_validation';
+
+                                                                return (
+                                                                    <div
+                                                                        key={assignment.id}
+                                                                        className={`bg-white rounded-xl border shadow-sm transition-all ${hasResponse ? 'border-green-200 hover:shadow-md' : 'border-gray-100 opacity-75'}`}
+                                                                    >
+                                                                        {/* Sector Header — clickable */}
+                                                                        <button
+                                                                            onClick={() => setExpandedSector(isExpanded ? null : assignment.id)}
+                                                                            className="w-full flex items-center justify-between p-4 text-left cursor-pointer"
+                                                                        >
+                                                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                                                <span className={`text-sm px-2.5 py-1 rounded-lg ${config.bg} ${config.color} font-bold shrink-0`}>
+                                                                                    {config.icon}
+                                                                                </span>
+                                                                                <div className="min-w-0">
+                                                                                    <p className="text-sm font-bold text-gray-800 truncate">{sectorLabel}</p>
+                                                                                    <p className="text-[10px] text-gray-400 font-medium">
+                                                                                        {assignment.assigned_phone || 'Sin teléfono'}
+                                                                                        {assignment.resolved_at && ` · ${new Date(assignment.resolved_at).toLocaleString('es-AR')}`}
+                                                                                    </p>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2 shrink-0">
+                                                                                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${config.bg} ${config.color}`}>
+                                                                                    {config.label}
+                                                                                </span>
+                                                                                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                                                            </div>
+                                                                        </button>
+
+                                                                        {/* Expanded Content */}
+                                                                        {isExpanded && hasResponse && (
+                                                                            <div className="px-4 pb-4 space-y-3 border-t border-gray-50 pt-3 animate-in fade-in duration-200">
+                                                                                {/* Acción Inmediata */}
+                                                                                {assignment.immediate_action && (
+                                                                                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                                                                        <h6 className="text-[10px] font-bold text-blue-600 uppercase mb-1 flex items-center gap-1">
+                                                                                            <span className="w-1 h-1 rounded-full bg-blue-500"></span>
+                                                                                            Acción Inmediata
+                                                                                        </h6>
+                                                                                        <p className="text-xs text-gray-700 leading-relaxed">{assignment.immediate_action}</p>
+                                                                                    </div>
+                                                                                )}
+
+                                                                                {/* Causa Raíz */}
+                                                                                {assignment.root_cause && (
+                                                                                    <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
+                                                                                        <h6 className="text-[10px] font-bold text-amber-700 uppercase mb-1 flex items-center gap-1">
+                                                                                            <BrainCircuit className="w-3 h-3" />
+                                                                                            Causa Raíz
+                                                                                        </h6>
+                                                                                        <p className="text-xs text-gray-700 leading-relaxed">{assignment.root_cause}</p>
+                                                                                    </div>
+                                                                                )}
+
+                                                                                {/* Plan de Acción */}
+                                                                                {assignment.corrective_plan && (
+                                                                                    <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                                                                                        <h6 className="text-[10px] font-bold text-green-700 uppercase mb-1 flex items-center gap-1">
+                                                                                            <CheckCircle className="w-3 h-3" />
+                                                                                            Plan de Acción
+                                                                                        </h6>
+                                                                                        <p className="text-xs text-gray-700 leading-relaxed">{assignment.corrective_plan}</p>
+                                                                                        {assignment.implementation_date && (
+                                                                                            <div className="flex items-center gap-1 text-[10px] font-bold text-green-600 mt-2">
+                                                                                                <Clock className="w-3 h-3" />
+                                                                                                Implementación: {new Date(assignment.implementation_date).toLocaleDateString()}
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                )}
+
+                                                                                {/* Evidencia */}
+                                                                                {assignment.resolution_evidence_urls && assignment.resolution_evidence_urls.length > 0 && (
+                                                                                    <div>
+                                                                                        <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-2 flex items-center gap-1">
+                                                                                            <Camera className="w-3 h-3" />
+                                                                                            Evidencia ({assignment.resolution_evidence_urls.length})
+                                                                                        </h6>
+                                                                                        <div className="flex gap-2 overflow-x-auto pb-1">
+                                                                                            {assignment.resolution_evidence_urls.map((url: string, i: number) => (
+                                                                                                <a
+                                                                                                    key={i}
+                                                                                                    href={url}
+                                                                                                    target="_blank"
+                                                                                                    className="w-14 h-14 rounded-lg bg-gray-100 bg-cover bg-center border border-gray-200 flex-shrink-0 hover:ring-2 ring-purple-500 transition-all cursor-zoom-in"
+                                                                                                    style={{ backgroundImage: `url(${url})` }}
+                                                                                                />
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+
+                                                                                {/* Notas adicionales */}
+                                                                                {assignment.resolution_notes && (
+                                                                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                                                        <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-1">Notas</h6>
+                                                                                        <p className="text-xs text-gray-600">{assignment.resolution_notes}</p>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+
+                                                                        {/* Expanded: Rejected/Partial */}
+                                                                        {isExpanded && assignment.status === 'rejected' && assignment.notes && (
+                                                                            <div className="px-4 pb-4 border-t border-gray-50 pt-3">
+                                                                                <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+                                                                                    <h6 className="text-[10px] font-bold text-red-700 uppercase mb-1">Motivo del Rechazo</h6>
+                                                                                    <p className="text-xs text-red-600">{assignment.notes}</p>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+
+                                                                        {isExpanded && assignment.status === 'partial' && assignment.notes && (
+                                                                            <div className="px-4 pb-4 border-t border-gray-50 pt-3">
+                                                                                <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
+                                                                                    <h6 className="text-[10px] font-bold text-orange-700 uppercase mb-1">Nota (Parcial)</h6>
+                                                                                    <p className="text-xs text-orange-600">{assignment.notes}</p>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+
+                                                                        {isExpanded && assignment.status === 'pending' && (
+                                                                            <div className="px-4 pb-4 border-t border-gray-50 pt-3">
+                                                                                <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-center">
+                                                                                    <p className="text-xs text-yellow-700 font-medium">⏳ Este sector aún no ha enviado su respuesta</p>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    ) : (
+                                                        /* ========== SINGLE-SECTOR VIEW (original) ========== */
+                                                        <>
+                                                            {/* 1. Acción Inmediata */}
+                                                            <div className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm">
+                                                                <h5 className="text-xs font-bold text-blue-600 uppercase mb-2 flex items-center gap-2">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                                                    Acción Inmediata
+                                                                </h5>
+                                                                <p className="text-sm text-gray-700 leading-relaxed">
+                                                                    {selectedReport.resolution_notes || <span className="text-gray-400 italic">Sin datos registrados.</span>}
+                                                                </p>
+                                                            </div>
+
+                                                            {/* 2. Causa Raíz */}
+                                                            {selectedReport.root_cause && (
+                                                                <div className="bg-white p-4 rounded-xl border border-amber-100 shadow-sm relative overflow-hidden">
+                                                                    <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>
+                                                                    <h5 className="text-xs font-bold text-amber-700 uppercase mb-2 flex items-center gap-2">
+                                                                        <BrainCircuit className="w-3 h-3" />
+                                                                        Causa Raíz Identificada
+                                                                    </h5>
+                                                                    <p className="text-sm text-gray-700 leading-relaxed">
+                                                                        {selectedReport.root_cause}
+                                                                    </p>
+                                                                </div>
+                                                            )}
+
+                                                            {/* 3. Plan de Acción */}
+                                                            {selectedReport.corrective_plan && (
+                                                                <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm relative overflow-hidden">
+                                                                    <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
+                                                                    <h5 className="text-xs font-bold text-green-700 uppercase mb-2 flex items-center gap-2">
+                                                                        <CheckCircle className="w-3 h-3" />
+                                                                        Plan de Acción
+                                                                    </h5>
+                                                                    <p className="text-sm text-gray-700 leading-relaxed mb-3">
+                                                                        {selectedReport.corrective_plan}
+                                                                    </p>
+                                                                    {selectedReport.implementation_date && (
+                                                                        <div className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-lg w-fit">
+                                                                            <Clock className="w-3 h-3" />
+                                                                            Implementación: {new Date(selectedReport.implementation_date).toLocaleDateString()}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            {/* 4. Evidencia */}
+                                                            {selectedReport.resolution_evidence_urls && selectedReport.resolution_evidence_urls.length > 0 && (
+                                                                <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                                                    <h5 className="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
+                                                                        <Camera className="w-3 h-3" />
+                                                                        Evidencia Adjunta
+                                                                    </h5>
+                                                                    <div className="grid grid-cols-3 gap-2">
+                                                                        {selectedReport.resolution_evidence_urls.map((url: string, i: number) => (
+                                                                            <a
+                                                                                key={i}
+                                                                                href={url}
+                                                                                target="_blank"
+                                                                                className="aspect-square rounded-lg bg-gray-100 bg-cover bg-center border border-gray-200 hover:ring-2 ring-purple-500 transition-all cursor-zoom-in"
+                                                                                style={{ backgroundImage: `url(${url})` }}
+                                                                            />
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Info del Responsable */}
+                                                            {selectedReport.assigned_to && (
+                                                                <div className="text-right">
+                                                                    <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
+                                                                        Responsable: {selectedReport.assigned_to}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </div>
+
+                                                {/* RENDERIZADO DE HISTORIAL DE RECHAZOS (SOLUCIONES INSUFICIENTES) */}
+                                                {selectedReport.resolution_history && selectedReport.resolution_history.length > 0 && (
+                                                    <div className="bg-red-50 rounded-2xl p-6 border border-red-100 mt-6">
+                                                        <h3 className="text-sm font-bold text-red-800 flex items-center gap-2 mb-4">
+                                                            <AlertTriangle className="w-4 h-4" />
+                                                            Historial de Soluciones Insuficientes
+                                                        </h3>
+                                                        <div className="space-y-4">
+                                                            {selectedReport.resolution_history.map((entry: any, index: number) => (
+                                                                <div key={index} className="bg-white rounded-xl p-4 border border-red-100 shadow-sm relative overflow-hidden">
+                                                                    <div className="absolute top-0 left-0 w-1 h-full bg-red-200"></div>
+
+                                                                    <div className="flex justify-between items-start mb-3">
+                                                                        <div>
+                                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                                                                Rechazado el {new Date(entry.rejected_at).toLocaleString()}
+                                                                            </span>
+                                                                            <p className="text-xs font-bold text-red-600 mt-1">
+                                                                                Motivo: "{entry.reject_reason}"
+                                                                            </p>
+                                                                        </div>
+                                                                        <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-bold rounded-full">
+                                                                            Intento #{index + 1}
+                                                                        </span>
+                                                                    </div>
+
+                                                                    <div className="space-y-3 text-xs text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                                        <div>
+                                                                            <span className="font-bold text-gray-700 block mb-0.5">Acción Inmediata Propuesta:</span>
+                                                                            {entry.previous_data.immediate_action || '-'}
+                                                                        </div>
+                                                                        {entry.previous_data.root_cause && (
+                                                                            <div>
+                                                                                <span className="font-bold text-gray-700 block mb-0.5">Causa Raíz (RCA):</span>
+                                                                                {entry.previous_data.root_cause}
+                                                                            </div>
+                                                                        )}
+                                                                        <div>
+                                                                            <span className="font-bold text-gray-700 block mb-0.5">Plan de Acción:</span>
+                                                                            {entry.previous_data.corrective_plan || '-'}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
                                                             ))}
                                                         </div>
                                                     </div>
                                                 )}
 
-                                                {/* Info del Responsable */}
-                                                {selectedReport.assigned_to && (
-                                                    <div className="text-right">
-                                                        <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
-                                                            Responsable: {selectedReport.assigned_to}
-                                                        </span>
+                                                {isAdmin && (
+                                                    <div className="flex gap-3 flex-shrink-0 pt-2 border-t border-purple-100">
+                                                        <button
+                                                            onClick={() => setShowQualityReturnModal(true)}
+                                                            className="flex-1 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold text-sm hover:bg-red-50 transition-colors"
+                                                        >
+                                                            Devolver (Rechazo)
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setShowQualityApproveModal(true)}
+                                                            className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 shadow-lg shadow-purple-500/20"
+                                                        >
+                                                            Aprobar y Cerrar
+                                                        </button>
                                                     </div>
                                                 )}
                                             </div>
-
-                                            {/* RENDERIZADO DE HISTORIAL DE RECHAZOS (SOLUCIONES INSUFICIENTES) */}
-                                            {selectedReport.resolution_history && selectedReport.resolution_history.length > 0 && (
-                                                <div className="bg-red-50 rounded-2xl p-6 border border-red-100 mt-6">
-                                                    <h3 className="text-sm font-bold text-red-800 flex items-center gap-2 mb-4">
-                                                        <AlertTriangle className="w-4 h-4" />
-                                                        Historial de Soluciones Insuficientes
-                                                    </h3>
-                                                    <div className="space-y-4">
-                                                        {selectedReport.resolution_history.map((entry: any, index: number) => (
-                                                            <div key={index} className="bg-white rounded-xl p-4 border border-red-100 shadow-sm relative overflow-hidden">
-                                                                <div className="absolute top-0 left-0 w-1 h-full bg-red-200"></div>
-
-                                                                <div className="flex justify-between items-start mb-3">
-                                                                    <div>
-                                                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                                                            Rechazado el {new Date(entry.rejected_at).toLocaleString()}
-                                                                        </span>
-                                                                        <p className="text-xs font-bold text-red-600 mt-1">
-                                                                            Motivo: "{entry.reject_reason}"
-                                                                        </p>
-                                                                    </div>
-                                                                    <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-bold rounded-full">
-                                                                        Intento #{index + 1}
-                                                                    </span>
-                                                                </div>
-
-                                                                <div className="space-y-3 text-xs text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                                                    <div>
-                                                                        <span className="font-bold text-gray-700 block mb-0.5">Acción Inmediata Propuesta:</span>
-                                                                        {entry.previous_data.immediate_action || '-'}
-                                                                    </div>
-                                                                    {entry.previous_data.root_cause && (
-                                                                        <div>
-                                                                            <span className="font-bold text-gray-700 block mb-0.5">Causa Raíz (RCA):</span>
-                                                                            {entry.previous_data.root_cause}
-                                                                        </div>
-                                                                    )}
-                                                                    <div>
-                                                                        <span className="font-bold text-gray-700 block mb-0.5">Plan de Acción:</span>
-                                                                        {entry.previous_data.corrective_plan || '-'}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {isAdmin && (
-                                                <div className="flex gap-3 flex-shrink-0 pt-2 border-t border-purple-100">
-                                                    <button
-                                                        onClick={() => setShowQualityReturnModal(true)}
-                                                        className="flex-1 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold text-sm hover:bg-red-50 transition-colors"
-                                                    >
-                                                        Devolver (Rechazo)
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setShowQualityApproveModal(true)}
-                                                        className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 shadow-lg shadow-purple-500/20"
-                                                    >
-                                                        Aprobar y Cerrar
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : selectedReport.status === 'assignment_rejected' ? (
+                                        );
+                                    })() : selectedReport.status === 'assignment_rejected' ? (
                                         // VISTA RECHAZO DEL RESPONSABLE
                                         <div className="space-y-4">
                                             <div className="bg-red-50 border border-red-200 rounded-2xl p-6 relative overflow-hidden">
