@@ -22,7 +22,8 @@ import {
     Phone,
     MessageSquare,
     Save,
-    ChevronDown
+    ChevronDown,
+    Trash2
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { CLASSIFICATION_CATEGORIES } from '../constants/classification_categories';
@@ -836,6 +837,8 @@ export const Dashboard = () => {
     const [showQualityReturnModal, setShowQualityReturnModal] = useState(false);
     const [showQualityApproveModal, setShowQualityApproveModal] = useState(false);
     const [isProcessingQuality, setIsProcessingQuality] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Observations state
     const [observationText, setObservationText] = useState('');
@@ -1931,7 +1934,18 @@ export const Dashboard = () => {
                         <div className="w-1/2 bg-gray-50 border-l border-gray-200 p-8 flex flex-col">
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="text-lg font-bold text-gray-800">{isAdmin ? 'Centro de Gestión' : 'Detalle del Caso'}</h3>
-                                <button onClick={() => setSelectedReport(null)} className="p-2 hover:bg-gray-200 rounded-full"><X className="w-5 h-5 text-gray-500" /></button>
+                                <div className="flex items-center gap-1">
+                                    {isAdmin && (
+                                        <button
+                                            onClick={() => setShowDeleteModal(true)}
+                                            className="p-2 hover:bg-red-100 rounded-full group transition-colors"
+                                            title="Eliminar reporte"
+                                        >
+                                            <Trash2 className="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors" />
+                                        </button>
+                                    )}
+                                    <button onClick={() => setSelectedReport(null)} className="p-2 hover:bg-gray-200 rounded-full"><X className="w-5 h-5 text-gray-500" /></button>
+                                </div>
                             </div>
 
                             <div className="flex-1 overflow-y-auto pr-2">
@@ -2788,6 +2802,95 @@ export const Dashboard = () => {
                 title={feedbackModal.title}
                 message={feedbackModal.message}
             />
+
+            {/* Delete Confirmation Modal — Admin Only */}
+            {showDeleteModal && selectedReport && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full animate-in zoom-in-95 duration-300">
+                        <div className="p-6 border-b border-gray-100 flex items-center gap-3">
+                            <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center">
+                                <Trash2 className="w-6 h-6 text-red-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-800">Eliminar Reporte</h3>
+                                <p className="text-xs text-gray-500">Esta acción no se puede deshacer</p>
+                            </div>
+                        </div>
+                        <div className="p-6 space-y-3">
+                            <p className="text-sm text-gray-600">
+                                ¿Estás seguro que deseas eliminar permanentemente el reporte{' '}
+                                <span className="font-bold text-sanatorio-primary">{selectedReport.tracking_id}</span>?
+                            </p>
+                            <div className="bg-red-50 rounded-xl p-3 border border-red-100">
+                                <p className="text-xs text-red-700">
+                                    <span className="font-bold">⚠️ Advertencia:</span> Se eliminarán también todas las asignaciones de sector, respuestas, evidencias y notas asociadas a este caso.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="p-6 border-t border-gray-100 flex gap-3">
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                className="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition-colors text-sm"
+                                disabled={isDeleting}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    setIsDeleting(true);
+                                    try {
+                                        // First delete sector_assignments (if any)
+                                        await supabase
+                                            .from('sector_assignments')
+                                            .delete()
+                                            .eq('report_id', selectedReport.id);
+
+                                        // Then delete the report
+                                        const { error } = await supabase
+                                            .from('reports')
+                                            .delete()
+                                            .eq('id', selectedReport.id);
+
+                                        if (error) throw error;
+
+                                        setShowDeleteModal(false);
+                                        setSelectedReport(null);
+                                        // Refresh the list
+                                        setReports(prev => prev.filter(r => r.id !== selectedReport.id));
+                                        setFeedbackModal({
+                                            isOpen: true,
+                                            type: 'success',
+                                            title: 'Reporte Eliminado',
+                                            message: `El reporte ${selectedReport.tracking_id} fue eliminado permanentemente.`
+                                        });
+                                    } catch (err: any) {
+                                        console.error('Error deleting report:', err);
+                                        setFeedbackModal({
+                                            isOpen: true,
+                                            type: 'error',
+                                            title: 'Error',
+                                            message: 'No se pudo eliminar el reporte: ' + err.message
+                                        });
+                                    } finally {
+                                        setIsDeleting(false);
+                                    }
+                                }}
+                                className="flex-1 px-4 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <>
+                                        <Trash2 className="w-4 h-4" />
+                                        Eliminar Permanentemente
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

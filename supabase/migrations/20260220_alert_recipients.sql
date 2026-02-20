@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS alert_recipients (
 CREATE UNIQUE INDEX IF NOT EXISTS alert_recipients_phone_idx ON alert_recipients (phone_number);
 
 -- Enable RLS
-ALTER TABLE alert_recipients ENABLE ROW LEVEL ENFORCEMENT;
+ALTER TABLE alert_recipients ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies: Only service_role (Edge Functions) can read, only admin via authenticated can manage
 -- Allow all authenticated users to read (needed for admin UI)
