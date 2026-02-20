@@ -97,7 +97,7 @@ export const MetricsFilters = ({ filters, onChange, allowedSectors, canViewAll, 
     };
 
     return (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 animate-in fade-in duration-300">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 animate-in fade-in duration-300 relative z-40">
             <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3">
                 {/* Label */}
                 <div className="flex items-center gap-2 shrink-0">
@@ -184,8 +184,8 @@ export const MetricsFilters = ({ filters, onChange, allowedSectors, canViewAll, 
                                                         }`}
                                                 >
                                                     <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${isSelected
-                                                            ? 'bg-sanatorio-primary border-sanatorio-primary'
-                                                            : 'border-gray-300 bg-white'
+                                                        ? 'bg-sanatorio-primary border-sanatorio-primary'
+                                                        : 'border-gray-300 bg-white'
                                                         }`}>
                                                         {isSelected && <Check className="w-3 h-3 text-white" />}
                                                     </div>
