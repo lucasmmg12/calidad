@@ -21,6 +21,21 @@
       radial-gradient(at 0% 0%, rgba(0, 84, 139, 0.03) 0px, transparent 50%),
       radial-gradient(at 100% 100%, rgba(0, 169, 157, 0.03) 0px, transparent 50%);
     min-height: 100vh;
+    position: relative;
+  }
+
+  /* Subtle institutional wallpaper — sits behind all content */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image: url('/SANARG2021_fondo de pantalla.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.04;
+    pointer-events: none;
   }
 
   h1,
@@ -68,34 +83,22 @@
 @keyframes enter {
   from {
     opacity: var(--tw-enter-opacity, 1);
-    transform: translate3d(
-        var(--tw-enter-translate-x, 0),
+    transform: translate3d(var(--tw-enter-translate-x, 0),
         var(--tw-enter-translate-y, 0),
-        0
-      )
-      scale3d(
+        0) scale3d(var(--tw-enter-scale, 1),
         var(--tw-enter-scale, 1),
-        var(--tw-enter-scale, 1),
-        var(--tw-enter-scale, 1)
-      )
-      rotate(var(--tw-enter-rotate, 0));
+        var(--tw-enter-scale, 1)) rotate(var(--tw-enter-rotate, 0));
   }
 }
 
 @keyframes exit {
   to {
     opacity: var(--tw-exit-opacity, 1);
-    transform: translate3d(
-        var(--tw-exit-translate-x, 0),
+    transform: translate3d(var(--tw-exit-translate-x, 0),
         var(--tw-exit-translate-y, 0),
-        0
-      )
-      scale3d(
+        0) scale3d(var(--tw-exit-scale, 1),
         var(--tw-exit-scale, 1),
-        var(--tw-exit-scale, 1),
-        var(--tw-exit-scale, 1)
-      )
-      rotate(var(--tw-exit-rotate, 0));
+        var(--tw-exit-scale, 1)) rotate(var(--tw-exit-rotate, 0));
   }
 }
 
@@ -120,39 +123,101 @@
 }
 
 /* Fade */
-.fade-in { --tw-enter-opacity: 0; }
-.fade-out { --tw-exit-opacity: 0; }
+.fade-in {
+  --tw-enter-opacity: 0;
+}
+
+.fade-out {
+  --tw-exit-opacity: 0;
+}
 
 /* Zoom / Scale */
-.zoom-in-95 { --tw-enter-scale: 0.95; }
-.zoom-in-90 { --tw-enter-scale: 0.90; }
-.zoom-in-50 { --tw-enter-scale: 0.50; }
-.zoom-out-95 { --tw-exit-scale: 0.95; }
+.zoom-in-95 {
+  --tw-enter-scale: 0.95;
+}
+
+.zoom-in-90 {
+  --tw-enter-scale: 0.90;
+}
+
+.zoom-in-50 {
+  --tw-enter-scale: 0.50;
+}
+
+.zoom-out-95 {
+  --tw-exit-scale: 0.95;
+}
 
 /* Slide from directions */
-.slide-in-from-top-1    { --tw-enter-translate-y: -0.25rem; }
-.slide-in-from-top-2    { --tw-enter-translate-y: -0.5rem; }
-.slide-in-from-top-4    { --tw-enter-translate-y: -1rem; }
-.slide-in-from-bottom-4 { --tw-enter-translate-y: 1rem; }
-.slide-in-from-bottom-8 { --tw-enter-translate-y: 2rem; }
-.slide-in-from-left-4   { --tw-enter-translate-x: -1rem; }
-.slide-in-from-right-4  { --tw-enter-translate-x: 1rem; }
-.slide-in-from-right-8  { --tw-enter-translate-x: 2rem; }
+.slide-in-from-top-1 {
+  --tw-enter-translate-y: -0.25rem;
+}
+
+.slide-in-from-top-2 {
+  --tw-enter-translate-y: -0.5rem;
+}
+
+.slide-in-from-top-4 {
+  --tw-enter-translate-y: -1rem;
+}
+
+.slide-in-from-bottom-4 {
+  --tw-enter-translate-y: 1rem;
+}
+
+.slide-in-from-bottom-8 {
+  --tw-enter-translate-y: 2rem;
+}
+
+.slide-in-from-left-4 {
+  --tw-enter-translate-x: -1rem;
+}
+
+.slide-in-from-right-4 {
+  --tw-enter-translate-x: 1rem;
+}
+
+.slide-in-from-right-8 {
+  --tw-enter-translate-x: 2rem;
+}
 
 /* Duration overrides */
-.duration-200 { animation-duration: 200ms; }
-.duration-300 { animation-duration: 300ms; }
-.duration-500 { animation-duration: 500ms; }
-.duration-700 { animation-duration: 700ms; }
+.duration-200 {
+  animation-duration: 200ms;
+}
+
+.duration-300 {
+  animation-duration: 300ms;
+}
+
+.duration-500 {
+  animation-duration: 500ms;
+}
+
+.duration-700 {
+  animation-duration: 700ms;
+}
 
 /* Delay overrides */
-.delay-100 { animation-delay: 100ms; }
-.delay-200 { animation-delay: 200ms; }
-.delay-300 { animation-delay: 300ms; }
-.delay-500 { animation-delay: 500ms; }
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+.delay-500 {
+  animation-delay: 500ms;
+}
 
 /* ─── Reduced Motion ─── */
 @media (prefers-reduced-motion: reduce) {
+
   .animate-in,
   .animate-out {
     animation-duration: 0.01ms !important;

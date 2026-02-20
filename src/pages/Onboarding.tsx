@@ -69,7 +69,7 @@ const Onboarding = () => {
                     role: selectedRole,
                     display_name: displayName.trim(),
                     phone_number: phoneNumber.replace(/\D/g, ''),
-                    assigned_sectors: selectedRole === 'responsable' ? selectedSectors : [],
+                    assigned_sectors: selectedSectors,
                     onboarding_completed: true,
                     account_status: 'pending',
                     updated_at: new Date().toISOString(),

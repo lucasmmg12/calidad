@@ -693,30 +693,36 @@ export const UserManagement = () => {
                                 </select>
                             </div>
 
-                            {editingUser.role === 'responsable' && (
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">Sectores Asignados</label>
-                                    <div className="max-h-60 overflow-y-auto border border-slate-200 rounded-lg p-2 space-y-1">
-                                        {SECTOR_OPTIONS.map(sector => (
-                                            <label key={sector.value} className="flex items-center p-2 hover:bg-slate-50 rounded cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={editingUser.assigned_sectors?.includes(sector.value)}
-                                                    onChange={(e) => {
-                                                        const current = editingUser.assigned_sectors || [];
-                                                        const updated = e.target.checked
-                                                            ? [...current, sector.value]
-                                                            : current.filter(s => s !== sector.value);
-                                                        setEditingUser({ ...editingUser, assigned_sectors: updated });
-                                                    }}
-                                                    className="w-4 h-4 text-sanatorio-primary rounded border-gray-300 focus:ring-sanatorio-primary"
-                                                />
-                                                <span className="ml-3 text-sm text-slate-700">{sector.label}</span>
-                                            </label>
-                                        ))}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">Sectores Asignados</label>
+                                {(editingUser.role === 'admin' || editingUser.role === 'directivo') && (
+                                    <div className="mb-2 p-2.5 bg-blue-50 border border-blue-100 rounded-lg">
+                                        <p className="text-[11px] text-blue-700 font-medium">
+                                            💡 Los {editingUser.role === 'admin' ? 'administradores' : 'directivos'} mantienen sus permisos actuales.
+                                            Si se les asignan sectores, <strong>también podrán ser seleccionados como responsables</strong> para derivaciones de esos sectores.
+                                        </p>
                                     </div>
+                                )}
+                                <div className="max-h-60 overflow-y-auto border border-slate-200 rounded-lg p-2 space-y-1">
+                                    {SECTOR_OPTIONS.map(sector => (
+                                        <label key={sector.value} className="flex items-center p-2 hover:bg-slate-50 rounded cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={editingUser.assigned_sectors?.includes(sector.value)}
+                                                onChange={(e) => {
+                                                    const current = editingUser.assigned_sectors || [];
+                                                    const updated = e.target.checked
+                                                        ? [...current, sector.value]
+                                                        : current.filter(s => s !== sector.value);
+                                                    setEditingUser({ ...editingUser, assigned_sectors: updated });
+                                                }}
+                                                className="w-4 h-4 text-sanatorio-primary rounded border-gray-300 focus:ring-sanatorio-primary"
+                                            />
+                                            <span className="ml-3 text-sm text-slate-700">{sector.label}</span>
+                                        </label>
+                                    ))}
                                 </div>
-                            )}
+                            </div>
 
                             <div className="flex gap-3 mt-6">
                                 <button

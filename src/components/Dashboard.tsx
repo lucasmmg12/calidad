@@ -1008,21 +1008,26 @@ export const Dashboard = () => {
         setIsProcessingQuality(false);
     };
 
-    // Fetch responsables for the hybrid selector (only for admins)
+    // Fetch all users with assigned sectors (responsables + admin/directivo with sectors)
     const fetchResponsables = useCallback(async () => {
         if (!isAdmin) return;
         setLoadingResponsables(true);
         try {
+            // Fetch ALL approved users who have at least one sector assigned
+            // This includes responsables AND admin/directivo with sectors
             const { data, error } = await supabase
                 .from('user_profiles')
                 .select('*')
-                .eq('role', 'responsable')
                 .order('display_name', { ascending: true });
 
             if (error) {
                 console.error('[Dashboard] Error fetching responsables:', error);
             } else {
-                setResponsables(data || []);
+                // Filter to only include users that have sectors assigned
+                const usersWithSectors = (data || []).filter(
+                    u => u.assigned_sectors && u.assigned_sectors.length > 0
+                );
+                setResponsables(usersWithSectors);
             }
         } catch (err) {
             console.error('[Dashboard] Unexpected error fetching responsables:', err);
