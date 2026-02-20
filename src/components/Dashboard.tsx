@@ -27,6 +27,7 @@ import { useMemo } from 'react';
 import { CLASSIFICATION_CATEGORIES } from '../constants/classification_categories';
 import { SECTOR_OPTIONS } from '../constants/sectors';
 import type { UserProfile } from '../contexts/AuthContext';
+import { generateId } from '../utils/compat';
 
 // Discard Confirmation Modal Component
 const DiscardConfirmationModal = ({
@@ -392,18 +393,18 @@ const ReferralModal = ({
 }) => {
     const [managementType, setManagementType] = useState<'simple' | 'desvio' | 'adverse'>('simple');
     const [rows, setRows] = useState<SectorAssignmentRow[]>([
-        { id: crypto.randomUUID(), sector: reportSector || '', selectedUserId: '', phone: '' }
+        { id: generateId(), sector: reportSector || '', selectedUserId: '', phone: '' }
     ]);
 
     useEffect(() => {
         if (isOpen) {
             setManagementType('simple');
-            setRows([{ id: crypto.randomUUID(), sector: reportSector || '', selectedUserId: '', phone: '' }]);
+            setRows([{ id: generateId(), sector: reportSector || '', selectedUserId: '', phone: '' }]);
         }
     }, [isOpen]);
 
     const addRow = () => {
-        setRows(prev => [...prev, { id: crypto.randomUUID(), sector: '', selectedUserId: '', phone: '' }]);
+        setRows(prev => [...prev, { id: generateId(), sector: '', selectedUserId: '', phone: '' }]);
     };
 
     const updateRow = (id: string, updated: SectorAssignmentRow) => {

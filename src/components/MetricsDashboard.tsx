@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '../utils/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -25,6 +25,7 @@ import { Chart, registerables } from 'chart.js';
 import { AdvancedAnalytics } from './AdvancedAnalytics';
 import { SlaAlertBanner } from './SlaAlerts';
 import { PdcaPanel } from './PdcaPanel';
+import { MetricsFilters, type MetricsFilterState } from './MetricsFilters';
 
 Chart.register(...registerables);
 
@@ -43,17 +44,65 @@ export const MetricsDashboard = () => {
     });
     const [isExporting, setIsExporting] = useState(false);
     const [rawReports, setRawReports] = useState<any[]>([]);
+    const [roleFilteredReports, setRoleFilteredReports] = useState<any[]>([]);
     const [expandedSector, setExpandedSector] = useState<string | null>(null);
     const [sectorFeedback, setSectorFeedback] = useState<Record<string, string>>({});
     const [loadingFeedback, setLoadingFeedback] = useState<string | null>(null);
+    const [filters, setFilters] = useState<MetricsFilterState>({ sector: '', month: 0, year: 0 });
 
     const { role, sectors, profile, session } = useAuth();
 
+    const canViewAll = role === 'admin' || role === 'directivo';
+
+    // ─── Apply user filters (sector, month, year) on top of role-filtered reports ───
+    const applyUserFilters = useCallback((reports: any[]) => {
+        let result = reports;
+
+        // Sector filter
+        if (filters.sector) {
+            result = result.filter(r => r.sector === filters.sector);
+        }
+
+        // Month filter (1-12)
+        if (filters.month !== 0) {
+            result = result.filter(r => {
+                const d = new Date(r.created_at);
+                return d.getMonth() + 1 === filters.month;
+            });
+        }
+
+        // Year filter
+        if (filters.year !== 0) {
+            result = result.filter(r => {
+                const d = new Date(r.created_at);
+                return d.getFullYear() === filters.year;
+            });
+        }
+
+        return result;
+    }, [filters]);
+
+    // ─── Collect all report dates for the year picker ───
+    const allReportDates = useMemo(() => {
+        return roleFilteredReports.map(r => r.created_at);
+    }, [roleFilteredReports]);
+
     useEffect(() => {
-        calculateMetrics();
+        fetchAndFilterByRole();
     }, [role, sectors]);
 
-    const calculateMetrics = async () => {
+    // Re-compute stats when user filters change
+    useEffect(() => {
+        if (roleFilteredReports.length > 0) {
+            computeStats(applyUserFilters(roleFilteredReports));
+        } else if (!loading) {
+            // No reports after role filter — reset stats
+            computeStats([]);
+        }
+    }, [filters, roleFilteredReports]);
+
+    // ─── Step 1: Fetch all reports and apply ROLE-BASED filter ───
+    const fetchAndFilterByRole = async () => {
         setLoading(true);
         const { data: reports, error } = await supabase
             .from('reports')
@@ -68,15 +117,23 @@ export const MetricsDashboard = () => {
         // --- Role Based Filtering ---
         // Admin & Directivo: View All
         // Responsable: View only assigned sectors
-        let filteredReports = reports;
+        let roleFiltered = reports;
 
         if (role === 'responsable') {
-            // Normalize sectors for comparison (just in case)
-            filteredReports = reports.filter(r =>
+            roleFiltered = reports.filter(r =>
                 r.sector && sectors.includes(r.sector)
             );
         }
 
+        setRoleFilteredReports(roleFiltered);
+
+        // Apply any active user-filters on top
+        const finalFiltered = applyUserFilters(roleFiltered);
+        computeStats(finalFiltered);
+    };
+
+    // ─── Step 2: Compute all statistics from the given reports ───
+    const computeStats = (filteredReports: any[]) => {
         setRawReports(filteredReports);
 
         const total = filteredReports.length;
@@ -99,29 +156,24 @@ export const MetricsDashboard = () => {
             ? (totalTimeMs / resolvedCountWithDates / (1000 * 60 * 60)).toFixed(1)
             : 0;
 
-        // By Sector — use filteredReports so responsable only sees their sectors
+        // By Sector
         const sectorMap: Record<string, number> = {};
         filteredReports.forEach(r => {
             const s = r.sector || 'Otros';
             sectorMap[s] = (sectorMap[s] || 0) + 1;
         });
         const bySector = Object.entries(sectorMap)
-            .map(([sector, count]) => ({ sector, count, percentage: (count / total) * 100 }))
+            .map(([sector, count]) => ({ sector, count, percentage: total > 0 ? (count / total) * 100 : 0 }))
             .sort((a, b) => b.count - a.count);
 
-        // By Urgency — use filteredReports
+        // By Urgency
         const byUrgency = {
             Verdes: filteredReports.filter(r => r.ai_urgency === 'Verde').length,
             Amarillos: filteredReports.filter(r => r.ai_urgency === 'Amarillo').length,
             Rojos: filteredReports.filter(r => r.ai_urgency === 'Rojo').length
         };
 
-        // By Status (Detailed) — use filteredReports
-        // Mapping:
-        // Resueltos -> resolved
-        // Pendientes -> pending, analyzed
-        // Esperando Solución -> pending_resolution, in_progress, quality_validation
-        // Cancelados -> cancelled
+        // By Status (Detailed)
         const byStatus = {
             resolved: filteredReports.filter(r => r.status === 'resolved').length,
             pending: filteredReports.filter(r => ['pending', 'analyzed'].includes(r.status)).length,
@@ -129,7 +181,7 @@ export const MetricsDashboard = () => {
             cancelled: filteredReports.filter(r => r.status === 'cancelled').length
         };
 
-        // By Classification (ai_category) — use filteredReports
+        // By Classification (ai_category)
         const classificationMap: Record<string, number> = {};
         filteredReports.forEach(r => {
             const cat = r.ai_category || 'Sin clasificar';
@@ -688,6 +740,23 @@ export const MetricsDashboard = () => {
                     )}
                 </button>
             </div>
+
+            {/* ─── Filter Bar ─── */}
+            <MetricsFilters
+                filters={filters}
+                onChange={setFilters}
+                allowedSectors={sectors}
+                canViewAll={canViewAll}
+                reportDates={allReportDates}
+            />
+
+            {/* Active filter summary */}
+            {(filters.sector || filters.month !== 0 || filters.year !== 0) && (
+                <div className="bg-sanatorio-primary/5 border border-sanatorio-primary/10 rounded-xl px-4 py-2.5 flex items-center gap-2">
+                    <span className="text-xs font-bold text-sanatorio-primary">📊 Mostrando {stats.total} reportes filtrados</span>
+                    <span className="text-xs text-gray-400">de {roleFilteredReports.length} totales en tu vista</span>
+                </div>
+            )}
 
             {/* KPI Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
