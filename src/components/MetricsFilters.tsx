@@ -200,45 +200,39 @@ export const MetricsFilters = ({ filters, onChange, allowedSectors, canViewAll, 
                     </div>
 
                     {/* ══════════ DATE RANGE: FROM ══════════ */}
-                    <div className="relative min-w-[150px]">
-                        <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                        <input
-                            type="date"
-                            id="filter-date-from"
-                            value={filters.dateFrom}
-                            onChange={(e) => onChange({ ...filters, dateFrom: e.target.value })}
-                            min={dateRange.min}
-                            max={filters.dateTo || dateRange.max}
-                            className={`w-full bg-gray-50 border rounded-xl pl-9 pr-3 py-2.5 text-xs font-medium text-gray-700 cursor-pointer hover:border-sanatorio-primary/40 focus:outline-none focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary/50 transition-all ${filters.dateFrom ? 'border-purple-300 bg-purple-50/50' : 'border-gray-200'
-                                }`}
-                            title="Fecha desde"
-                        />
-                        {!filters.dateFrom && (
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 pointer-events-none">
-                                Desde
-                            </span>
-                        )}
+                    <div className="flex items-center gap-1.5 min-w-[170px]">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider shrink-0">Desde</span>
+                        <div className="relative flex-1">
+                            <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                            <input
+                                type="date"
+                                id="filter-date-from"
+                                value={filters.dateFrom}
+                                onChange={(e) => onChange({ ...filters, dateFrom: e.target.value })}
+                                min={dateRange.min}
+                                max={filters.dateTo || dateRange.max}
+                                className={`w-full bg-gray-50 border rounded-xl pl-9 pr-3 py-2.5 text-xs font-medium text-gray-700 cursor-pointer hover:border-sanatorio-primary/40 focus:outline-none focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary/50 transition-all ${filters.dateFrom ? 'border-purple-300 bg-purple-50/50' : 'border-gray-200'}`}
+                                title="Fecha desde"
+                            />
+                        </div>
                     </div>
 
                     {/* ══════════ DATE RANGE: TO ══════════ */}
-                    <div className="relative min-w-[150px]">
-                        <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                        <input
-                            type="date"
-                            id="filter-date-to"
-                            value={filters.dateTo}
-                            onChange={(e) => onChange({ ...filters, dateTo: e.target.value })}
-                            min={filters.dateFrom || dateRange.min}
-                            max={dateRange.max}
-                            className={`w-full bg-gray-50 border rounded-xl pl-9 pr-3 py-2.5 text-xs font-medium text-gray-700 cursor-pointer hover:border-sanatorio-primary/40 focus:outline-none focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary/50 transition-all ${filters.dateTo ? 'border-purple-300 bg-purple-50/50' : 'border-gray-200'
-                                }`}
-                            title="Fecha hasta"
-                        />
-                        {!filters.dateTo && (
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 pointer-events-none">
-                                Hasta
-                            </span>
-                        )}
+                    <div className="flex items-center gap-1.5 min-w-[170px]">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider shrink-0">Hasta</span>
+                        <div className="relative flex-1">
+                            <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                            <input
+                                type="date"
+                                id="filter-date-to"
+                                value={filters.dateTo}
+                                onChange={(e) => onChange({ ...filters, dateTo: e.target.value })}
+                                min={filters.dateFrom || dateRange.min}
+                                max={dateRange.max}
+                                className={`w-full bg-gray-50 border rounded-xl pl-9 pr-3 py-2.5 text-xs font-medium text-gray-700 cursor-pointer hover:border-sanatorio-primary/40 focus:outline-none focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary/50 transition-all ${filters.dateTo ? 'border-purple-300 bg-purple-50/50' : 'border-gray-200'}`}
+                                title="Fecha hasta"
+                            />
+                        </div>
                     </div>
 
                     {/* Clear Filters */}
