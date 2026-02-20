@@ -47,6 +47,7 @@ export const MetricsDashboard = () => {
     const [rawReports, setRawReports] = useState<any[]>([]);
     const [roleFilteredReports, setRoleFilteredReports] = useState<any[]>([]);
     const [expandedSector, setExpandedSector] = useState<string | null>(null);
+    const [expandedClassification, setExpandedClassification] = useState<string | null>(null);
     const [sectorFeedback, setSectorFeedback] = useState<Record<string, string>>({});
     const [loadingFeedback, setLoadingFeedback] = useState<string | null>(null);
     const [filters, setFilters] = useState<MetricsFilterState>({ sectors: [], dateFrom: '', dateTo: '' });
@@ -1245,26 +1246,78 @@ export const MetricsDashboard = () => {
                             ];
                             const barColor = classificationColors[idx % classificationColors.length];
                             const isUnclassified = item.category === 'Sin clasificar';
+                            const isExpanded = expandedClassification === item.category;
+                            const associatedReports = rawReports.filter(r => (r.ai_category || 'Sin clasificar') === item.category);
 
                             return (
-                                <div key={item.category} className={`group rounded-xl p-3 transition-all hover:bg-slate-50 ${isUnclassified ? 'opacity-60' : ''}`}>
-                                    <div className="flex justify-between items-center mb-1.5">
-                                        <span className={`text-sm font-medium ${isUnclassified ? 'text-gray-400 italic' : 'text-gray-700'}`}>
-                                            {item.category}
-                                        </span>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs font-bold text-gray-500">{item.count}</span>
-                                            <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                                                {Math.round(item.percentage)}%
+                                <div key={item.category} className={`rounded-xl transition-all ${isUnclassified ? 'opacity-60' : ''}`}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setExpandedClassification(isExpanded ? null : item.category)}
+                                        className={`w-full group rounded-xl p-3 transition-all text-left cursor-pointer ${isExpanded ? 'bg-slate-50' : 'hover:bg-slate-50'}`}
+                                    >
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <span className={`text-sm font-medium flex items-center gap-1.5 ${isUnclassified ? 'text-gray-400 italic' : 'text-gray-700'}`}>
+                                                <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                                                {item.category}
                                             </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-bold text-gray-500">{item.count}</span>
+                                                <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                                    {Math.round(item.percentage)}%
+                                                </span>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                                        <div
-                                            className={`h-full rounded-full transition-all duration-700 ease-out ${barColor} group-hover:opacity-90`}
-                                            style={{ width: `${item.percentage}%` }}
-                                        ></div>
-                                    </div>
+                                        <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-700 ease-out ${barColor} group-hover:opacity-90`}
+                                                style={{ width: `${item.percentage}%` }}
+                                            ></div>
+                                        </div>
+                                    </button>
+
+                                    {/* Expanded: list of associated reports */}
+                                    {isExpanded && associatedReports.length > 0 && (
+                                        <div className="mt-1 ml-4 mr-1 mb-2 space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                                            {associatedReports.map((report: any) => {
+                                                const urgencyColor = report.ai_urgency === 'Rojo' ? 'bg-red-500' : report.ai_urgency === 'Amarillo' ? 'bg-amber-400' : 'bg-green-500';
+                                                const statusLabel: Record<string, string> = {
+                                                    pending: 'Pendiente', analyzed: 'Analizado', pending_resolution: 'En resolución',
+                                                    in_progress: 'En progreso', quality_validation: 'Validación', resolved: 'Resuelto',
+                                                    cancelled: 'Cancelado', multi_sector_pending: 'Multi-sector'
+                                                };
+                                                return (
+                                                    <div
+                                                        key={report.id}
+                                                        className="flex items-center gap-3 p-2.5 bg-white border border-gray-100 rounded-lg hover:shadow-sm transition-all group/item"
+                                                    >
+                                                        <div className={`w-2 h-2 rounded-full shrink-0 ${urgencyColor}`}></div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 mb-0.5">
+                                                                <span className="text-xs font-bold text-gray-700 font-mono">
+                                                                    {report.tracking_id || '—'}
+                                                                </span>
+                                                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-medium">
+                                                                    {statusLabel[report.status] || report.status}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-[11px] text-gray-500 truncate">
+                                                                {report.ai_summary || report.content?.substring(0, 80) || 'Sin descripción'}
+                                                            </p>
+                                                        </div>
+                                                        <div className="text-right shrink-0">
+                                                            <p className="text-[10px] text-gray-400 font-medium">
+                                                                {report.sector || '—'}
+                                                            </p>
+                                                            <p className="text-[10px] text-gray-300">
+                                                                {report.created_at ? new Date(report.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' }) : ''}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
