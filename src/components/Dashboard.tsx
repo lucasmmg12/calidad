@@ -1639,33 +1639,35 @@ export const Dashboard = () => {
                     </div>
 
                     {/* Date From */}
-                    <div className="relative min-w-[140px]">
-                        <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                        <input
-                            type="date"
-                            value={listDateFrom}
-                            onChange={(e) => setListDateFrom(e.target.value)}
-                            max={listDateTo || undefined}
-                            className={`w-full bg-gray-50 border rounded-xl pl-9 pr-3 py-2.5 text-xs font-medium transition-all outline-none focus:ring-1 focus:ring-sanatorio-primary/30 ${listDateFrom ? 'border-purple-300 bg-purple-50/50' : 'border-gray-200'
-                                }`}
-                            title="Fecha desde"
-                        />
-                        {!listDateFrom && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 pointer-events-none">Desde</span>}
+                    <div className="flex items-center gap-1.5 min-w-[170px]">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider shrink-0">Desde</span>
+                        <div className="relative flex-1">
+                            <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                            <input
+                                type="date"
+                                value={listDateFrom}
+                                onChange={(e) => setListDateFrom(e.target.value)}
+                                max={listDateTo || undefined}
+                                className={`w-full bg-gray-50 border rounded-xl pl-9 pr-3 py-2.5 text-xs font-medium transition-all outline-none focus:ring-1 focus:ring-sanatorio-primary/30 ${listDateFrom ? 'border-purple-300 bg-purple-50/50' : 'border-gray-200'}`}
+                                title="Fecha desde"
+                            />
+                        </div>
                     </div>
 
                     {/* Date To */}
-                    <div className="relative min-w-[140px]">
-                        <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                        <input
-                            type="date"
-                            value={listDateTo}
-                            onChange={(e) => setListDateTo(e.target.value)}
-                            min={listDateFrom || undefined}
-                            className={`w-full bg-gray-50 border rounded-xl pl-9 pr-3 py-2.5 text-xs font-medium transition-all outline-none focus:ring-1 focus:ring-sanatorio-primary/30 ${listDateTo ? 'border-purple-300 bg-purple-50/50' : 'border-gray-200'
-                                }`}
-                            title="Fecha hasta"
-                        />
-                        {!listDateTo && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 pointer-events-none">Hasta</span>}
+                    <div className="flex items-center gap-1.5 min-w-[170px]">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider shrink-0">Hasta</span>
+                        <div className="relative flex-1">
+                            <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                            <input
+                                type="date"
+                                value={listDateTo}
+                                onChange={(e) => setListDateTo(e.target.value)}
+                                min={listDateFrom || undefined}
+                                className={`w-full bg-gray-50 border rounded-xl pl-9 pr-3 py-2.5 text-xs font-medium transition-all outline-none focus:ring-1 focus:ring-sanatorio-primary/30 ${listDateTo ? 'border-purple-300 bg-purple-50/50' : 'border-gray-200'}`}
+                                title="Fecha hasta"
+                            />
+                        </div>
                     </div>
 
                     {/* Clear filters */}
