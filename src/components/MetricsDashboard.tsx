@@ -40,7 +40,8 @@ export const MetricsDashboard = () => {
         bySector: [] as { sector: string; count: number; percentage: number }[],
         byUrgency: { Verdes: 0, Amarillos: 0, Rojos: 0 },
         byStatus: { resolved: 0, pending: 0, waiting: 0, cancelled: 0 },
-        byClassification: [] as { category: string; count: number; percentage: number }[]
+        byClassification: [] as { category: string; count: number; percentage: number }[],
+        byAnonymity: { anonymous: 0, identified: 0 }
     });
     const [isExporting, setIsExporting] = useState(false);
     const [rawReports, setRawReports] = useState<any[]>([]);
@@ -48,34 +49,38 @@ export const MetricsDashboard = () => {
     const [expandedSector, setExpandedSector] = useState<string | null>(null);
     const [sectorFeedback, setSectorFeedback] = useState<Record<string, string>>({});
     const [loadingFeedback, setLoadingFeedback] = useState<string | null>(null);
-    const [filters, setFilters] = useState<MetricsFilterState>({ sector: '', month: 0, year: 0 });
+    const [filters, setFilters] = useState<MetricsFilterState>({ sectors: [], dateFrom: '', dateTo: '' });
 
     const { role, sectors, profile, session } = useAuth();
 
     const canViewAll = role === 'admin' || role === 'directivo';
 
-    // ─── Apply user filters (sector, month, year) on top of role-filtered reports ───
+    // ─── Apply user filters (sectors[], dateFrom, dateTo) on top of role-filtered reports ───
     const applyUserFilters = useCallback((reports: any[]) => {
         let result = reports;
 
-        // Sector filter
-        if (filters.sector) {
-            result = result.filter(r => r.sector === filters.sector);
+        // Multi-sector filter
+        if (filters.sectors.length > 0) {
+            result = result.filter(r => filters.sectors.includes(r.sector));
         }
 
-        // Month filter (1-12)
-        if (filters.month !== 0) {
+        // Date range: from
+        if (filters.dateFrom) {
+            const from = new Date(filters.dateFrom);
+            from.setHours(0, 0, 0, 0);
             result = result.filter(r => {
                 const d = new Date(r.created_at);
-                return d.getMonth() + 1 === filters.month;
+                return d >= from;
             });
         }
 
-        // Year filter
-        if (filters.year !== 0) {
+        // Date range: to
+        if (filters.dateTo) {
+            const to = new Date(filters.dateTo);
+            to.setHours(23, 59, 59, 999);
             result = result.filter(r => {
                 const d = new Date(r.created_at);
-                return d.getFullYear() === filters.year;
+                return d <= to;
             });
         }
 
@@ -191,6 +196,11 @@ export const MetricsDashboard = () => {
             .map(([category, count]) => ({ category, count, percentage: total > 0 ? (count / total) * 100 : 0 }))
             .sort((a, b) => b.count - a.count);
 
+        // By Anonymity
+        const anonymousCount = filteredReports.filter(r => r.is_anonymous === true).length;
+        const identifiedCount = total - anonymousCount;
+        const byAnonymity = { anonymous: anonymousCount, identified: identifiedCount };
+
         setStats({
             total,
             resolved: resolved.length,
@@ -200,7 +210,8 @@ export const MetricsDashboard = () => {
             bySector,
             byUrgency,
             byStatus,
-            byClassification
+            byClassification,
+            byAnonymity
         });
         setLoading(false);
     };
@@ -751,7 +762,7 @@ export const MetricsDashboard = () => {
             />
 
             {/* Active filter summary */}
-            {(filters.sector || filters.month !== 0 || filters.year !== 0) && (
+            {(filters.sectors.length > 0 || filters.dateFrom || filters.dateTo) && (
                 <div className="bg-sanatorio-primary/5 border border-sanatorio-primary/10 rounded-xl px-4 py-2.5 flex items-center gap-2">
                     <span className="text-xs font-bold text-sanatorio-primary">📊 Mostrando {stats.total} reportes filtrados</span>
                     <span className="text-xs text-gray-400">de {roleFilteredReports.length} totales en tu vista</span>
@@ -1262,6 +1273,116 @@ export const MetricsDashboard = () => {
                     <div className="text-center py-10 text-gray-400">
                         <Tag className="w-8 h-8 mx-auto mb-2 opacity-30" />
                         <p className="text-sm">No hay datos de clasificación disponibles.</p>
+                    </div>
+                )}
+            </div>
+
+            {/* ── Anónimos vs Identificados ── */}
+            <div className="bg-white p-8 rounded-3xl shadow-card border border-gray-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    Anónimos vs Identificados
+                </h3>
+                <p className="text-xs text-gray-400 mb-6">Proporción de reportes con identidad declarada vs anónimos.</p>
+
+                {stats.total > 0 ? (
+                    <div className="flex flex-col md:flex-row items-center gap-8">
+                        {/* Visual Donut */}
+                        <div className="relative w-40 h-40 shrink-0">
+                            <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                                {/* Background */}
+                                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#f3f4f6" strokeWidth="3" />
+                                {/* Identified arc */}
+                                <circle
+                                    cx="18" cy="18" r="15.9155"
+                                    fill="none"
+                                    stroke="#14b8a6"
+                                    strokeWidth="3"
+                                    strokeDasharray={`${stats.total > 0 ? (stats.byAnonymity.identified / stats.total) * 100 : 0} ${100 - (stats.total > 0 ? (stats.byAnonymity.identified / stats.total) * 100 : 0)}`}
+                                    strokeLinecap="round"
+                                    className="transition-all duration-700"
+                                />
+                                {/* Anonymous arc */}
+                                <circle
+                                    cx="18" cy="18" r="15.9155"
+                                    fill="none"
+                                    stroke="#a78bfa"
+                                    strokeWidth="3"
+                                    strokeDasharray={`${stats.total > 0 ? (stats.byAnonymity.anonymous / stats.total) * 100 : 0} ${100 - (stats.total > 0 ? (stats.byAnonymity.anonymous / stats.total) * 100 : 0)}`}
+                                    strokeDashoffset={`-${stats.total > 0 ? (stats.byAnonymity.identified / stats.total) * 100 : 0}`}
+                                    strokeLinecap="round"
+                                    className="transition-all duration-700"
+                                />
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <span className="text-3xl font-black text-gray-800">{stats.total}</span>
+                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total</span>
+                            </div>
+                        </div>
+
+                        {/* Legend & Bars */}
+                        <div className="flex-1 space-y-4 w-full">
+                            {/* Identified */}
+                            <div className="group">
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 rounded-full bg-teal-500"></div>
+                                        <span className="text-sm font-bold text-gray-700">👤 Identificados</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-lg font-black text-teal-600">{stats.byAnonymity.identified}</span>
+                                        <span className="text-xs text-gray-400">({stats.total > 0 ? Math.round((stats.byAnonymity.identified / stats.total) * 100) : 0}%)</span>
+                                    </div>
+                                </div>
+                                <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full bg-gradient-to-r from-teal-400 to-teal-500 transition-all duration-700 ease-out"
+                                        style={{ width: `${stats.total > 0 ? (stats.byAnonymity.identified / stats.total) * 100 : 0}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+
+                            {/* Anonymous */}
+                            <div className="group">
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 rounded-full bg-violet-400"></div>
+                                        <span className="text-sm font-bold text-gray-700">🕶️ Anónimos</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-lg font-black text-violet-600">{stats.byAnonymity.anonymous}</span>
+                                        <span className="text-xs text-gray-400">({stats.total > 0 ? Math.round((stats.byAnonymity.anonymous / stats.total) * 100) : 0}%)</span>
+                                    </div>
+                                </div>
+                                <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full bg-gradient-to-r from-violet-300 to-violet-400 transition-all duration-700 ease-out"
+                                        style={{ width: `${stats.total > 0 ? (stats.byAnonymity.anonymous / stats.total) * 100 : 0}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+
+                            {/* Insight */}
+                            <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                <p className="text-xs text-gray-500">
+                                    💡 {stats.byAnonymity.anonymous > stats.byAnonymity.identified
+                                        ? 'La mayoría de los reportes son anónimos. Esto puede indicar una cultura donde los reportantes prefieren no identificarse.'
+                                        : stats.byAnonymity.anonymous === 0
+                                            ? 'Todos los reportes están identificados. Excelente nivel de transparencia.'
+                                            : `El ${Math.round((stats.byAnonymity.anonymous / stats.total) * 100)}% de los reportes son anónimos. Un balance saludable entre confidencialidad y transparencia.`
+                                    }
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="text-center py-10 text-gray-400">
+                        <svg className="w-8 h-8 mx-auto mb-2 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <p className="text-sm">No hay datos disponibles.</p>
                     </div>
                 )}
             </div>
