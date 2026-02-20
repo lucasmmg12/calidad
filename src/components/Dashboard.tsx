@@ -1,5 +1,6 @@
 ﻿
-import { useEffect, useState, useCallback } from 'react';
+
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../utils/supabase';
 import {
     LayoutDashboard,
@@ -23,13 +24,23 @@ import {
     MessageSquare,
     Save,
     ChevronDown,
-    Trash2
+    Trash2,
+    Download,
+    FileSpreadsheet,
+    CalendarDays,
+    Building2,
+    Filter,
+    Search,
+    Check
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { CLASSIFICATION_CATEGORIES } from '../constants/classification_categories';
 import { SECTOR_OPTIONS } from '../constants/sectors';
 import type { UserProfile } from '../contexts/AuthContext';
 import { generateId } from '../utils/compat';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 // Discard Confirmation Modal Component
 const DiscardConfirmationModal = ({
@@ -1314,6 +1325,23 @@ export const Dashboard = () => {
     // FILTROS
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation' | 'discarded' | 'assignment_rejected' | 'multi_sector_pending'>('all');
+    const [listSectorFilter, setListSectorFilter] = useState<string[]>([]);
+    const [listDateFrom, setListDateFrom] = useState('');
+    const [listDateTo, setListDateTo] = useState('');
+    const [listSectorDropdownOpen, setListSectorDropdownOpen] = useState(false);
+    const [listSectorSearch, setListSectorSearch] = useState('');
+    const listSectorDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close sector dropdown on outside click
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (listSectorDropdownRef.current && !listSectorDropdownRef.current.contains(e.target as Node)) {
+                setListSectorDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
 
 
@@ -1336,8 +1364,27 @@ export const Dashboard = () => {
             report.content?.toLowerCase().includes(searchLower) ||
             report.ai_summary?.toLowerCase().includes(searchLower);
 
-        return matchesStatus && matchesSearch;
-    });
+        // Filtro por Sector (multi-select)
+        const matchesSector = listSectorFilter.length === 0 || listSectorFilter.includes(report.sector);
+
+        // Filtro por Fecha Desde
+        let matchesDateFrom = true;
+        if (listDateFrom) {
+            const from = new Date(listDateFrom);
+            from.setHours(0, 0, 0, 0);
+            matchesDateFrom = new Date(report.created_at) >= from;
+        }
+
+        // Filtro por Fecha Hasta
+        let matchesDateTo = true;
+        if (listDateTo) {
+            const to = new Date(listDateTo);
+            to.setHours(23, 59, 59, 999);
+            matchesDateTo = new Date(report.created_at) <= to;
+        }
+
+        return matchesStatus && matchesSearch && matchesSector && matchesDateFrom && matchesDateTo;
+    }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
 
 
@@ -1510,6 +1557,253 @@ export const Dashboard = () => {
                 </div>
             </div>
 
+            {/* Filtros de Sector + Fecha + Export */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 relative z-30">
+                <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3">
+                    <div className="flex items-center gap-2 shrink-0">
+                        <Filter className="w-4 h-4 text-gray-400" />
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Filtros</span>
+                    </div>
+
+                    {/* Sector Multi-Select */}
+                    <div className="relative flex-1 min-w-[200px]" ref={listSectorDropdownRef}>
+                        <button
+                            type="button"
+                            onClick={() => setListSectorDropdownOpen(!listSectorDropdownOpen)}
+                            className={`w-full flex items-center gap-2 bg-gray-50 border rounded-xl px-3 py-2.5 text-xs font-medium transition-all ${listSectorFilter.length > 0 ? 'border-blue-300 bg-blue-50/50' : 'border-gray-200 hover:border-gray-300'
+                                }`}
+                        >
+                            <Building2 className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                            <span className="truncate flex-1 text-left">
+                                {listSectorFilter.length === 0 ? 'Todos los sectores' :
+                                    listSectorFilter.length === 1 ? listSectorFilter[0] :
+                                        `${listSectorFilter.length} sectores`}
+                            </span>
+                            {listSectorFilter.length > 0 && (
+                                <span className="shrink-0 w-5 h-5 bg-sanatorio-primary text-white rounded-full text-[10px] font-bold flex items-center justify-center">
+                                    {listSectorFilter.length}
+                                </span>
+                            )}
+                            <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${listSectorDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {listSectorDropdownOpen && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-w-md">
+                                <div className="p-2 border-b border-gray-100">
+                                    <div className="relative">
+                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            value={listSectorSearch}
+                                            onChange={(e) => setListSectorSearch(e.target.value)}
+                                            placeholder="Buscar sector..."
+                                            className="w-full pl-8 pr-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:ring-1 focus:ring-sanatorio-primary/30 outline-none"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="px-2 py-1.5 border-b border-gray-100 flex gap-2">
+                                    <button type="button" onClick={() => { setListSectorFilter(SECTOR_OPTIONS.map(s => s.value)); }} className="text-[10px] font-bold text-sanatorio-primary hover:underline">Todos</button>
+                                    {listSectorFilter.length > 0 && (
+                                        <button type="button" onClick={() => setListSectorFilter([])} className="text-[10px] font-bold text-red-500 hover:underline">Limpiar</button>
+                                    )}
+                                </div>
+                                <div className="max-h-[240px] overflow-y-auto">
+                                    {SECTOR_OPTIONS.filter(s =>
+                                        s.label.toLowerCase().includes(listSectorSearch.toLowerCase()) ||
+                                        s.value.toLowerCase().includes(listSectorSearch.toLowerCase())
+                                    ).map(s => {
+                                        const isSelected = listSectorFilter.includes(s.value);
+                                        return (
+                                            <button
+                                                key={s.value}
+                                                type="button"
+                                                onClick={() => {
+                                                    setListSectorFilter(prev =>
+                                                        isSelected ? prev.filter(v => v !== s.value) : [...prev, s.value]
+                                                    );
+                                                }}
+                                                className={`w-full flex items-center gap-2 px-3 py-2 text-xs transition-colors ${isSelected ? 'bg-sanatorio-primary/5 font-bold text-sanatorio-primary' : 'text-gray-700 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-sanatorio-primary border-sanatorio-primary' : 'border-gray-300 bg-white'
+                                                    }`}>
+                                                    {isSelected && <Check className="w-3 h-3 text-white" />}
+                                                </div>
+                                                <span className="truncate">{s.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Date From */}
+                    <div className="relative min-w-[140px]">
+                        <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                        <input
+                            type="date"
+                            value={listDateFrom}
+                            onChange={(e) => setListDateFrom(e.target.value)}
+                            max={listDateTo || undefined}
+                            className={`w-full bg-gray-50 border rounded-xl pl-9 pr-3 py-2.5 text-xs font-medium transition-all outline-none focus:ring-1 focus:ring-sanatorio-primary/30 ${listDateFrom ? 'border-purple-300 bg-purple-50/50' : 'border-gray-200'
+                                }`}
+                            title="Fecha desde"
+                        />
+                        {!listDateFrom && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 pointer-events-none">Desde</span>}
+                    </div>
+
+                    {/* Date To */}
+                    <div className="relative min-w-[140px]">
+                        <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                        <input
+                            type="date"
+                            value={listDateTo}
+                            onChange={(e) => setListDateTo(e.target.value)}
+                            min={listDateFrom || undefined}
+                            className={`w-full bg-gray-50 border rounded-xl pl-9 pr-3 py-2.5 text-xs font-medium transition-all outline-none focus:ring-1 focus:ring-sanatorio-primary/30 ${listDateTo ? 'border-purple-300 bg-purple-50/50' : 'border-gray-200'
+                                }`}
+                            title="Fecha hasta"
+                        />
+                        {!listDateTo && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 pointer-events-none">Hasta</span>}
+                    </div>
+
+                    {/* Clear filters */}
+                    {(listSectorFilter.length > 0 || listDateFrom || listDateTo) && (
+                        <button
+                            type="button"
+                            onClick={() => { setListSectorFilter([]); setListDateFrom(''); setListDateTo(''); }}
+                            className="text-[10px] font-bold text-red-500 hover:text-red-700 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors shrink-0"
+                        >
+                            ✕ Limpiar
+                        </button>
+                    )}
+
+                    {/* Spacer */}
+                    <div className="flex-1" />
+
+                    {/* Export Buttons */}
+                    <div className="flex items-center gap-2 shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const statusLabel = (s: string) =>
+                                    s === 'pending' || s === 'analyzed' ? 'Pendiente' :
+                                        s === 'pending_resolution' ? 'En Gestión' :
+                                            s === 'quality_validation' ? 'Validación' :
+                                                s === 'resolved' ? 'Resuelto' :
+                                                    s === 'discarded' ? 'Descartado' : s;
+                                const data = filteredReports.map(r => ({
+                                    'ID': r.tracking_id || '',
+                                    'Fecha': r.created_at ? new Date(r.created_at).toLocaleDateString('es-AR') : '',
+                                    'Sector': r.sector || '',
+                                    'Problema': r.ai_summary || r.content?.substring(0, 100) || '',
+                                    'Prioridad': r.ai_urgency || 'Normal',
+                                    'Estado': statusLabel(r.status),
+                                    'Clasificación': r.ai_category || 'Sin clasificar',
+                                    'Anónimo': r.is_anonymous ? 'Sí' : 'No'
+                                }));
+                                const ws = XLSX.utils.json_to_sheet(data);
+                                const wb = XLSX.utils.book_new();
+                                XLSX.utils.book_append_sheet(wb, ws, 'Reportes');
+                                XLSX.writeFile(wb, `reportes_calidad_${new Date().toISOString().slice(0, 10)}.xlsx`);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-green-50 text-green-700 border border-green-200 rounded-xl text-xs font-bold hover:bg-green-100 transition-colors"
+                        >
+                            <FileSpreadsheet className="w-3.5 h-3.5" />
+                            XLSX
+                        </button>
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                                // Logo
+                                try {
+                                    const logoImg = new Image();
+                                    logoImg.crossOrigin = 'Anonymous';
+                                    logoImg.src = '/logosanatorio.png';
+                                    await new Promise<void>((resolve) => {
+                                        logoImg.onload = () => resolve();
+                                        logoImg.onerror = () => resolve();
+                                    });
+                                    const canvas = document.createElement('canvas');
+                                    canvas.width = logoImg.naturalWidth;
+                                    canvas.height = logoImg.naturalHeight;
+                                    const ctx = canvas.getContext('2d');
+                                    ctx?.drawImage(logoImg, 0, 0);
+                                    const logoData = canvas.toDataURL('image/png');
+                                    doc.addImage(logoData, 'PNG', 14, 8, 30, 12);
+                                } catch { /* skip logo */ }
+
+                                doc.setFontSize(16);
+                                doc.setFont('helvetica', 'bold');
+                                doc.setTextColor(0, 43, 77);
+                                doc.text('Listado de Casos — Gestión de Calidad', 50, 16);
+                                doc.setFontSize(9);
+                                doc.setFont('helvetica', 'normal');
+                                doc.setTextColor(120, 120, 120);
+                                doc.text(`Generado: ${new Date().toLocaleString('es-AR')} | Total: ${filteredReports.length} casos`, 50, 22);
+                                doc.setDrawColor(0, 43, 77);
+                                doc.setLineWidth(0.5);
+                                doc.line(14, 25, 283, 25);
+
+                                const statusLabel = (s: string) =>
+                                    s === 'pending' || s === 'analyzed' ? 'Pendiente' :
+                                        s === 'pending_resolution' ? 'En Gestión' :
+                                            s === 'quality_validation' ? 'Validación' :
+                                                s === 'resolved' ? 'Resuelto' :
+                                                    s === 'discarded' ? 'Descartado' : s;
+                                autoTable(doc, {
+                                    startY: 28,
+                                    head: [['ID', 'Fecha', 'Sector', 'Problema', 'Prioridad', 'Estado', 'Clasificación']],
+                                    body: filteredReports.map(r => [
+                                        r.tracking_id || '',
+                                        r.created_at ? new Date(r.created_at).toLocaleDateString('es-AR') : '',
+                                        r.sector || '',
+                                        (r.ai_summary || r.content?.substring(0, 80) || '').substring(0, 60),
+                                        r.ai_urgency || 'Normal',
+                                        statusLabel(r.status),
+                                        r.ai_category || 'Sin clasificar'
+                                    ]),
+                                    styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+                                    headStyles: { fillColor: [0, 43, 77], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+                                    alternateRowStyles: { fillColor: [245, 247, 250] },
+                                    columnStyles: {
+                                        0: { cellWidth: 28 },
+                                        1: { cellWidth: 24, halign: 'center' as const },
+                                        2: { cellWidth: 35 },
+                                        3: { cellWidth: 75 },
+                                        4: { cellWidth: 22, halign: 'center' as const },
+                                        5: { cellWidth: 25, halign: 'center' as const },
+                                        6: { cellWidth: 35 }
+                                    },
+                                    margin: { left: 14, right: 14, top: 28 },
+                                    didDrawPage: (data: any) => {
+                                        doc.setFontSize(7);
+                                        doc.setTextColor(160, 160, 160);
+                                        doc.text('Sanatorio Argentino — Sistema de Gestión de Calidad', 14, doc.internal.pageSize.height - 8);
+                                        doc.text(`Página ${data.pageNumber}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 8);
+                                    }
+                                });
+                                doc.save(`reportes_calidad_${new Date().toISOString().slice(0, 10)}.pdf`);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors"
+                        >
+                            <Download className="w-3.5 h-3.5" />
+                            PDF
+                        </button>
+                    </div>
+                </div>
+
+                {/* Active filter summary */}
+                {(listSectorFilter.length > 0 || listDateFrom || listDateTo) && (
+                    <div className="mt-3 bg-blue-50/50 border border-blue-100 rounded-lg px-3 py-2 flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-blue-700">📊 {filteredReports.length} reportes filtrados</span>
+                        <span className="text-[10px] text-gray-400">de {reports.length} totales</span>
+                    </div>
+                )}
+            </div>
+
             {/* Main Content - List View */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[400px]">
                 {loading ? (
@@ -1524,6 +1818,7 @@ export const Dashboard = () => {
                                 <tr className="bg-gray-50/50 border-b border-gray-100 text-xs font-bold text-gray-400 uppercase tracking-wider">
                                     <th className="px-6 py-4">Estado</th>
                                     <th className="px-6 py-4">ID</th>
+                                    <th className="px-6 py-4">Fecha</th>
                                     <th className="px-6 py-4">Sector</th>
                                     <th className="px-6 py-4">Problema</th>
                                     <th className="px-6 py-4">Prioridad</th>
@@ -1555,6 +1850,7 @@ export const Dashboard = () => {
                                                 )}
                                             </td>
                                             <td className="px-6 py-4 text-sm font-bold text-gray-700 group-hover:text-sanatorio-primary transition-colors">{report.tracking_id}</td>
+                                            <td className="px-6 py-4 text-xs text-gray-400 whitespace-nowrap">{report.created_at ? new Date(report.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
                                             <td className="px-6 py-4 text-sm text-gray-600">{report.sector || '-'}</td>
                                             <td className="px-6 py-4 text-sm text-gray-600 line-clamp-1 max-w-xs">{report.ai_summary || report.content}</td>
                                             <td className="px-6 py-4">
@@ -1591,7 +1887,7 @@ export const Dashboard = () => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={7} className="px-6 py-12 text-center text-gray-400">
+                                        <td colSpan={8} className="px-6 py-12 text-center text-gray-400">
                                             No se encontraron reportes con los criterios seleccionados.
                                         </td>
                                     </tr>
