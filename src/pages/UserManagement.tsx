@@ -617,251 +617,255 @@ export const UserManagement = () => {
 
             {/* Create User Modal */}
             {isCreating && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 animate-in zoom-in-95">
-                        <div className="flex justify-between items-center mb-6">
-                            <div>
-                                <h2 className="text-xl font-bold text-slate-800">Crear Nuevo Usuario</h2>
-                                <p className="text-xs text-slate-400 mt-1">Complete los datos del nuevo usuario</p>
-                            </div>
-                            <button onClick={() => setIsCreating(false)} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"><X className="w-5 h-5" /></button>
-                        </div>
-
-                        <form onSubmit={handleCreateUser} className="space-y-4">
-                            {/* Name Row */}
-                            <div className="grid grid-cols-2 gap-3">
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in" onClick={() => setIsCreating(false)}>
+                    <div className="flex items-center justify-center min-h-full p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                            <div className="flex justify-between items-center mb-6">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Nombre <span className="text-red-500">*</span></label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="Ej: María"
-                                        value={newUserName}
-                                        onChange={e => setNewUserName(e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all"
-                                    />
+                                    <h2 className="text-xl font-bold text-slate-800">Crear Nuevo Usuario</h2>
+                                    <p className="text-xs text-slate-400 mt-1">Complete los datos del nuevo usuario</p>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Apellido <span className="text-red-500">*</span></label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="Ej: González"
-                                        value={newUserLastName}
-                                        onChange={e => setNewUserLastName(e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all"
-                                    />
-                                </div>
+                                <button onClick={() => setIsCreating(false)} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"><X className="w-5 h-5" /></button>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Email <span className="text-red-500">*</span></label>
-                                <input
-                                    type="email"
-                                    required
-                                    placeholder="usuario@sanatorioargentino.com"
-                                    value={newUserEmail}
-                                    onChange={e => setNewUserEmail(e.target.value)}
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
-                                    <input
-                                        type="text"
-                                        minLength={6}
-                                        value={newUserPassword}
-                                        onChange={e => setNewUserPassword(e.target.value)}
-                                        placeholder="123456"
-                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all font-mono text-sm"
-                                    />
-                                    <p className="text-[10px] text-slate-400 mt-1">Contraseña por defecto: 123456</p>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
-                                    <div className="relative">
-                                        <Phone className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                            <form onSubmit={handleCreateUser} className="space-y-4">
+                                {/* Name Row */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Nombre <span className="text-red-500">*</span></label>
                                         <input
-                                            type="tel"
-                                            placeholder="2645438114"
-                                            value={newUserPhone}
-                                            onChange={e => setNewUserPhone(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all font-mono text-sm"
+                                            type="text"
+                                            required
+                                            placeholder="Ej: María"
+                                            value={newUserName}
+                                            onChange={e => setNewUserName(e.target.value)}
+                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Apellido <span className="text-red-500">*</span></label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="Ej: González"
+                                            value={newUserLastName}
+                                            onChange={e => setNewUserLastName(e.target.value)}
+                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all"
                                         />
                                     </div>
                                 </div>
-                            </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Rol Inicial</label>
-                                <select
-                                    value={newUserRole}
-                                    onChange={(e: any) => setNewUserRole(e.target.value)}
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none bg-white transition-all"
-                                >
-                                    <option value="responsable">🛠️ Responsable</option>
-                                    <option value="admin">👑 Administrador</option>
-                                    <option value="directivo">🏥 Directivo</option>
-                                </select>
-                            </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Email <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="email"
+                                        required
+                                        placeholder="usuario@sanatorioargentino.com"
+                                        value={newUserEmail}
+                                        onChange={e => setNewUserEmail(e.target.value)}
+                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all"
+                                    />
+                                </div>
 
-                            <div className="flex gap-3 mt-6 pt-4 border-t border-slate-100">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsCreating(false)}
-                                    className="flex-1 py-2.5 px-4 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-medium transition-colors"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={creatingLoading}
-                                    className="flex-1 btn-primary flex justify-center items-center gap-2"
-                                >
-                                    {creatingLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserPlus className="w-5 h-5" />}
-                                    Crear Usuario
-                                </button>
-                            </div>
-                        </form>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
+                                        <input
+                                            type="text"
+                                            minLength={6}
+                                            value={newUserPassword}
+                                            onChange={e => setNewUserPassword(e.target.value)}
+                                            placeholder="123456"
+                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all font-mono text-sm"
+                                        />
+                                        <p className="text-[10px] text-slate-400 mt-1">Contraseña por defecto: 123456</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
+                                        <div className="relative">
+                                            <Phone className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                                            <input
+                                                type="tel"
+                                                placeholder="2645438114"
+                                                value={newUserPhone}
+                                                onChange={e => setNewUserPhone(e.target.value)}
+                                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all font-mono text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Rol Inicial</label>
+                                    <select
+                                        value={newUserRole}
+                                        onChange={(e: any) => setNewUserRole(e.target.value)}
+                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none bg-white transition-all"
+                                    >
+                                        <option value="responsable">🛠️ Responsable</option>
+                                        <option value="admin">👑 Administrador</option>
+                                        <option value="directivo">🏥 Directivo</option>
+                                    </select>
+                                </div>
+
+                                <div className="flex gap-3 mt-6 pt-4 border-t border-slate-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsCreating(false)}
+                                        className="flex-1 py-2.5 px-4 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-medium transition-colors"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={creatingLoading}
+                                        className="flex-1 btn-primary flex justify-center items-center gap-2"
+                                    >
+                                        {creatingLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserPlus className="w-5 h-5" />}
+                                        Crear Usuario
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
             )}
 
             {/* Edit User Modal */}
             {editingUser && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 animate-in zoom-in-95">
-                        <div className="flex justify-between items-center mb-6">
-                            <div>
-                                <h2 className="text-xl font-bold text-slate-800">Editar Usuario</h2>
-                                <p className="text-xs text-slate-400 mt-1">Modificar datos de {editingUser.display_name || 'usuario'}</p>
-                            </div>
-                            <button onClick={() => { setEditingUser(null); setSectorSearchTerm(''); }} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"><X className="w-5 h-5" /></button>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre Completo</label>
-                                <input
-                                    type="text"
-                                    placeholder="Ej: María González"
-                                    value={editingUser.display_name || ''}
-                                    onChange={e => setEditingUser({ ...editingUser, display_name: e.target.value })}
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono (WhatsApp)</label>
-                                <div className="relative">
-                                    <Phone className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-                                    <input
-                                        type="tel"
-                                        placeholder="2645438114"
-                                        value={editingUser.phone_number || ''}
-                                        onChange={e => setEditingUser({ ...editingUser, phone_number: e.target.value })}
-                                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all font-mono text-sm"
-                                    />
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in" onClick={() => { setEditingUser(null); setSectorSearchTerm(''); }}>
+                    <div className="flex items-center justify-center min-h-full p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                            <div className="flex justify-between items-center mb-6">
+                                <div>
+                                    <h2 className="text-xl font-bold text-slate-800">Editar Usuario</h2>
+                                    <p className="text-xs text-slate-400 mt-1">Modificar datos de {editingUser.display_name || 'usuario'}</p>
                                 </div>
+                                <button onClick={() => { setEditingUser(null); setSectorSearchTerm(''); }} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"><X className="w-5 h-5" /></button>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Rol</label>
-                                <select
-                                    value={editingUser.role}
-                                    onChange={(e: any) => setEditingUser({ ...editingUser, role: e.target.value })}
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none bg-white transition-all"
-                                >
-                                    <option value="responsable">🛠️ Responsable</option>
-                                    <option value="admin">👑 Administrador</option>
-                                    <option value="directivo">🏥 Directivo</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">Sectores Asignados</label>
-                                {(editingUser.role === 'admin' || editingUser.role === 'directivo') && (
-                                    <div className="mb-2 p-2.5 bg-blue-50 border border-blue-100 rounded-xl">
-                                        <p className="text-[11px] text-blue-700 font-medium">
-                                            💡 Los {editingUser.role === 'admin' ? 'administradores' : 'directivos'} mantienen sus permisos actuales.
-                                            Si se les asignan sectores, <strong>también podrán ser seleccionados como responsables</strong> para derivaciones de esos sectores.
-                                        </p>
-                                    </div>
-                                )}
-                                {/* Sector Search */}
-                                <div className="relative mb-2">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Nombre Completo</label>
                                     <input
                                         type="text"
-                                        placeholder="Buscar sector... (ej: neo, farmacia, guardia)"
-                                        value={sectorSearchTerm}
-                                        onChange={(e) => setSectorSearchTerm(e.target.value)}
-                                        className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all text-sm"
+                                        placeholder="Ej: María González"
+                                        value={editingUser.display_name || ''}
+                                        onChange={e => setEditingUser({ ...editingUser, display_name: e.target.value })}
+                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all"
                                     />
-                                    {sectorSearchTerm && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setSectorSearchTerm('')}
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-slate-100 text-slate-400"
-                                        >
-                                            <X className="w-3 h-3" />
-                                        </button>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono (WhatsApp)</label>
+                                    <div className="relative">
+                                        <Phone className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                                        <input
+                                            type="tel"
+                                            placeholder="2645438114"
+                                            value={editingUser.phone_number || ''}
+                                            onChange={e => setEditingUser({ ...editingUser, phone_number: e.target.value })}
+                                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all font-mono text-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Rol</label>
+                                    <select
+                                        value={editingUser.role}
+                                        onChange={(e: any) => setEditingUser({ ...editingUser, role: e.target.value })}
+                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none bg-white transition-all"
+                                    >
+                                        <option value="responsable">🛠️ Responsable</option>
+                                        <option value="admin">👑 Administrador</option>
+                                        <option value="directivo">🏥 Directivo</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">Sectores Asignados</label>
+                                    {(editingUser.role === 'admin' || editingUser.role === 'directivo') && (
+                                        <div className="mb-2 p-2.5 bg-blue-50 border border-blue-100 rounded-xl">
+                                            <p className="text-[11px] text-blue-700 font-medium">
+                                                💡 Los {editingUser.role === 'admin' ? 'administradores' : 'directivos'} mantienen sus permisos actuales.
+                                                Si se les asignan sectores, <strong>también podrán ser seleccionados como responsables</strong> para derivaciones de esos sectores.
+                                            </p>
+                                        </div>
+                                    )}
+                                    {/* Sector Search */}
+                                    <div className="relative mb-2">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar sector... (ej: neo, farmacia, guardia)"
+                                            value={sectorSearchTerm}
+                                            onChange={(e) => setSectorSearchTerm(e.target.value)}
+                                            className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all text-sm"
+                                        />
+                                        {sectorSearchTerm && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setSectorSearchTerm('')}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-slate-100 text-slate-400"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="max-h-52 overflow-y-auto border border-slate-200 rounded-xl p-2 space-y-0.5">
+                                        {SECTOR_OPTIONS
+                                            .filter(sector =>
+                                                !sectorSearchTerm ||
+                                                sector.label.toLowerCase().includes(sectorSearchTerm.toLowerCase()) ||
+                                                sector.value.toLowerCase().includes(sectorSearchTerm.toLowerCase())
+                                            )
+                                            .map(sector => (
+                                                <label key={sector.value} className="flex items-center p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={editingUser.assigned_sectors?.includes(sector.value)}
+                                                        onChange={(e) => {
+                                                            const current = editingUser.assigned_sectors || [];
+                                                            const updated = e.target.checked
+                                                                ? [...current, sector.value]
+                                                                : current.filter(s => s !== sector.value);
+                                                            setEditingUser({ ...editingUser, assigned_sectors: updated });
+                                                        }}
+                                                        className="w-4 h-4 text-sanatorio-primary rounded border-gray-300 focus:ring-sanatorio-primary"
+                                                    />
+                                                    <span className="ml-3 text-sm text-slate-700">{sector.label}</span>
+                                                </label>
+                                            ))}
+                                        {sectorSearchTerm && SECTOR_OPTIONS.filter(s =>
+                                            s.label.toLowerCase().includes(sectorSearchTerm.toLowerCase()) ||
+                                            s.value.toLowerCase().includes(sectorSearchTerm.toLowerCase())
+                                        ).length === 0 && (
+                                                <p className="text-sm text-slate-400 text-center py-3">No se encontraron sectores para "{sectorSearchTerm}"</p>
+                                            )}
+                                    </div>
+                                    {editingUser.assigned_sectors && editingUser.assigned_sectors.length > 0 && (
+                                        <p className="text-[10px] text-slate-400 mt-1.5">
+                                            {editingUser.assigned_sectors.length} sector{editingUser.assigned_sectors.length !== 1 ? 'es' : ''} seleccionado{editingUser.assigned_sectors.length !== 1 ? 's' : ''}
+                                        </p>
                                     )}
                                 </div>
-                                <div className="max-h-52 overflow-y-auto border border-slate-200 rounded-xl p-2 space-y-0.5">
-                                    {SECTOR_OPTIONS
-                                        .filter(sector =>
-                                            !sectorSearchTerm ||
-                                            sector.label.toLowerCase().includes(sectorSearchTerm.toLowerCase()) ||
-                                            sector.value.toLowerCase().includes(sectorSearchTerm.toLowerCase())
-                                        )
-                                        .map(sector => (
-                                            <label key={sector.value} className="flex items-center p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={editingUser.assigned_sectors?.includes(sector.value)}
-                                                    onChange={(e) => {
-                                                        const current = editingUser.assigned_sectors || [];
-                                                        const updated = e.target.checked
-                                                            ? [...current, sector.value]
-                                                            : current.filter(s => s !== sector.value);
-                                                        setEditingUser({ ...editingUser, assigned_sectors: updated });
-                                                    }}
-                                                    className="w-4 h-4 text-sanatorio-primary rounded border-gray-300 focus:ring-sanatorio-primary"
-                                                />
-                                                <span className="ml-3 text-sm text-slate-700">{sector.label}</span>
-                                            </label>
-                                        ))}
-                                    {sectorSearchTerm && SECTOR_OPTIONS.filter(s =>
-                                        s.label.toLowerCase().includes(sectorSearchTerm.toLowerCase()) ||
-                                        s.value.toLowerCase().includes(sectorSearchTerm.toLowerCase())
-                                    ).length === 0 && (
-                                            <p className="text-sm text-slate-400 text-center py-3">No se encontraron sectores para "{sectorSearchTerm}"</p>
-                                        )}
-                                </div>
-                                {editingUser.assigned_sectors && editingUser.assigned_sectors.length > 0 && (
-                                    <p className="text-[10px] text-slate-400 mt-1.5">
-                                        {editingUser.assigned_sectors.length} sector{editingUser.assigned_sectors.length !== 1 ? 'es' : ''} seleccionado{editingUser.assigned_sectors.length !== 1 ? 's' : ''}
-                                    </p>
-                                )}
-                            </div>
 
-                            <div className="flex gap-3 mt-6 pt-4 border-t border-slate-100">
-                                <button
-                                    onClick={() => { setEditingUser(null); setSectorSearchTerm(''); }}
-                                    className="flex-1 py-2.5 px-4 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-medium transition-colors"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    onClick={handleUpdateUser}
-                                    className="flex-1 btn-primary flex justify-center items-center gap-2"
-                                >
-                                    <Save className="w-5 h-5" />
-                                    Guardar Cambios
-                                </button>
+                                <div className="flex gap-3 mt-6 pt-4 border-t border-slate-100">
+                                    <button
+                                        onClick={() => { setEditingUser(null); setSectorSearchTerm(''); }}
+                                        className="flex-1 py-2.5 px-4 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-medium transition-colors"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={handleUpdateUser}
+                                        className="flex-1 btn-primary flex justify-center items-center gap-2"
+                                    >
+                                        <Save className="w-5 h-5" />
+                                        Guardar Cambios
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -870,56 +874,58 @@ export const UserManagement = () => {
 
             {/* Delete Confirmation Modal */}
             {deletingUser && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-                    <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden animate-in zoom-in-95">
-                        <div className="p-8 text-center">
-                            <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center mx-auto mb-5">
-                                <Trash2 className="w-8 h-8 text-red-500" />
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm animate-in fade-in" onClick={() => setDeletingUser(null)}>
+                    <div className="flex items-center justify-center min-h-full p-4">
+                        <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                            <div className="p-8 text-center">
+                                <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center mx-auto mb-5">
+                                    <Trash2 className="w-8 h-8 text-red-500" />
+                                </div>
+
+                                <h3 className="text-2xl font-display font-black text-slate-800 mb-3">
+                                    ¿Eliminar usuario?
+                                </h3>
+
+                                <p className="text-slate-500 font-medium leading-relaxed mb-2">
+                                    Estás a punto de eliminar a:
+                                </p>
+                                <p className="text-slate-800 font-bold text-lg mb-1">
+                                    {deletingUser.display_name || 'Sin Nombre'}
+                                </p>
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${deletingUser.role === 'directivo' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                    'bg-green-50 text-green-700 border-green-200'
+                                    }`}>
+                                    {deletingUser.role === 'directivo' ? '🏥 Directivo' : '🛠️ Responsable'}
+                                </span>
+
+                                <p className="text-red-500 text-sm font-medium mt-4 mb-6">
+                                    ⚠️ Esta acción no se puede deshacer.
+                                </p>
+
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setDeletingUser(null)}
+                                        disabled={deletingLoading}
+                                        className="flex-1 py-3 px-4 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-bold transition-colors"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={confirmDeleteUser}
+                                        disabled={deletingLoading}
+                                        className="flex-1 py-3 px-4 bg-red-500 hover:bg-red-600 active:scale-95 text-white rounded-xl font-bold transition-all shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                                    >
+                                        {deletingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                        Eliminar
+                                    </button>
+                                </div>
                             </div>
 
-                            <h3 className="text-2xl font-display font-black text-slate-800 mb-3">
-                                ¿Eliminar usuario?
-                            </h3>
-
-                            <p className="text-slate-500 font-medium leading-relaxed mb-2">
-                                Estás a punto de eliminar a:
-                            </p>
-                            <p className="text-slate-800 font-bold text-lg mb-1">
-                                {deletingUser.display_name || 'Sin Nombre'}
-                            </p>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${deletingUser.role === 'directivo' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                'bg-green-50 text-green-700 border-green-200'
-                                }`}>
-                                {deletingUser.role === 'directivo' ? '🏥 Directivo' : '🛠️ Responsable'}
-                            </span>
-
-                            <p className="text-red-500 text-sm font-medium mt-4 mb-6">
-                                ⚠️ Esta acción no se puede deshacer.
-                            </p>
-
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setDeletingUser(null)}
-                                    disabled={deletingLoading}
-                                    className="flex-1 py-3 px-4 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-bold transition-colors"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    onClick={confirmDeleteUser}
-                                    disabled={deletingLoading}
-                                    className="flex-1 py-3 px-4 bg-red-500 hover:bg-red-600 active:scale-95 text-white rounded-xl font-bold transition-all shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
-                                >
-                                    {deletingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                                    Eliminar
-                                </button>
+                            <div className="bg-slate-50 p-3 text-center border-t border-slate-100">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                    Sanatorio Argentino
+                                </p>
                             </div>
-                        </div>
-
-                        <div className="bg-slate-50 p-3 text-center border-t border-slate-100">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                Sanatorio Argentino
-                            </p>
                         </div>
                     </div>
                 </div>
