@@ -8,7 +8,7 @@ import { SECTOR_OPTIONS } from '../constants/sectors';
 export const ReportingForm = () => {
     const [loading, setLoading] = useState(false);
     const [successId, setSuccessId] = useState<string | null>(null);
-    const [isAnonymous, setIsAnonymous] = useState(false);
+    const [isAnonymous, setIsAnonymous] = useState<boolean | null>(null);
     const [files, setFiles] = useState<File[]>([]);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
     const [formData, setFormData] = useState({
@@ -69,6 +69,19 @@ export const ReportingForm = () => {
         // DB: 2645438114 (Clean digits only)
         const rawNumber = formData.contactNumber.replace(/\D/g, '');
 
+        // Validate required fields
+        if (!formData.sector) {
+            alert('Por favor, selecciona el sector al que va dirigido el hallazgo.');
+            setLoading(false);
+            return;
+        }
+
+        if (isAnonymous === null) {
+            alert('Por favor, indica si deseas reportar de forma anónima o identificada.');
+            setLoading(false);
+            return;
+        }
+
         if (!isAnonymous) {
             if (!formData.contactName.trim()) {
                 alert("Por favor, ingresa tu nombre completo.");
@@ -116,7 +129,7 @@ export const ReportingForm = () => {
                     sector: formData.sector,
                     origin_sector: formData.originSector || null,
                     content: formData.content,
-                    is_anonymous: isAnonymous,
+                    is_anonymous: isAnonymous === true,
                     contact_name: dbName,
                     contact_number: dbNumber,
                     status: 'pending',
@@ -176,7 +189,7 @@ export const ReportingForm = () => {
                     <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-widest">Guarda este código para consultas futuras</p>
                 </div>
                 <button
-                    onClick={() => { setSuccessId(null); setFormData({ originSector: '', sector: '', content: '', contactName: '', contactNumber: '' }); setFiles([]); setPreviewUrls([]); setIsAnonymous(false); }}
+                    onClick={() => { setSuccessId(null); setFormData({ originSector: '', sector: '', content: '', contactName: '', contactNumber: '' }); setFiles([]); setPreviewUrls([]); setIsAnonymous(null); }}
                     className="btn-primary w-full"
                 >
                     Enviar Nuevo Reporte
@@ -236,36 +249,66 @@ export const ReportingForm = () => {
                 <form onSubmit={handleSubmit} className="space-y-10">
 
                     {/* Identified Mode Header */}
-                    <div className={`group relative overflow-hidden rounded-2xl border-2 transition-all duration-500 ${!isAnonymous
-                        ? 'border-green-200 bg-green-50/50'
-                        : 'border-amber-200 bg-amber-50/50'
+                    <div className={`group relative overflow-hidden rounded-2xl border-2 transition-all duration-500 ${isAnonymous === null
+                        ? 'border-slate-200 bg-slate-50/50'
+                        : !isAnonymous
+                            ? 'border-green-200 bg-green-50/50'
+                            : 'border-amber-200 bg-amber-50/50'
                         }`}>
                         <div className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-5">
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${!isAnonymous ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-amber-400 text-white shadow-lg shadow-amber-400/20'}`}>
-                                        {!isAnonymous ? <User className="w-6 h-6" /> : <Lock className="w-6 h-6" />}
-                                    </div>
-                                    <div className="text-left">
-                                        <p className={`font-bold text-lg ${!isAnonymous ? 'text-green-700' : 'text-amber-700'}`}>
-                                            {!isAnonymous ? 'Modo Identificado' : 'Modo Anónimo'}
-                                        </p>
-                                        <p className="text-sm text-slate-500 font-medium tracking-tight">
-                                            {!isAnonymous ? 'Podremos contactarte para darte seguimiento y feedback.' : 'Tu identidad estará protegida.'}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div
-                                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-500 cursor-pointer ${isAnonymous ? 'bg-amber-400' : 'bg-green-500'}`}
-                                    onClick={() => setIsAnonymous(!isAnonymous)}
+                            <div className="mb-3">
+                                <p className="text-sm font-bold text-slate-700 mb-1">
+                                    ¿Cómo deseas reportar? <span className="text-red-500">*</span>
+                                </p>
+                                <p className="text-xs text-slate-400">Seleccioná una opción antes de continuar</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsAnonymous(false)}
+                                    className={`p-4 rounded-xl border-2 transition-all duration-300 text-left ${isAnonymous === false
+                                        ? 'border-green-400 bg-green-50 shadow-md shadow-green-500/10'
+                                        : 'border-slate-200 hover:border-green-200 hover:bg-green-50/30'
+                                        }`}
                                 >
-                                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-500 shadow-md ${isAnonymous ? 'translate-x-6' : 'translate-x-1'}`} />
-                                </div>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isAnonymous === false ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-400'
+                                            }`}>
+                                            <User className="w-5 h-5" />
+                                        </div>
+                                        <span className={`font-bold text-sm ${isAnonymous === false ? 'text-green-700' : 'text-slate-600'}`}>
+                                            Identificado
+                                        </span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                                        Recibís seguimiento por WhatsApp y podemos contactarte.
+                                    </p>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsAnonymous(true)}
+                                    className={`p-4 rounded-xl border-2 transition-all duration-300 text-left ${isAnonymous === true
+                                        ? 'border-amber-400 bg-amber-50 shadow-md shadow-amber-500/10'
+                                        : 'border-slate-200 hover:border-amber-200 hover:bg-amber-50/30'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isAnonymous === true ? 'bg-amber-400 text-white' : 'bg-slate-100 text-slate-400'
+                                            }`}>
+                                            <Lock className="w-5 h-5" />
+                                        </div>
+                                        <span className={`font-bold text-sm ${isAnonymous === true ? 'text-amber-700' : 'text-slate-600'}`}>
+                                            Anónimo
+                                        </span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                                        Tu identidad queda protegida con cifrado total.
+                                    </p>
+                                </button>
                             </div>
 
                             {/* Persuasive message when anonymous */}
-                            {isAnonymous && (
+                            {isAnonymous === true && (
                                 <div className="mt-4 p-4 bg-white rounded-xl border border-amber-100 animate-in slide-in-from-top-2 duration-300">
                                     <div className="flex items-start gap-3">
                                         <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -321,10 +364,10 @@ export const ReportingForm = () => {
                             </div>
                         </div>
 
-                        {/* Selector de Sector Destino */}
+                        {/* Selector de Sector Destino (OBLIGATORIO) */}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                Sector al cual va dirigida su observación
+                                Sector al cual va dirigida su observación <span className="text-red-500">*</span>
                                 <div className="group relative">
                                     <Info className="w-4 h-4 text-gray-400 cursor-help" />
                                     <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
@@ -354,7 +397,7 @@ export const ReportingForm = () => {
 
                         {/* Contenido */}
                         <div className="space-y-2">
-                            <label className="label-text">Detalle del Incidente</label>
+                            <label className="label-text">Detalle del Hallazgo</label>
                             <textarea
                                 required
                                 rows={6}
@@ -411,8 +454,8 @@ export const ReportingForm = () => {
                             />
                         </div>
 
-                        {/* Contact Fields — Required when not anonymous, optional when anonymous */}
-                        {!isAnonymous ? (
+                        {/* Contact Fields — Required when identified, optional when anonymous */}
+                        {isAnonymous === false ? (
                             <div className="space-y-5 p-5 bg-green-50/50 rounded-2xl border border-green-100 animate-in slide-in-from-top-4">
                                 <div className="flex items-center gap-2 mb-1">
                                     <User className="w-4 h-4 text-green-600" />
@@ -451,7 +494,7 @@ export const ReportingForm = () => {
                                     </p>
                                 </div>
                             </div>
-                        ) : (
+                        ) : isAnonymous === true ? (
                             <div className="space-y-5 p-5 bg-slate-50/50 rounded-2xl border border-slate-100 animate-in slide-in-from-top-4">
                                 <div className="flex items-center justify-between mb-1">
                                     <div className="flex items-center gap-2">
@@ -494,7 +537,7 @@ export const ReportingForm = () => {
                                     </p>
                                 </div>
                             </div>
-                        )}
+                        ) : null}
                     </div>
 
                     <button

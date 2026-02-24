@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
    ────────────────────────────────────────── */
 const WorkflowGraph = () => {
     const steps = [
-        { icon: <MessageSquare className="w-5 h-5" />, title: "Reporte", desc: "Usuario envía incidente (+Foto)", color: "bg-blue-100 text-blue-600", position: "top-0 left-1/2 -translate-x-1/2" },
+        { icon: <MessageSquare className="w-5 h-5" />, title: "Reporte", desc: "Usuario envía hallazgo (+Foto)", color: "bg-blue-100 text-blue-600", position: "top-0 left-1/2 -translate-x-1/2" },
         { icon: <BrainCircuit className="w-5 h-5" />, title: "Análisis IA", desc: "Clasificación automática Riesgo", color: "bg-purple-100 text-purple-600", position: "top-1/4 right-[5%]" },
         { icon: <UserCog className="w-5 h-5" />, title: "Gestión", desc: "Calidad deriva al Responsable", color: "bg-orange-100 text-orange-600", position: "bottom-1/4 right-[5%]" },
         { icon: <Smartphone className="w-5 h-5" />, title: "Notificación", desc: "Responsable recibe link WhatsApp", color: "bg-green-100 text-green-600", position: "bottom-0 left-1/2 -translate-x-1/2" },
@@ -71,7 +71,7 @@ const PublicGuide = () => (
                     <MessageSquare className="w-8 h-8 text-white" />
                 </div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-2">Guía para el Personal</h2>
-                <p className="text-gray-500">Todo lo que necesitas saber para reportar incidentes o sugerencias.</p>
+                <p className="text-gray-500">Todo lo que necesitas saber para reportar hallazgos o sugerencias.</p>
             </div>
 
             <div className="p-8 space-y-8">
@@ -446,7 +446,7 @@ const DirectivoGuide = () => (
                         <Activity className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
                         <div>
                             <p className="font-bold text-sm text-gray-800">Performance por Sector</p>
-                            <p className="text-xs text-gray-500">Qué sectores generan más incidentes y cuáles resuelven más rápido.</p>
+                            <p className="text-xs text-gray-500">Qué sectores generan más hallazgos y cuáles resuelven más rápido.</p>
                         </div>
                     </div>
                     <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-amber-50 to-transparent rounded-xl border border-amber-100">

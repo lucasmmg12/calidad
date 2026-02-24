@@ -1,0 +1,25 @@
+excel_column,detected_type,non_null,null_count,fill_pct,unique_values,sample,suggested_mapping
+N°,NUMBER,128,28,82%,128,7600 | 7601 | 7602 | 7603 | 7604,❓ MANUAL
+Marca temporal,DATE,156,0,100%,156,Fri Jan 02 2026 08:41:22 GMT-0300 (hora estándar de Argentina) | Fri Jan 02 2026 16:17:00 GMT-0300 (hora estándar de Argentina) | Sun Jan 04 2026 22:59:44 GMT-0300 (hora estándar de Argentina) | Sun Jan 04 2026 23:01:41 GMT-0300 (hora estándar de Argentina) | Sun Jan 04 2026 23:02:44 GMT-0300 (hora estándar de Argentina),❓ MANUAL
+"Nombre y apellido:
+
+",TEXT,109,47,70%,69,Internado | Soraya Barale | Laboratorio | Rosario Roca | Paciente Rodrigo Rodriguez acude a la guardia el,tracking_id
+Detalle del evento a reportar:,TEXT,156,0,100%,156,"paciente de hab 208, paciente Lanzone, altamente demandante, con aislamiento de  | Día 1ro de enero 2026 TM entra urgencia De Berbari cesárea a las 9 30 hs . Estab | El chiconq fue hoy al intercambio de ropa limpio.por sucio mo respeta horario.y  | El TM no fue a retirar cajas de show romm como quedó comprometido .si dejo el ma | Se sugiere mantener el orden en el sótano con los elementos de las campañas",content
+A qué sector perteneces? (opcional):,TEXT,152,4,97%,25,INT - Internado | QUI - Quirófano | AUX - Auxiliares de Hotelería | LAB - Laboratorio | HEM - Hemoterapia,sector
+A qué sector enviamos tu reclamo?,TEXT,156,0,100%,41,AUX - Auxiliares de Hotelería | QUI - Quirófano | INSUMED | FUN - Fundación | DIR - Dirección,❓ MANUAL
+Tipo (EA / OM),TEXT,118,38,76%,4,OM | Cuasi-EA | Felicitaciones | EA,finding_type
+Clasificación,TEXT,109,47,70%,14,Recursos e insumos | Prácticas asistenciales | Capacitación | Demora en la atención | Comunicación efectiva interservicios,ai_classification
+Analisis de Causa,TEXT,34,122,22%,34,Si se le llamo al referente que le correspondia ese fin de semana en dos oportun | PACIENTE SE LA SOLICITO TC DE cEREBRO QUE SE REALIZO A LAS 18:07 hs por problema | necesitamos informacion mas precisa para poder consultar con las personas respon | En horas de la mañana se le explico a la paciente le plan a seguir. Luego de rea | se da seguimiento con camilleros responsables quienes informarman que la situaci,root_cause
+Acción correctiva,TEXT,33,123,21%,33,"el personal debe llamar a cualquier otro coordinador. | SE REVISARON PROCESOS PARA LA ADQUISICION DE LAS IMAGENS Y PASO DE LAS MISMAS LA | Se reforzara en el informe que dan los medicos de la guardia. | Fecha de pago en termino. segun terminos legales. Entendemos las consultas que p | se le sugiere a Lic Iragorre a fin de elaborar registro correspondiente, reunion",immediate_action
+Es pertinente?,TEXT,15,141,10%,5,No | Sí | si | 13/01/32026 | Wed Jan 14 2026 00:00:48 GMT-0300 (hora estándar de Argentina),❓ MANUAL
+Fecha de compromiso,DATE,17,139,11%,17,Wed Jan 07 2026 00:00:48 GMT-0300 (hora estándar de Argentina) | Thu Jan 15 2026 00:00:48 GMT-0300 (hora estándar de Argentina) | Sat Jan 17 2026 00:00:48 GMT-0300 (hora estándar de Argentina) | Sat Jan 17 2026 00:00:48 GMT-0300 (hora estándar de Argentina) | Thu Jan 22 2026 00:00:48 GMT-0300 (hora estándar de Argentina),created_at
+Responsable,TEXT,20,136,13%,10,DR BARCIA | dra paola garcia | RRHH | Yohana Carabajal | coord de aux,assigned_to
+¿Comunico la respuesta al sector?,TEXT,7,149,4%,1,si,resolution_notes
+Cierre,TEXT,0,156,0%,0,,resolved_at
+Fecha de cierre,TEXT,0,156,0%,0,,❓ MANUAL
+Se envió al sector?,TEXT,0,156,0%,0,,❓ MANUAL
+__EMPTY,TEXT,0,156,0%,0,,❓ MANUAL
+__EMPTY_1,TEXT,0,156,0%,0,,❓ MANUAL
+__EMPTY_2,TEXT,0,156,0%,0,,❓ MANUAL
+__EMPTY_3,TEXT,0,156,0%,0,,❓ MANUAL
+__EMPTY_4,TEXT,0,156,0%,0,,❓ MANUAL

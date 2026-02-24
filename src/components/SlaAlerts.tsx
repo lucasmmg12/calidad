@@ -138,7 +138,7 @@ export const SlaAlertBanner = ({ reports, onResendWhatsApp }: Props) => {
             {showInfo && (
                 <div className="mb-3 p-4 bg-white/70 rounded-xl border border-gray-200 text-xs text-gray-600 space-y-2 animate-in fade-in slide-in-from-top-1 duration-300">
                     <p className="font-bold text-gray-800 text-sm">📋 Tiempo de Respuesta (Acuerdo de Nivel de Servicio)</p>
-                    <p>Es el <strong>tiempo máximo</strong> que tiene un responsable para responder un incidente desde que fue reportado. Funciona como el triage de una guardia: cada caso tiene un plazo según su urgencia.</p>
+                    <p>Es el <strong>tiempo máximo</strong> que tiene un responsable para responder un hallazgo desde que fue reportado. Funciona como el triage de una guardia: cada caso tiene un plazo según su urgencia.</p>
                     <div className="grid grid-cols-3 gap-2 mt-2">
                         <div className="bg-red-50 p-2 rounded-lg text-center">
                             <p className="font-black text-red-600">🔴 Crítico</p>

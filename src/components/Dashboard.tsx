@@ -855,6 +855,43 @@ export const Dashboard = () => {
     const [sectorAssignmentsData, setSectorAssignmentsData] = useState<any[]>([]);
     const [loadingAssignments, setLoadingAssignments] = useState(true);
     const [expandedSector, setExpandedSector] = useState<string | null>(null);
+    const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
+
+    // Send reminder WhatsApp for a pending sector assignment
+    const handleSendReminder = async (assignment: any) => {
+        if (!selectedReport || sendingReminderId) return;
+        setSendingReminderId(assignment.id);
+        try {
+            const sectorLabel = SECTOR_OPTIONS.find(s => s.value === assignment.sector)?.label || assignment.sector;
+            const resolutionLink = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}/${assignment.id}`;
+            const botNumber = `549${(assignment.assigned_phone || '').replace(/\D/g, '').replace(/^549/, '')}`;
+
+            if (botNumber.length < 12) {
+                setFeedbackModal({ isOpen: true, type: 'error', title: 'Sin teléfono', message: 'No hay un número de teléfono válido para esta asignación.' });
+                setSendingReminderId(null);
+                return;
+            }
+
+            const { error } = await supabase.functions.invoke('send-whatsapp', {
+                body: {
+                    number: botNumber,
+                    message: `🔔 *Recordatorio - Caso Pendiente*\n\nEl caso *${selectedReport.tracking_id}* aún requiere su gestión.\n📂 Sector: ${sectorLabel}\n\n⏰ Este caso está esperando su respuesta. Por favor, gestione a la brevedad.\n\n👉 *Gestione aquí:* ${resolutionLink}`,
+                    mediaUrl: "https://i.imgur.com/JGQlbiJ.jpeg"
+                }
+            });
+
+            if (error) {
+                setFeedbackModal({ isOpen: true, type: 'error', title: 'Error', message: 'No se pudo enviar el recordatorio.' });
+            } else {
+                setFeedbackModal({ isOpen: true, type: 'success', title: 'Recordatorio Enviado', message: `Se reenvió la notificación a ${sectorLabel} (${assignment.assigned_phone}).` });
+            }
+        } catch (err) {
+            console.error('[Reminder] Error:', err);
+            setFeedbackModal({ isOpen: true, type: 'error', title: 'Error', message: 'Error inesperado al enviar recordatorio.' });
+        } finally {
+            setSendingReminderId(null);
+        }
+    };
 
     // Fetch sector assignments when a report is selected
     useEffect(() => {
@@ -2503,6 +2540,22 @@ export const Dashboard = () => {
                                                                         <p className="font-bold text-red-700 mb-1">Motivo Rechazo:</p>
                                                                         <p>{assignment.notes}</p>
                                                                     </div>
+                                                                )}
+
+                                                                {/* Reminder Button — only for pending assignments, visible to admins */}
+                                                                {isAdmin && assignment.status === 'pending' && assignment.assigned_phone && (
+                                                                    <button
+                                                                        onClick={() => handleSendReminder(assignment)}
+                                                                        disabled={sendingReminderId === assignment.id}
+                                                                        className="mt-3 w-full py-2 px-3 bg-amber-50 border border-amber-200 text-amber-700 font-bold text-xs rounded-lg hover:bg-amber-100 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                                                    >
+                                                                        {sendingReminderId === assignment.id ? (
+                                                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                                        ) : (
+                                                                            <Bell className="w-3.5 h-3.5" />
+                                                                        )}
+                                                                        Enviar Recordatorio
+                                                                    </button>
                                                                 )}
                                                             </div>
                                                         );

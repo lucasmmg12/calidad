@@ -216,7 +216,7 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                                 </div>
                                 <h3 className="text-lg font-bold text-gray-800">Acción Correctiva Inmediata</h3>
                             </div>
-                            <p className="text-xs text-gray-500">¿Qué medida se tomó en el momento para contener el incidente?</p>
+                            <p className="text-xs text-gray-500">¿Qué medida se tomó en el momento para contener el hallazgo?</p>
                             <textarea
                                 {...register('immediateAction', { required: true })}
                                 rows={3}

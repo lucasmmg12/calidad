@@ -46,7 +46,7 @@ export const PrintableReport = forwardRef<HTMLDivElement, PrintableReportProps>(
                     <div className="text-sm border-b border-gray-200 pb-1">{data.findingType || 'Evento Adverso'}</div>
                 </div>
                 <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase block">Fecha Incidente</label>
+                    <label className="text-xs font-bold text-gray-500 uppercase block">Fecha Hallazgo</label>
                     <div className="text-sm border-b border-gray-200 pb-1">{new Date(data.date).toLocaleDateString()}</div>
                 </div>
             </div>

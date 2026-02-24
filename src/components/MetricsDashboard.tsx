@@ -442,7 +442,7 @@ export const MetricsDashboard = () => {
                     startY: 118,
                     head: [['Métrica', 'Valor', 'Indicador']],
                     body: [
-                        ['Total Incidentes', stats.total.toString(), '📊'],
+                        ['Total Hallazgos', stats.total.toString(), '📊'],
                         ['Casos Resueltos', stats.resolved.toString(), '✅'],
                         ['Tasa de Resolución', `${stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}%`, stats.total > 0 && (stats.resolved / stats.total) >= 0.7 ? '🟢' : '🟡'],
                         ['Alertas Críticas (Rojo)', stats.urgentCount.toString(), stats.urgentCount > 0 ? '🔴' : '🟢'],
@@ -615,7 +615,7 @@ export const MetricsDashboard = () => {
                 const kpiBoxH = 35;
 
                 const kpis = [
-                    { label: 'TOTAL INCIDENTES', value: stats.total.toString(), color: primaryColor },
+                    { label: 'TOTAL HALLAZGOS', value: stats.total.toString(), color: primaryColor },
                     { label: 'TASA DE RESOLUCIÓN', value: `${stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}%`, color: secondaryColor },
                     { label: 'ALERTAS CRÍTICAS', value: stats.urgentCount.toString(), color: [239, 68, 68] as [number, number, number] },
                     { label: 'TIEMPO PROMEDIO', value: `${stats.avgResolutionTimeHours}h`, color: [99, 102, 241] as [number, number, number] },
@@ -804,7 +804,7 @@ export const MetricsDashboard = () => {
                     <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                         <AlertOctagon className="w-24 h-24 text-red-600" />
                     </div>
-                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Incidentes Críticos</p>
+                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Hallazgos Críticos</p>
                     <p className="text-4xl font-black text-gray-800 mt-2">{stats.urgentCount}</p>
                     <p className="text-xs text-red-500 mt-2 font-medium">Requiren atención inmediata</p>
                 </div>
@@ -1096,7 +1096,7 @@ export const MetricsDashboard = () => {
                 <div className="bg-white p-8 rounded-3xl shadow-card border border-gray-100 flex flex-col">
                     <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
                         <Zap className="w-5 h-5 text-yellow-500" />
-                        Gravedad de Incidentes
+                        Gravedad de Hallazgos
                     </h3>
 
                     {(() => {

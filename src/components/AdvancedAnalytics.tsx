@@ -141,7 +141,7 @@ export const AdvancedAnalytics = ({ reports }: Props) => {
                     <div>
                         <div className="flex items-center justify-between mb-6">
                             <div>
-                                <h3 className="font-bold text-gray-800">Evolución de Incidentes</h3>
+                                <h3 className="font-bold text-gray-800">Evolución de Hallazgos</h3>
                                 <p className="text-xs text-gray-400 mt-1">Últimos 12 periodos</p>
                             </div>
                             <div className="relative">
@@ -208,7 +208,7 @@ export const AdvancedAnalytics = ({ reports }: Props) => {
                 {activeTab === 'heatmap' && (
                     <div>
                         <h3 className="font-bold text-gray-800 mb-1">Mapa de Calor: Sector × Día</h3>
-                        <p className="text-xs text-gray-400 mb-4">Concentración de incidentes por día de la semana</p>
+                        <p className="text-xs text-gray-400 mb-4">Concentración de hallazgos por día de la semana</p>
 
                         <div className="overflow-x-auto">
                             <table className="w-full text-xs">

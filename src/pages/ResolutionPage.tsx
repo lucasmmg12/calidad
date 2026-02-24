@@ -47,29 +47,56 @@ export const ResolutionPage = () => {
                     if (assignment.status === 'rejected') {
                         setRejected(true);
                     }
+
+                    // For multi-sector: determine step from the ASSIGNMENT status, not the report
+                    const getAssignmentStep = () => {
+                        if (assignment.status === 'resolved' || assignment.status === 'quality_validation') return 'step2_submitted';
+                        if (assignment.immediate_action) return 'step1_completed';
+                        return 'step1_pending';
+                    };
+
+                    // Determine if this assignment needs full RCA based on management_type
+                    const needsRCA = assignment.management_type === 'desvio' || assignment.management_type === 'adverse';
+
+                    setReportData({
+                        id: data.id,
+                        trackingId: data.tracking_id,
+                        description: data.content,
+                        isAdverseEvent: needsRCA,
+                        sector: assignment.sector || data.sector,
+                        contactNumber: data.contact_number,
+                        status: assignment.status, // Use ASSIGNMENT status
+                        notes: data.notes,
+                        // Use ASSIGNMENT-level step, not report-level
+                        resolutionStep: getAssignmentStep(),
+                        draftData: null,
+                        draftUpdatedAt: null,
+                        immediateAction: assignment.immediate_action || '',
+                        step1EvidenceUrls: assignment.resolution_evidence_urls || [],
+                    });
                 } else {
                     // Legacy: Check if already rejected at report level
                     if (data.status === 'assignment_rejected') {
                         setRejected(true);
                     }
-                }
 
-                setReportData({
-                    id: data.id,
-                    trackingId: data.tracking_id,
-                    description: data.content,
-                    isAdverseEvent: data.is_adverse_event || data.ai_urgency === 'Rojo',
-                    sector: assignmentId ? (assignmentData?.sector || data.sector) : data.sector,
-                    contactNumber: data.contact_number,
-                    status: data.status,
-                    notes: data.notes,
-                    // 2-Step Resolution fields
-                    resolutionStep: data.resolution_step || 'step1_pending',
-                    draftData: data.draft_data || null,
-                    draftUpdatedAt: data.draft_updated_at || null,
-                    immediateAction: data.resolution_notes || '',
-                    step1EvidenceUrls: data.step1_evidence_urls || [],
-                });
+                    setReportData({
+                        id: data.id,
+                        trackingId: data.tracking_id,
+                        description: data.content,
+                        isAdverseEvent: data.is_adverse_event || data.ai_urgency === 'Rojo',
+                        sector: data.sector,
+                        contactNumber: data.contact_number,
+                        status: data.status,
+                        notes: data.notes,
+                        // 2-Step Resolution fields
+                        resolutionStep: data.resolution_step || 'step1_pending',
+                        draftData: data.draft_data || null,
+                        draftUpdatedAt: data.draft_updated_at || null,
+                        immediateAction: data.resolution_notes || '',
+                        step1EvidenceUrls: data.step1_evidence_urls || [],
+                    });
+                }
 
                 // Only show the old CorrectiveActionForm for already-completed adverse events
                 // New flow uses the 2-step ResolutionForm

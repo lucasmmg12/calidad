@@ -1,0 +1,392 @@
+{
+  "generated_at": "2026-02-24T13:16:20.900Z",
+  "excel_file": "Dora bd desde enero.xlsx",
+  "total_rows": 156,
+  "total_columns": 22,
+  "excel_columns": [
+    "N°",
+    "Marca temporal",
+    "Nombre y apellido:\r\n\r\n",
+    "Detalle del evento a reportar:",
+    "A qué sector perteneces? (opcional):",
+    "A qué sector enviamos tu reclamo?",
+    "Tipo (EA / OM)",
+    "Clasificación",
+    "Analisis de Causa",
+    "Acción correctiva",
+    "Es pertinente?",
+    "Fecha de compromiso",
+    "Responsable",
+    "¿Comunico la respuesta al sector?",
+    "Cierre",
+    "Fecha de cierre",
+    "Se envió al sector?",
+    "__EMPTY",
+    "__EMPTY_1",
+    "__EMPTY_2",
+    "__EMPTY_3",
+    "__EMPTY_4"
+  ],
+  "mapping_suggestions": {
+    "Nombre y apellido:\r\n\r\n": "tracking_id",
+    "Detalle del evento a reportar:": "content",
+    "A qué sector perteneces? (opcional):": "sector",
+    "Tipo (EA / OM)": "finding_type",
+    "Clasificación": "ai_classification",
+    "Analisis de Causa": "root_cause",
+    "Acción correctiva": "immediate_action",
+    "Fecha de compromiso": "created_at",
+    "Responsable": "assigned_to",
+    "¿Comunico la respuesta al sector?": "resolution_notes",
+    "Cierre": "resolved_at"
+  },
+  "unmapped_columns": [
+    "N°",
+    "Marca temporal",
+    "A qué sector enviamos tu reclamo?",
+    "Es pertinente?",
+    "Fecha de cierre",
+    "Se envió al sector?",
+    "__EMPTY",
+    "__EMPTY_1",
+    "__EMPTY_2",
+    "__EMPTY_3",
+    "__EMPTY_4"
+  ],
+  "column_profiles": [
+    {
+      "col": "N°",
+      "detectedType": "NUMBER",
+      "nonNull": 128,
+      "nullCount": 28,
+      "fillPct": "82%",
+      "uniqueCount": 128,
+      "sample": [
+        "7600",
+        "7601",
+        "7602",
+        "7603",
+        "7604"
+      ]
+    },
+    {
+      "col": "Marca temporal",
+      "detectedType": "DATE",
+      "nonNull": 156,
+      "nullCount": 0,
+      "fillPct": "100%",
+      "uniqueCount": 156,
+      "sample": [
+        "Fri Jan 02 2026 08:41:22 GMT-0300 (hora estándar de Argentina)",
+        "Fri Jan 02 2026 16:17:00 GMT-0300 (hora estándar de Argentina)",
+        "Sun Jan 04 2026 22:59:44 GMT-0300 (hora estándar de Argentina)",
+        "Sun Jan 04 2026 23:01:41 GMT-0300 (hora estándar de Argentina)",
+        "Sun Jan 04 2026 23:02:44 GMT-0300 (hora estándar de Argentina)"
+      ]
+    },
+    {
+      "col": "Nombre y apellido:\r\n\r\n",
+      "detectedType": "TEXT",
+      "nonNull": 109,
+      "nullCount": 47,
+      "fillPct": "70%",
+      "uniqueCount": 69,
+      "sample": [
+        "Internado",
+        "Soraya Barale",
+        "Laboratorio",
+        "Rosario Roca",
+        "Paciente Rodrigo Rodriguez acude a la guardia el"
+      ]
+    },
+    {
+      "col": "Detalle del evento a reportar:",
+      "detectedType": "TEXT",
+      "nonNull": 156,
+      "nullCount": 0,
+      "fillPct": "100%",
+      "uniqueCount": 156,
+      "sample": [
+        "paciente de hab 208, paciente Lanzone, altamente demandante, con aislamiento de ",
+        "Día 1ro de enero 2026 TM entra urgencia De Berbari cesárea a las 9 30 hs . Estab",
+        "El chiconq fue hoy al intercambio de ropa limpio.por sucio mo respeta horario.y ",
+        "El TM no fue a retirar cajas de show romm como quedó comprometido .si dejo el ma",
+        "Se sugiere mantener el orden en el sótano con los elementos de las campañas"
+      ]
+    },
+    {
+      "col": "A qué sector perteneces? (opcional):",
+      "detectedType": "TEXT",
+      "nonNull": 152,
+      "nullCount": 4,
+      "fillPct": "97%",
+      "uniqueCount": 25,
+      "sample": [
+        "INT - Internado",
+        "QUI - Quirófano",
+        "AUX - Auxiliares de Hotelería",
+        "LAB - Laboratorio",
+        "HEM - Hemoterapia"
+      ]
+    },
+    {
+      "col": "A qué sector enviamos tu reclamo?",
+      "detectedType": "TEXT",
+      "nonNull": 156,
+      "nullCount": 0,
+      "fillPct": "100%",
+      "uniqueCount": 41,
+      "sample": [
+        "AUX - Auxiliares de Hotelería",
+        "QUI - Quirófano",
+        "INSUMED",
+        "FUN - Fundación",
+        "DIR - Dirección"
+      ]
+    },
+    {
+      "col": "Tipo (EA / OM)",
+      "detectedType": "TEXT",
+      "nonNull": 118,
+      "nullCount": 38,
+      "fillPct": "76%",
+      "uniqueCount": 4,
+      "sample": [
+        "OM",
+        "Cuasi-EA",
+        "Felicitaciones",
+        "EA"
+      ]
+    },
+    {
+      "col": "Clasificación",
+      "detectedType": "TEXT",
+      "nonNull": 109,
+      "nullCount": 47,
+      "fillPct": "70%",
+      "uniqueCount": 14,
+      "sample": [
+        "Recursos e insumos",
+        "Prácticas asistenciales",
+        "Capacitación",
+        "Demora en la atención",
+        "Comunicación efectiva interservicios"
+      ]
+    },
+    {
+      "col": "Analisis de Causa",
+      "detectedType": "TEXT",
+      "nonNull": 34,
+      "nullCount": 122,
+      "fillPct": "22%",
+      "uniqueCount": 34,
+      "sample": [
+        "Si se le llamo al referente que le correspondia ese fin de semana en dos oportun",
+        "PACIENTE SE LA SOLICITO TC DE cEREBRO QUE SE REALIZO A LAS 18:07 hs por problema",
+        "necesitamos informacion mas precisa para poder consultar con las personas respon",
+        "En horas de la mañana se le explico a la paciente le plan a seguir. Luego de rea",
+        "se da seguimiento con camilleros responsables quienes informarman que la situaci"
+      ]
+    },
+    {
+      "col": "Acción correctiva",
+      "detectedType": "TEXT",
+      "nonNull": 33,
+      "nullCount": 123,
+      "fillPct": "21%",
+      "uniqueCount": 33,
+      "sample": [
+        "el personal debe llamar a cualquier otro coordinador.",
+        "SE REVISARON PROCESOS PARA LA ADQUISICION DE LAS IMAGENS Y PASO DE LAS MISMAS LA",
+        "Se reforzara en el informe que dan los medicos de la guardia.",
+        "Fecha de pago en termino. segun terminos legales. Entendemos las consultas que p",
+        "se le sugiere a Lic Iragorre a fin de elaborar registro correspondiente, reunion"
+      ]
+    },
+    {
+      "col": "Es pertinente?",
+      "detectedType": "TEXT",
+      "nonNull": 15,
+      "nullCount": 141,
+      "fillPct": "10%",
+      "uniqueCount": 5,
+      "sample": [
+        "No",
+        "Sí",
+        "si",
+        "13/01/32026",
+        "Wed Jan 14 2026 00:00:48 GMT-0300 (hora estándar de Argentina)"
+      ]
+    },
+    {
+      "col": "Fecha de compromiso",
+      "detectedType": "DATE",
+      "nonNull": 17,
+      "nullCount": 139,
+      "fillPct": "11%",
+      "uniqueCount": 17,
+      "sample": [
+        "Wed Jan 07 2026 00:00:48 GMT-0300 (hora estándar de Argentina)",
+        "Thu Jan 15 2026 00:00:48 GMT-0300 (hora estándar de Argentina)",
+        "Sat Jan 17 2026 00:00:48 GMT-0300 (hora estándar de Argentina)",
+        "Sat Jan 17 2026 00:00:48 GMT-0300 (hora estándar de Argentina)",
+        "Thu Jan 22 2026 00:00:48 GMT-0300 (hora estándar de Argentina)"
+      ]
+    },
+    {
+      "col": "Responsable",
+      "detectedType": "TEXT",
+      "nonNull": 20,
+      "nullCount": 136,
+      "fillPct": "13%",
+      "uniqueCount": 10,
+      "sample": [
+        "DR BARCIA",
+        "dra paola garcia",
+        "RRHH",
+        "Yohana Carabajal",
+        "coord de aux"
+      ]
+    },
+    {
+      "col": "¿Comunico la respuesta al sector?",
+      "detectedType": "TEXT",
+      "nonNull": 7,
+      "nullCount": 149,
+      "fillPct": "4%",
+      "uniqueCount": 1,
+      "sample": [
+        "si"
+      ]
+    },
+    {
+      "col": "Cierre",
+      "detectedType": "TEXT",
+      "nonNull": 0,
+      "nullCount": 156,
+      "fillPct": "0%",
+      "uniqueCount": 0,
+      "sample": []
+    },
+    {
+      "col": "Fecha de cierre",
+      "detectedType": "TEXT",
+      "nonNull": 0,
+      "nullCount": 156,
+      "fillPct": "0%",
+      "uniqueCount": 0,
+      "sample": []
+    },
+    {
+      "col": "Se envió al sector?",
+      "detectedType": "TEXT",
+      "nonNull": 0,
+      "nullCount": 156,
+      "fillPct": "0%",
+      "uniqueCount": 0,
+      "sample": []
+    },
+    {
+      "col": "__EMPTY",
+      "detectedType": "TEXT",
+      "nonNull": 0,
+      "nullCount": 156,
+      "fillPct": "0%",
+      "uniqueCount": 0,
+      "sample": []
+    },
+    {
+      "col": "__EMPTY_1",
+      "detectedType": "TEXT",
+      "nonNull": 0,
+      "nullCount": 156,
+      "fillPct": "0%",
+      "uniqueCount": 0,
+      "sample": []
+    },
+    {
+      "col": "__EMPTY_2",
+      "detectedType": "TEXT",
+      "nonNull": 0,
+      "nullCount": 156,
+      "fillPct": "0%",
+      "uniqueCount": 0,
+      "sample": []
+    },
+    {
+      "col": "__EMPTY_3",
+      "detectedType": "TEXT",
+      "nonNull": 0,
+      "nullCount": 156,
+      "fillPct": "0%",
+      "uniqueCount": 0,
+      "sample": []
+    },
+    {
+      "col": "__EMPTY_4",
+      "detectedType": "TEXT",
+      "nonNull": 0,
+      "nullCount": 156,
+      "fillPct": "0%",
+      "uniqueCount": 0,
+      "sample": []
+    }
+  ],
+  "sector_values_system": [
+    "ADM-Administracion",
+    "AGC-Mantenimiento-Equipamiento-Medico",
+    "ANST-Anestesia",
+    "APA-Anatomia-Patologica",
+    "APS-Asistencia-Psicologica",
+    "ASMED-Asesor-Medico-Direccion",
+    "AUX-Auxiliares-Hoteleria",
+    "CC-Contact-Center",
+    "CDI-Control-de-Infecciones",
+    "CEXT-S1-Consultorios-Externos-Sede-1",
+    "CEXT-S2-Consultorios-Externos-Sede-2",
+    "CEXT-S3-Consultorios-Externos-Sede-3",
+    "CEXT-SFS-Consultorios-Externos-Sede-Santa-Fe",
+    "CHQ-Chequeo-Medico-Preventivo",
+    "CIT-Citologia",
+    "CYS-Compras-y-Suministro",
+    "DIR-Direccion",
+    "DXI-S1-Diagnostico-Imagenes-Sede-1",
+    "DXI-SF-Diagnostico-Imagenes-Sede-Santa-Fe",
+    "FACT-AMB-Facturacion-Ambulatorio",
+    "FACT-INT-Facturacion-Internado",
+    "FAR-Farmacia",
+    "FER-Fertilidad",
+    "FUN-Fundacion",
+    "GCM-Guardia-Clinica-Medica",
+    "GGO-Guardia-Gineco-Obstetrica",
+    "GPE-Guardia-Pediatrica",
+    "HDD-Hospital-de-Dia",
+    "HDM-Hemodinamia",
+    "HEM-Hemoterapia",
+    "HYS-Higiene-y-Seguridad",
+    "INST-Instrumentadoras",
+    "INSUMED-Insumed",
+    "INT-Internado-Adultos",
+    "IPE-Internacion-Pediatrica",
+    "KIN-Kinesiologia",
+    "LAB-Laboratorio-Analisis-Clinicos",
+    "LAB-FERT-Laboratorio-Fertilidad",
+    "LYC-Liquidaciones-y-Convenio",
+    "MAN-Mantenimiento-Edilicio",
+    "NUT-Nutricion-y-Alimentacion",
+    "PYT-Pagos-y-Tesoreria",
+    "QUI-Quirofano",
+    "REC-S1-Recepcion-Sede-1",
+    "RES-Residencias-Medicas",
+    "RRHH-Recursos-Humanos",
+    "SEG-Seguridad-Patrimonial",
+    "SGC-Sistema-Gestion-Calidad",
+    "SR-Shock-Room",
+    "TC-Tomografia-Computada",
+    "TRM-Traumatologia",
+    "TYS-Tecnologia-y-Sistemas",
+    "UCI-Unidad-Cuidados-Intensivos",
+    "UTIN-Cuidados-Intensivos-Neonatales",
+    "VAC-Vacunatorio"
+  ]
+}
