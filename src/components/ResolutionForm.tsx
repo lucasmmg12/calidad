@@ -18,6 +18,8 @@ import {
     Image,
 } from 'lucide-react';
 import type { ResolutionFormData, ResolutionStatus } from '../types/resolution';
+import { SECTOR_OPTIONS } from '../constants/sectors';
+import { ORIGIN_OPTIONS } from '../constants/origin_options';
 
 interface Props {
     reportData: {
@@ -26,6 +28,8 @@ interface Props {
         description: string;
         isAdverseEvent: boolean;
         sector: string;
+        originSector?: string;
+        reporterSector?: string;
         resolutionStep?: string;
         draftData?: any;
         draftUpdatedAt?: string;
@@ -479,6 +483,27 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                     <div className="bg-gray-50 rounded-xl p-4 text-gray-700 text-sm leading-relaxed border border-gray-100 italic">
                         "{reportData.description}"
                     </div>
+
+                    {/* Sectores intervinientes */}
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {reportData.originSector && (
+                            <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
+                                <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-0.5">Origen</p>
+                                <p className="text-xs font-bold text-blue-800">{ORIGIN_OPTIONS.find(o => o.value === reportData.originSector)?.label || reportData.originSector}</p>
+                            </div>
+                        )}
+                        {reportData.reporterSector && (
+                            <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-100">
+                                <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-0.5">Sector Reportante</p>
+                                <p className="text-xs font-bold text-indigo-800">{SECTOR_OPTIONS.find(s => s.value === reportData.reporterSector)?.label || reportData.reporterSector}</p>
+                            </div>
+                        )}
+                        <div className="bg-purple-50 rounded-lg p-3 border border-purple-100">
+                            <p className="text-[10px] font-bold text-purple-500 uppercase tracking-wider mb-0.5">Sector Destino</p>
+                            <p className="text-xs font-bold text-purple-800">{SECTOR_OPTIONS.find(s => s.value === reportData.sector)?.label || reportData.sector}</p>
+                        </div>
+                    </div>
+
                     {reportData.isAdverseEvent && (
                         <div className="mt-3 flex items-center gap-2 text-amber-700 bg-amber-50 px-3 py-2 rounded-lg text-xs font-bold border border-amber-100/50">
                             <AlertTriangle className="w-4 h-4" />

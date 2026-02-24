@@ -64,10 +64,11 @@ export const ResolutionPage = () => {
                         description: data.content,
                         isAdverseEvent: needsRCA,
                         sector: assignment.sector || data.sector,
+                        originSector: data.origin_sector || '',
+                        reporterSector: data.reporter_sector || '',
                         contactNumber: data.contact_number,
-                        status: assignment.status, // Use ASSIGNMENT status
+                        status: assignment.status,
                         notes: data.notes,
-                        // Use ASSIGNMENT-level step, not report-level
                         resolutionStep: getAssignmentStep(),
                         draftData: null,
                         draftUpdatedAt: null,
@@ -86,10 +87,11 @@ export const ResolutionPage = () => {
                         description: data.content,
                         isAdverseEvent: data.is_adverse_event || data.ai_urgency === 'Rojo',
                         sector: data.sector,
+                        originSector: data.origin_sector || '',
+                        reporterSector: data.reporter_sector || '',
                         contactNumber: data.contact_number,
                         status: data.status,
                         notes: data.notes,
-                        // 2-Step Resolution fields
                         resolutionStep: data.resolution_step || 'step1_pending',
                         draftData: data.draft_data || null,
                         draftUpdatedAt: data.draft_updated_at || null,

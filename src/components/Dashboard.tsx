@@ -36,6 +36,7 @@ import {
 import { useMemo } from 'react';
 import { CLASSIFICATION_CATEGORIES } from '../constants/classification_categories';
 import { SECTOR_OPTIONS } from '../constants/sectors';
+import { ORIGIN_OPTIONS } from '../constants/origin_options';
 import type { UserProfile } from '../contexts/AuthContext';
 import { generateId } from '../utils/compat';
 import * as XLSX from 'xlsx';
@@ -1561,26 +1562,31 @@ export const Dashboard = () => {
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
 
                 {/* Tabs de Estado */}
-                <div className="flex bg-gray-100 p-1 rounded-lg w-full md:w-auto">
+                <div className="flex bg-gray-100 p-1 rounded-lg w-full md:w-auto flex-wrap">
                     {[
-                        { id: 'all', label: 'Todos' },
-                        { id: 'pending', label: 'Pendientes' },
-                        { id: 'in_progress', label: 'En Gestión' },
-                        { id: 'quality_validation', label: 'Por Validar' },
-                        { id: 'resolved', label: 'Resueltos' },
-                        { id: 'assignment_rejected', label: '⚡ Rechazados' },
-                        { id: 'discarded', label: 'Descartados' }
+                        { id: 'all', label: 'Todos', tooltip: 'Vista general de todos los casos activos (excluye descartados y rechazados).' },
+                        { id: 'pending', label: 'Pendientes', tooltip: 'Hallazgos nuevos que aún no fueron derivados a ningún responsable. Calidad todavía no les envió WhatsApp.' },
+                        { id: 'in_progress', label: 'En Gestión', tooltip: 'Ya se envió el mensaje al responsable (o múltiples sectores) pero todavía no respondieron. Están "en curso".' },
+                        { id: 'quality_validation', label: 'Por Validar', tooltip: 'El responsable ya envió su resolución, pero Calidad aún debe revisar y aprobar la respuesta.' },
+                        { id: 'resolved', label: 'Resueltos', tooltip: 'Calidad aprobó la resolución. Caso cerrado ✅' },
+                        { id: 'assignment_rejected', label: '⚡ Rechazados', tooltip: 'El responsable rechazó la asignación (no le correspondía, etc.). Requiere reasignación por Calidad.' },
+                        { id: 'discarded', label: 'Descartados', tooltip: 'Calidad decidió descartar el hallazgo (no procede, duplicado, etc.).' }
                     ].map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setStatusFilter(tab.id as 'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation' | 'discarded' | 'assignment_rejected')}
-                            className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${statusFilter === tab.id
-                                ? 'bg-white text-sanatorio-primary shadow-sm'
-                                : 'text-gray-500 hover:text-gray-700'
-                                }`}
-                        >
-                            {tab.label}
-                        </button>
+                        <div key={tab.id} className="group relative">
+                            <button
+                                onClick={() => setStatusFilter(tab.id as 'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation' | 'discarded' | 'assignment_rejected')}
+                                className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${statusFilter === tab.id
+                                    ? 'bg-white text-sanatorio-primary shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                            >
+                                {tab.label}
+                            </button>
+                            <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 p-2.5 bg-gray-800 text-white text-[11px] leading-snug rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center z-50 shadow-lg">
+                                {tab.tooltip}
+                                <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+                            </div>
+                        </div>
                     ))}
                 </div>
 
@@ -2009,8 +2015,8 @@ export const Dashboard = () => {
                                         </div>
                                         {selectedReport.origin_sector && (
                                             <div className="flex-1">
-                                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Sector Origen</h3>
-                                                <p className="text-sm font-bold text-gray-700">{selectedReport.origin_sector}</p>
+                                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Origen</h3>
+                                                <p className="text-sm font-bold text-gray-700">{ORIGIN_OPTIONS.find(o => o.value === selectedReport.origin_sector)?.label || selectedReport.origin_sector}</p>
                                             </div>
                                         )}
                                     </div>
