@@ -1562,20 +1562,20 @@ export const Dashboard = () => {
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
 
                 {/* Tabs de Estado */}
-                <div className="flex bg-gray-100 p-1 rounded-lg shrink-0 overflow-x-auto">
+                <div className="flex bg-gray-100 p-1 rounded-lg w-full md:w-auto flex-wrap">
                     {[
                         { id: 'all', label: 'Todos', tooltip: 'Vista general de todos los casos activos (excluye descartados y rechazados).' },
                         { id: 'pending', label: 'Pendientes', tooltip: 'Hallazgos nuevos que aún no fueron derivados a ningún responsable. Calidad todavía no les envió WhatsApp.' },
                         { id: 'in_progress', label: 'En Gestión', tooltip: 'Ya se envió el mensaje al responsable (o múltiples sectores) pero todavía no respondieron. Están "en curso".' },
                         { id: 'quality_validation', label: 'Por Validar', tooltip: 'El responsable ya envió su resolución, pero Calidad aún debe revisar y aprobar la respuesta.' },
                         { id: 'resolved', label: 'Resueltos', tooltip: 'Calidad aprobó la resolución. Caso cerrado ✅' },
-                        { id: 'assignment_rejected', label: '⚡Rechazados', tooltip: 'El responsable rechazó la asignación (no le correspondía, etc.). Requiere reasignación por Calidad.' },
+                        { id: 'assignment_rejected', label: '⚡ Rechazados', tooltip: 'El responsable rechazó la asignación (no le correspondía, etc.). Requiere reasignación por Calidad.' },
                         { id: 'discarded', label: 'Descartados', tooltip: 'Calidad decidió descartar el hallazgo (no procede, duplicado, etc.).' }
                     ].map(tab => (
                         <div key={tab.id} className="group relative">
                             <button
                                 onClick={() => setStatusFilter(tab.id as 'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation' | 'discarded' | 'assignment_rejected')}
-                                className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${statusFilter === tab.id
+                                className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${statusFilter === tab.id
                                     ? 'bg-white text-sanatorio-primary shadow-sm'
                                     : 'text-gray-500 hover:text-gray-700'
                                     }`}
