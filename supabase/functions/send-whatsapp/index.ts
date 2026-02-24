@@ -25,7 +25,7 @@ serve(async (req) => {
 
         console.log(`[WhatsApp] Sending to ${number}: ${message.substring(0, 50)}...`)
 
-        const response = await fetch('https://app.builderbot.cloud/api/v2/c3fd918b-b736-40dc-a841-cbb73d3b2a8d/messages', {
+        const response = await fetch('https://app.builderbot.cloud/api/v2/9981a143-f290-4ebe-a426-21c4d234371c/messages', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
