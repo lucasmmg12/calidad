@@ -2803,8 +2803,21 @@ export const Dashboard = () => {
 
                                                                         {isExpanded && assignment.status === 'pending' && (
                                                                             <div className="px-4 pb-4 border-t border-gray-50 pt-3">
-                                                                                <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-center">
+                                                                                <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-center space-y-2">
                                                                                     <p className="text-xs text-yellow-700 font-medium">⏳ Este sector aún no ha enviado su respuesta</p>
+                                                                                    {isAdmin && (
+                                                                                        <button
+                                                                                            onClick={(e) => { e.stopPropagation(); handleSendReminder(assignment); }}
+                                                                                            disabled={sendingReminderId === assignment.id}
+                                                                                            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-green-500 hover:bg-green-600 active:scale-95 text-white text-xs font-bold rounded-lg transition-all shadow-sm shadow-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                                        >
+                                                                                            {sendingReminderId === assignment.id ? (
+                                                                                                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Enviando...</>
+                                                                                            ) : (
+                                                                                                <><MessageSquare className="w-3.5 h-3.5" /> Reenviar mensaje</>
+                                                                                            )}
+                                                                                        </button>
+                                                                                    )}
                                                                                 </div>
                                                                             </div>
                                                                         )}
