@@ -7,6 +7,9 @@ export interface ResolutionFormData {
   immediateAction: string;
   evidenceUrls: string[];
 
+  // Flag: true when only Step 1 is being submitted (adverse events)
+  isStep1Only?: boolean;
+
   // Bloque de Fondo (Solo si isAdverseEvent = true)
   rootCause?: string;
   correctivePlan?: string;

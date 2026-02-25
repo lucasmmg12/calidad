@@ -149,20 +149,22 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
 
             if (error) throw error;
 
+            // Always notify parent so sector_assignments get updated
+            await onSubmit({
+                reportId: reportData.id,
+                isAdverseEvent: reportData.isAdverseEvent,
+                reportSummary: reportData.description,
+                immediateAction: immediateAction.trim(),
+                evidenceUrls: allStep1Urls,
+                isStep1Only: reportData.isAdverseEvent, // Flag: step1 partial, not full resolution
+            });
+
             if (reportData.isAdverseEvent) {
                 // Move to step 2
                 setStep1ExistingUrls(allStep1Urls);
                 setStep1Files([]);
                 setCurrentStep('step2');
             } else {
-                // For simple cases, call onSubmit so multi-sector assignments get updated
-                await onSubmit({
-                    reportId: reportData.id,
-                    isAdverseEvent: false,
-                    reportSummary: reportData.description,
-                    immediateAction: immediateAction.trim(),
-                    evidenceUrls: allStep1Urls,
-                });
                 setStatus('submitted');
                 setCurrentStep('completed');
             }

@@ -178,34 +178,58 @@ export const ResolutionPage = () => {
 
         try {
             if (isMultiSectorAssignment && assignmentId) {
-                // Multi-sector: update the specific assignment
-                const { error: assignErr } = await supabase
-                    .from('sector_assignments')
-                    .update({
-                        status: 'resolved',
-                        immediate_action: formData.immediateAction,
-                        root_cause: formData.rootCause || null,
-                        corrective_plan: formData.correctivePlan || null,
-                        implementation_date: formData.implementationDate || null,
-                        resolution_evidence_urls: formData.evidenceUrls || [],
-                        resolved_at: new Date().toISOString()
-                    })
-                    .eq('id', assignmentId);
+                if (formData.isStep1Only) {
+                    // Step 1 only (adverse events): save immediate action but keep pending
+                    const { error: assignErr } = await supabase
+                        .from('sector_assignments')
+                        .update({
+                            immediate_action: formData.immediateAction,
+                            resolution_evidence_urls: formData.evidenceUrls || [],
+                        })
+                        .eq('id', assignmentId);
 
-                if (assignErr) throw assignErr;
+                    if (assignErr) throw assignErr;
 
-                // Log in report notes
-                const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
-                const sectorNote = assignmentData?.sector || 'sector';
-                const logEntry = `[${timestamp}] ✅ RESOLUCIÓN RECIBIDA: ${sectorNote} completó su gestión`;
-                const currentNotes = reportData.notes || '';
-                const updatedNotes = currentNotes ? `${currentNotes}\n\n${logEntry}` : logEntry;
+                    // Log in report notes
+                    const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+                    const sectorNote = assignmentData?.sector || 'sector';
+                    const logEntry = `[${timestamp}] 📝 PASO 1 COMPLETADO: ${sectorNote} registró acción inmediata (pendiente análisis profundo)`;
+                    const currentNotes = reportData.notes || '';
+                    const updatedNotes = currentNotes ? `${currentNotes}\n\n${logEntry}` : logEntry;
 
-                await supabase
-                    .from('reports')
-                    .update({ notes: updatedNotes })
-                    .eq('id', reportData.id);
+                    await supabase
+                        .from('reports')
+                        .update({ notes: updatedNotes })
+                        .eq('id', reportData.id);
+                } else {
+                    // Full resolution: mark as resolved
+                    const { error: assignErr } = await supabase
+                        .from('sector_assignments')
+                        .update({
+                            status: 'resolved',
+                            immediate_action: formData.immediateAction,
+                            root_cause: formData.rootCause || null,
+                            corrective_plan: formData.correctivePlan || null,
+                            implementation_date: formData.implementationDate || null,
+                            resolution_evidence_urls: formData.evidenceUrls || [],
+                            resolved_at: new Date().toISOString()
+                        })
+                        .eq('id', assignmentId);
 
+                    if (assignErr) throw assignErr;
+
+                    // Log in report notes
+                    const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+                    const sectorNote = assignmentData?.sector || 'sector';
+                    const logEntry = `[${timestamp}] ✅ RESOLUCIÓN RECIBIDA: ${sectorNote} completó su gestión`;
+                    const currentNotes = reportData.notes || '';
+                    const updatedNotes = currentNotes ? `${currentNotes}\n\n${logEntry}` : logEntry;
+
+                    await supabase
+                        .from('reports')
+                        .update({ notes: updatedNotes })
+                        .eq('id', reportData.id);
+                }
             }
             // Note: For non-multi-sector, the ResolutionForm already handles the DB updates directly
             // via supabase in handleStep1Submit and handleStep2Submit
