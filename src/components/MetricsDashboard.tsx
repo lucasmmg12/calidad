@@ -16,7 +16,8 @@ import {
     ChevronDown,
     Sparkles,
     Tag,
-    ClipboardCheck
+    ClipboardCheck,
+    Star
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -41,7 +42,8 @@ export const MetricsDashboard = () => {
         byUrgency: { Verdes: 0, Amarillos: 0, Rojos: 0 },
         byStatus: { resolved: 0, pending: 0, waiting: 0, cancelled: 0 },
         byClassification: [] as { category: string; count: number; percentage: number }[],
-        byAnonymity: { anonymous: 0, identified: 0 }
+        byAnonymity: { anonymous: 0, identified: 0 },
+        felicitaciones: 0
     });
     const [isExporting, setIsExporting] = useState(false);
     const [rawReports, setRawReports] = useState<any[]>([]);
@@ -143,9 +145,11 @@ export const MetricsDashboard = () => {
         setRawReports(filteredReports);
 
         const total = filteredReports.length;
-        const resolved = filteredReports.filter(r => r.status === 'resolved');
-        const pending = filteredReports.filter(r => r.status !== 'resolved');
-        const urgent = filteredReports.filter(r => r.ai_urgency === 'Rojo');
+        const felicitaciones = filteredReports.filter(r => r.finding_type === 'Felicitación' || r.ai_category === 'Felicitación').length;
+        const nonFelicitaciones = filteredReports.filter(r => r.finding_type !== 'Felicitación' && r.ai_category !== 'Felicitación');
+        const resolved = nonFelicitaciones.filter(r => r.status === 'resolved');
+        const pending = nonFelicitaciones.filter(r => r.status !== 'resolved');
+        const urgent = nonFelicitaciones.filter(r => r.ai_urgency === 'Rojo');
 
         // Avg Resolution Time
         let totalTimeMs = 0;
@@ -212,7 +216,8 @@ export const MetricsDashboard = () => {
             byUrgency,
             byStatus,
             byClassification,
-            byAnonymity
+            byAnonymity,
+            felicitaciones
         });
         setLoading(false);
     };
@@ -771,7 +776,7 @@ export const MetricsDashboard = () => {
             )}
 
             {/* KPI Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group">
                     <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                         <BarChart3 className="w-24 h-24 text-blue-600" />
@@ -816,6 +821,15 @@ export const MetricsDashboard = () => {
                     <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Tiempo Promedio</p>
                     <p className="text-4xl font-black text-gray-800 mt-2">{stats.avgResolutionTimeHours}h</p>
                     <p className="text-xs text-gray-400 mt-2">Desde reporte hasta cierre</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-6 rounded-2xl shadow-sm border border-amber-200 relative overflow-hidden group">
+                    <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Star className="w-24 h-24 text-amber-400" />
+                    </div>
+                    <p className="text-amber-600 text-xs font-bold uppercase tracking-wider">Felicitaciones</p>
+                    <p className="text-4xl font-black text-amber-600 mt-2">{stats.felicitaciones}</p>
+                    <p className="text-xs text-amber-500 mt-2 font-medium">Reconocimientos positivos 🎉</p>
                 </div>
             </div>
 

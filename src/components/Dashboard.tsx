@@ -36,7 +36,6 @@ import {
 import { useMemo } from 'react';
 import { CLASSIFICATION_CATEGORIES } from '../constants/classification_categories';
 import { SECTOR_OPTIONS } from '../constants/sectors';
-import { ORIGIN_OPTIONS } from '../constants/origin_options';
 import type { UserProfile } from '../contexts/AuthContext';
 import { generateId } from '../utils/compat';
 import * as XLSX from 'xlsx';
@@ -1881,7 +1880,9 @@ export const Dashboard = () => {
                                     filteredReports.map((report) => (
                                         <tr key={report.id} onClick={() => setSelectedReport(report)} className="hover:bg-blue-50/40 cursor-pointer transition-colors group">
                                             <td className="px-6 py-4">
-                                                {report.status === 'resolved' ? (
+                                                {(report.finding_type === 'Felicitación' || report.ai_category === 'Felicitación') ? (
+                                                    <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center" title="Felicitación">⭐</div>
+                                                ) : report.status === 'resolved' ? (
                                                     <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><CheckCircle className="w-3 h-3" /></div>
                                                 ) : report.status === 'multi_sector_pending' ? (
                                                     <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center animate-pulse" title="Multi-Sector">
@@ -2007,18 +2008,60 @@ export const Dashboard = () => {
                                         "{selectedReport.content}"
                                     </div>
 
-                                    {/* Sector Info */}
+                                    {/* Sector Info — Editable by Admin */}
                                     <div className="mt-4 flex gap-4">
                                         <div className="flex-1">
                                             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Sector Destino</h3>
-                                            <p className="text-sm font-bold text-gray-700">{selectedReport.sector}</p>
+                                            {isAdmin ? (
+                                                <select
+                                                    value={selectedReport.sector || ''}
+                                                    onChange={async (e) => {
+                                                        const newSector = e.target.value;
+                                                        const { error } = await supabase.from('reports').update({ sector: newSector }).eq('id', selectedReport.id);
+                                                        if (!error) {
+                                                            const updatedReport = { ...selectedReport, sector: newSector };
+                                                            setReports(reports.map(r => r.id === selectedReport.id ? updatedReport : r));
+                                                            setSelectedReport(updatedReport);
+                                                        }
+                                                    }}
+                                                    className="w-full bg-white border border-gray-200 text-gray-700 text-sm rounded-lg p-2 outline-none focus:border-sanatorio-primary focus:ring-1 focus:ring-sanatorio-primary font-bold"
+                                                >
+                                                    <option value="">Seleccionar sector...</option>
+                                                    {SECTOR_OPTIONS.map(s => (
+                                                        <option key={`dest-${s.value}`} value={s.value}>{s.label}</option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <p className="text-sm font-bold text-gray-700">{selectedReport.sector}</p>
+                                            )}
                                         </div>
-                                        {selectedReport.origin_sector && (
-                                            <div className="flex-1">
-                                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Origen</h3>
-                                                <p className="text-sm font-bold text-gray-700">{ORIGIN_OPTIONS.find(o => o.value === selectedReport.origin_sector)?.label || selectedReport.origin_sector}</p>
-                                            </div>
-                                        )}
+                                        <div className="flex-1">
+                                            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Sector Origen</h3>
+                                            {isAdmin ? (
+                                                <select
+                                                    value={selectedReport.reporter_sector || selectedReport.origin_sector || ''}
+                                                    onChange={async (e) => {
+                                                        const newOrigin = e.target.value;
+                                                        const { error } = await supabase.from('reports').update({ reporter_sector: newOrigin }).eq('id', selectedReport.id);
+                                                        if (!error) {
+                                                            const updatedReport = { ...selectedReport, reporter_sector: newOrigin };
+                                                            setReports(reports.map(r => r.id === selectedReport.id ? updatedReport : r));
+                                                            setSelectedReport(updatedReport);
+                                                        }
+                                                    }}
+                                                    className="w-full bg-white border border-gray-200 text-gray-700 text-sm rounded-lg p-2 outline-none focus:border-sanatorio-primary focus:ring-1 focus:ring-sanatorio-primary font-bold"
+                                                >
+                                                    <option value="">Seleccionar sector...</option>
+                                                    {SECTOR_OPTIONS.map(s => (
+                                                        <option key={`orig-${s.value}`} value={s.value}>{s.label}</option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <p className="text-sm font-bold text-gray-700">
+                                                    {selectedReport.reporter_sector || selectedReport.origin_sector || 'Sin asignar'}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* Tipo de Hallazgo (1st Dropdown - Admin Only) */}

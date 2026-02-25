@@ -1,15 +1,19 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../utils/supabase';
-import { Send, ShieldAlert, Loader2, ChevronDown, User, Lock, Info, AlertTriangle, Lightbulb, Paperclip, X, Phone } from 'lucide-react';
+import { Send, ShieldAlert, Loader2, ChevronDown, User, Lock, Info, AlertTriangle, Lightbulb, Paperclip, X, Phone, Star, Trophy } from 'lucide-react';
 import { DoraAssistant } from './DoraAssistant';
 import { SECTOR_OPTIONS } from '../constants/sectors';
-import { ORIGIN_OPTIONS } from '../constants/origin_options';
+
+type ReportMode = 'hallazgo' | 'felicitacion';
+
 
 
 export const ReportingForm = () => {
     const [loading, setLoading] = useState(false);
     const [successId, setSuccessId] = useState<string | null>(null);
-    const [isAnonymous, setIsAnonymous] = useState<boolean | null>(null);
+    const [isAnonymous, setIsAnonymous] = useState(false);
+    const [reportMode, setReportMode] = useState<ReportMode>('hallazgo');
+    const [felicitacionSent, setFelicitacionSent] = useState(false);
     const [files, setFiles] = useState<File[]>([]);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
     const [formData, setFormData] = useState({
@@ -66,25 +70,16 @@ export const ReportingForm = () => {
 
         const trackingId = generateTrackingId();
         let evidenceUrls: string[] = [];
-
-        // Formatting Phone Number
-        // DB: 2645438114 (Clean digits only)
         const rawNumber = formData.contactNumber.replace(/\D/g, '');
 
-        // Validate required fields
         if (!formData.sector) {
-            alert('Por favor, selecciona el sector al que va dirigido el hallazgo.');
+            alert('Por favor, selecciona el sector.');
             setLoading(false);
             return;
         }
 
-        if (isAnonymous === null) {
-            alert('Por favor, indica si deseas reportar de forma anónima o identificada.');
-            setLoading(false);
-            return;
-        }
-
-        if (!isAnonymous) {
+        // Validations only for hallazgo identified mode
+        if (reportMode === 'hallazgo' && !isAnonymous) {
             if (!formData.contactName.trim()) {
                 alert("Por favor, ingresa tu nombre completo.");
                 setLoading(false);
@@ -99,8 +94,6 @@ export const ReportingForm = () => {
 
         const dbNumber = rawNumber.length >= 8 ? rawNumber : null;
         const dbName = formData.contactName.trim() || null;
-
-        // Bot: 549 + Number (e.g. 5492645438114)
         const botNumber = dbNumber ? `549${dbNumber}` : null;
 
         try {
@@ -112,97 +105,148 @@ export const ReportingForm = () => {
                     const { error: uploadError } = await supabase.storage
                         .from('evidence')
                         .upload(fileName, file);
-
                     if (uploadError) throw uploadError;
-
-                    const { data } = supabase.storage
-                        .from('evidence')
-                        .getPublicUrl(fileName);
-
+                    const { data } = supabase.storage.from('evidence').getPublicUrl(fileName);
                     evidenceUrls.push(data.publicUrl);
                 }
             }
 
-            // 2. Insert Report
-            const { error: dbError } = await supabase
-                .from('reports')
-                .insert({
-                    tracking_id: trackingId,
-                    sector: formData.sector,
-                    origin_sector: formData.originSector || null,
-                    reporter_sector: formData.reporterSector || null,
-                    content: formData.content,
-                    is_anonymous: isAnonymous === true,
-                    contact_name: dbName,
-                    contact_number: dbNumber,
-                    status: 'pending',
-                    evidence_urls: evidenceUrls
+            if (reportMode === 'felicitacion') {
+                // ── FELICITACIÓN FLOW ──
+                const sectorLabel = SECTOR_OPTIONS.find(s => s.value === formData.sector)?.label || formData.sector;
+                const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+
+                const { error: dbError } = await supabase
+                    .from('reports')
+                    .insert({
+                        tracking_id: trackingId,
+                        sector: formData.sector,
+                        reporter_sector: formData.reporterSector || null,
+                        content: formData.content,
+                        is_anonymous: false,
+                        contact_name: dbName,
+                        contact_number: dbNumber,
+                        status: 'resolved',
+                        finding_type: 'Felicitación',
+                        ai_urgency: 'Verde',
+                        ai_summary: `🎉 Felicitación para ${sectorLabel}`,
+                        ai_category: 'Felicitación',
+                        evidence_urls: evidenceUrls,
+                        resolved_at: new Date().toISOString(),
+                        notes: `[${timestamp}] 🎉 Felicitación recibida para ${sectorLabel}. Auto-cerrada.`
+                    });
+                if (dbError) throw dbError;
+
+                // Auto-send WhatsApp to sector referentes
+                try {
+                    const { data: referentes } = await supabase
+                        .from('user_profiles')
+                        .select('display_name, phone_number, assigned_sectors')
+                        .eq('account_status', 'approved');
+
+                    const sectorReferentes = (referentes || []).filter(
+                        u => u.phone_number && u.assigned_sectors?.includes(formData.sector)
+                    );
+
+                    const fromName = dbName || 'Un colaborador';
+                    for (const ref of sectorReferentes) {
+                        const refNumber = `549${ref.phone_number.replace(/\D/g, '')}`;
+                        supabase.functions.invoke('send-whatsapp', {
+                            body: {
+                                number: refNumber,
+                                message: `🎉 *¡Felicitaciones, ${ref.display_name || 'equipo'}!*\n\n${fromName} ha reconocido el trabajo de tu sector *${sectorLabel}*.\n\n💬 _"${formData.content}"_\n\n¡Seguí así! Tu dedicación marca la diferencia. 💪✨\n\n— Sistema de Calidad, Sanatorio Argentino`,
+                                mediaUrl: "https://i.imgur.com/63f9RLD.jpeg"
+                            }
+                        }).catch(err => console.error('Error sending felicitacion whatsapp:', err));
+                    }
+                    setFelicitacionSent(sectorReferentes.length > 0);
+                } catch (waErr) {
+                    console.error('Error looking up referentes:', waErr);
+                }
+
+                setSuccessId(trackingId);
+            } else {
+                // ── HALLAZGO FLOW (original) ──
+                const { error: dbError } = await supabase
+                    .from('reports')
+                    .insert({
+                        tracking_id: trackingId,
+                        sector: formData.sector,
+                        origin_sector: formData.originSector || null,
+                        reporter_sector: formData.reporterSector || null,
+                        content: formData.content,
+                        is_anonymous: isAnonymous === true,
+                        contact_name: dbName,
+                        contact_number: dbNumber,
+                        status: 'pending',
+                        evidence_urls: evidenceUrls
+                    });
+                if (dbError) throw dbError;
+
+                if (botNumber) {
+                    supabase.functions.invoke('send-whatsapp', {
+                        body: {
+                            number: botNumber,
+                            message: `👋 ¡Hola! Valoramos mucho que nos hayas contactado. Queremos contarte que ya recibimos tu reporte y el equipo de Calidad comenzará a revisarlo a la brevedad.\n\n🆔 Tu código de seguimiento personal es: *${trackingId}*\n\nCon este código podrás consultar los avances en el sistema cuando lo desees.\n\n¡Muchas gracias por ayudarnos a brindar una mejor atención cada día! ✨💙`,
+                            mediaUrl: "https://i.imgur.com/63f9RLD.jpeg"
+                        }
+                    }).catch(err => console.error('Error sending immediate whatsapp:', err));
+                }
+
+                await supabase.functions.invoke('analyze-report', {
+                    body: {
+                        reportText: formData.content,
+                        reportId: trackingId,
+                        contactNumber: botNumber,
+                        evidenceUrls: evidenceUrls
+                    }
                 });
 
-            if (dbError) throw dbError;
-
-            // 3. Send WhatsApp Confirmation IMMEDIATELY (if contact provided)
-            // We do this before AI analysis so the user gets feedback instantly.
-            if (botNumber) {
-                // Fire and forget - don't block the UI for this
-                supabase.functions.invoke('send-whatsapp', {
-                    body: {
-                        number: botNumber,
-                        message: `👋 ¡Hola! Valoramos mucho que nos hayas contactado. Queremos contarte que ya recibimos tu reporte y el equipo de Calidad comenzará a revisarlo a la brevedad.\n\n🆔 Tu código de seguimiento personal es: *${trackingId}*\n\nCon este código podrás consultar los avances en el sistema cuando lo desees.\n\n¡Muchas gracias por ayudarnos a brindar una mejor atención cada día! ✨💙`,
-                        mediaUrl: "https://i.imgur.com/63f9RLD.jpeg"
-                    }
-                }).catch(err => console.error('Error sending immediate whatsapp:', err));
+                setSuccessId(trackingId);
             }
-
-            // 4. Trigger AI (Background Process)
-            await supabase.functions.invoke('analyze-report', {
-                body: {
-                    reportText: formData.content,
-                    reportId: trackingId,
-                    contactNumber: botNumber, // Still passing it for Red Alerts usage
-                    evidenceUrls: evidenceUrls
-                }
-            });
-
-            setSuccessId(trackingId);
         } catch (error) {
             console.error('Error submitting report:', error);
-            alert('Hubo un error al enviar el reporte. Por favor intente nuevamente.');
+            alert('Hubo un error al enviar. Por favor intente nuevamente.');
         } finally {
             setLoading(false);
         }
     };
 
     if (successId) {
+        const isFelicitacion = reportMode === 'felicitacion';
         return (
             <div className="max-w-md mx-auto mt-10 p-10 glass-card text-center animate-in zoom-in-95 duration-500 rounded-[2.5rem]">
                 <div className="flex justify-center mb-8 relative">
-                    <div className="bg-white p-4 rounded-2xl shadow-premium animate-pulse">
-                        <img
-                            src="/logosanatorio.png"
-                            alt="Logo"
-                            className="w-20 h-20 object-contain"
-                        />
+                    <div className={`p-4 rounded-2xl shadow-premium animate-pulse ${isFelicitacion ? 'bg-gradient-to-br from-yellow-100 to-amber-50' : 'bg-white'}`}>
+                        {isFelicitacion ? (
+                            <Trophy className="w-20 h-20 text-amber-500" />
+                        ) : (
+                            <img src="/logosanatorio.png" alt="Logo" className="w-20 h-20 object-contain" />
+                        )}
                     </div>
                 </div>
-                <h2 className="text-3xl font-display font-black text-sanatorio-primary mb-4">¡Reporte Enviado!</h2>
-                <p className="text-slate-500 mb-8 font-medium">Gracias por ayudarnos a mejorar. Tu código de seguimiento es:</p>
+                <h2 className={`text-3xl font-display font-black mb-4 ${isFelicitacion ? 'text-amber-600' : 'text-sanatorio-primary'}`}>
+                    {isFelicitacion ? '🎉 ¡Felicitación Enviada!' : '¡Reporte Enviado!'}
+                </h2>
+                <p className="text-slate-500 mb-8 font-medium">
+                    {isFelicitacion
+                        ? (felicitacionSent ? 'Tu reconocimiento fue enviado directamente al equipo del sector. ¡Gracias!' : 'Tu felicitación fue registrada exitosamente.')
+                        : 'Gracias por ayudarnos a mejorar. Tu código de seguimiento es:'}
+                </p>
                 <div className="bg-slate-50 border border-slate-200 p-6 rounded-2xl mb-8 group cursor-pointer hover:border-sanatorio-primary transition-colors">
                     <p className="text-3xl font-mono font-black text-sanatorio-primary tracking-wider group-active:scale-95 transition-transform">{successId}</p>
                     <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-widest">Guarda este código para consultas futuras</p>
                 </div>
                 <button
-                    onClick={() => { setSuccessId(null); setFormData({ originSector: '', reporterSector: '', sector: '', content: '', contactName: '', contactNumber: '' }); setFiles([]); setPreviewUrls([]); setIsAnonymous(null); }}
+                    onClick={() => { setSuccessId(null); setFormData({ originSector: '', reporterSector: '', sector: '', content: '', contactName: '', contactNumber: '' }); setFiles([]); setPreviewUrls([]); setIsAnonymous(false); setReportMode('hallazgo'); setFelicitacionSent(false); }}
                     className="btn-primary w-full"
                 >
-                    Enviar Nuevo Reporte
+                    {isFelicitacion ? 'Enviar Otra' : 'Enviar Nuevo Reporte'}
                 </button>
-
-                {/* Dora Success Message */}
                 <div className="mt-6">
                     <DoraAssistant
                         variant="inline"
-                        message="¡Excelente trabajo! Tu reporte nos ayuda a ser mejores cada día. 💙"
+                        message={isFelicitacion ? '¡Qué lindo gesto! Reconocer el trabajo de los demás fortalece al equipo. 🌟' : '¡Excelente trabajo! Tu reporte nos ayuda a ser mejores cada día. 💙'}
                     />
                 </div>
             </div>
@@ -216,157 +260,157 @@ export const ReportingForm = () => {
                 <p className="text-slate-500 text-lg font-medium">Tu voz es el motor de nuestra mejora continua.</p>
             </div>
 
-            {/* Quick Guide Card */}
-            <div className="glass-panel rounded-3xl p-8 mb-10 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-sanatorio-primary/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
-                <h3 className="text-xs font-bold text-sanatorio-primary uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                    <Info className="w-4 h-4" />
-                    Guía Rápida de Reporte
-                </h3>
-                <div className="grid md:grid-cols-3 gap-8">
-                    <div className="space-y-3">
-                        <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
-                            <AlertTriangle className="w-5 h-5 text-orange-600" />
-                        </div>
-                        <p className="font-bold text-slate-800 text-sm">Sé Específico</p>
-                        <p className="text-xs text-slate-500 leading-relaxed">Detalla el Qué, Dónde y Cuándo con precisión.</p>
+            {/* ── Mode Selector: Hallazgo vs Felicitación ── */}
+            <div className="flex gap-4 mb-8">
+                <button
+                    type="button"
+                    onClick={() => setReportMode('hallazgo')}
+                    className={`flex-1 p-5 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-3 group ${reportMode === 'hallazgo'
+                            ? 'border-sanatorio-primary bg-sanatorio-primary/5 shadow-lg shadow-sanatorio-primary/10'
+                            : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+                        }`}
+                >
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${reportMode === 'hallazgo' ? 'bg-sanatorio-primary text-white shadow-lg' : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'
+                        }`}>
+                        <ShieldAlert className="w-7 h-7" />
                     </div>
-                    <div className="space-y-3">
-                        <div className="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center">
-                            <Lightbulb className="w-5 h-5 text-yellow-600" />
-                        </div>
-                        <p className="font-bold text-slate-800 text-sm">Aporta Ideas</p>
-                        <p className="text-xs text-slate-500 leading-relaxed">Tus sugerencias de solución son muy valiosas.</p>
+                    <div className="text-center">
+                        <p className={`font-bold text-lg ${reportMode === 'hallazgo' ? 'text-sanatorio-primary' : 'text-gray-600'}`}>Hallazgo</p>
+                        <p className="text-xs text-slate-400 mt-0.5">Reportar un problema u observación</p>
                     </div>
-                    <div className="space-y-3">
-                        <div className="w-10 h-10 bg-sanatorio-secondary/10 rounded-xl flex items-center justify-center">
-                            <ShieldAlert className="w-5 h-5 text-sanatorio-secondary" />
+                </button>
+                <button
+                    type="button"
+                    onClick={() => { setReportMode('felicitacion'); setIsAnonymous(false); }}
+                    className={`flex-1 p-5 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-3 group ${reportMode === 'felicitacion'
+                            ? 'border-amber-400 bg-amber-50/50 shadow-lg shadow-amber-400/10'
+                            : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+                        }`}
+                >
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${reportMode === 'felicitacion' ? 'bg-gradient-to-br from-amber-400 to-yellow-500 text-white shadow-lg' : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'
+                        }`}>
+                        <Star className="w-7 h-7" />
+                    </div>
+                    <div className="text-center">
+                        <p className={`font-bold text-lg ${reportMode === 'felicitacion' ? 'text-amber-600' : 'text-gray-600'}`}>Felicitación</p>
+                        <p className="text-xs text-slate-400 mt-0.5">Reconocer el trabajo de un sector</p>
+                    </div>
+                </button>
+            </div>
+
+            {/* Quick Guide Card — only for hallazgo */}
+            {reportMode === 'hallazgo' && (
+                <div className="glass-panel rounded-3xl p-8 mb-10 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-sanatorio-primary/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                    <h3 className="text-xs font-bold text-sanatorio-primary uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                        <Info className="w-4 h-4" />
+                        Guía Rápida de Reporte
+                    </h3>
+                    <div className="grid md:grid-cols-3 gap-8">
+                        <div className="space-y-3">
+                            <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+                                <AlertTriangle className="w-5 h-5 text-orange-600" />
+                            </div>
+                            <p className="font-bold text-slate-800 text-sm">Sé Específico</p>
+                            <p className="text-xs text-slate-500 leading-relaxed">Detalla el Qué, Dónde y Cuándo con precisión.</p>
                         </div>
-                        <p className="font-bold text-slate-800 text-sm">Identificación</p>
-                        <p className="text-xs text-slate-500 leading-relaxed">Identificarte nos permite darte feedback directo y hacer seguimiento.</p>
+                        <div className="space-y-3">
+                            <div className="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center">
+                                <Lightbulb className="w-5 h-5 text-yellow-600" />
+                            </div>
+                            <p className="font-bold text-slate-800 text-sm">Aporta Ideas</p>
+                            <p className="text-xs text-slate-500 leading-relaxed">Tus sugerencias de solución son muy valiosas.</p>
+                        </div>
+                        <div className="space-y-3">
+                            <div className="w-10 h-10 bg-sanatorio-secondary/10 rounded-xl flex items-center justify-center">
+                                <ShieldAlert className="w-5 h-5 text-sanatorio-secondary" />
+                            </div>
+                            <p className="font-bold text-slate-800 text-sm">Identificación</p>
+                            <p className="text-xs text-slate-500 leading-relaxed">Identificarte nos permite darte feedback directo y hacer seguimiento.</p>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             <div className="glass-card rounded-[2.5rem] p-6 md:p-12">
                 <form onSubmit={handleSubmit} className="space-y-10">
 
-                    {/* Identified Mode Header */}
-                    <div className={`group relative overflow-hidden rounded-2xl border-2 transition-all duration-500 ${isAnonymous === null
-                        ? 'border-slate-200 bg-slate-50/50'
-                        : !isAnonymous
+                    {/* Identified Mode Header — only for hallazgo */}
+                    {reportMode === 'hallazgo' && (<>
+                        <div className={`group relative overflow-hidden rounded-2xl border-2 transition-all duration-500 ${!isAnonymous
                             ? 'border-green-200 bg-green-50/50'
                             : 'border-amber-200 bg-amber-50/50'
-                        }`}>
-                        <div className="p-6">
-                            <div className="mb-3">
-                                <p className="text-sm font-bold text-slate-700 mb-1">
-                                    ¿Cómo deseas reportar? <span className="text-red-500">*</span>
-                                </p>
-                                <p className="text-xs text-slate-400">Seleccioná una opción antes de continuar</p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsAnonymous(false)}
-                                    className={`p-4 rounded-xl border-2 transition-all duration-300 text-left ${isAnonymous === false
-                                        ? 'border-green-400 bg-green-50 shadow-md shadow-green-500/10'
-                                        : 'border-slate-200 hover:border-green-200 hover:bg-green-50/30'
-                                        }`}
-                                >
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isAnonymous === false ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-400'
-                                            }`}>
-                                            <User className="w-5 h-5" />
+                            }`}>
+                            <div className="p-6">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-5">
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${!isAnonymous ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-amber-400 text-white shadow-lg shadow-amber-400/20'}`}>
+                                            {!isAnonymous ? <User className="w-6 h-6" /> : <Lock className="w-6 h-6" />}
                                         </div>
-                                        <span className={`font-bold text-sm ${isAnonymous === false ? 'text-green-700' : 'text-slate-600'}`}>
-                                            Identificado
-                                        </span>
-                                    </div>
-                                    <p className="text-[11px] text-slate-500 leading-relaxed">
-                                        Recibís seguimiento por WhatsApp y podemos contactarte.
-                                    </p>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsAnonymous(true)}
-                                    className={`p-4 rounded-xl border-2 transition-all duration-300 text-left ${isAnonymous === true
-                                        ? 'border-amber-400 bg-amber-50 shadow-md shadow-amber-500/10'
-                                        : 'border-slate-200 hover:border-amber-200 hover:bg-amber-50/30'
-                                        }`}
-                                >
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isAnonymous === true ? 'bg-amber-400 text-white' : 'bg-slate-100 text-slate-400'
-                                            }`}>
-                                            <Lock className="w-5 h-5" />
+                                        <div className="text-left">
+                                            <p className={`font-bold text-lg ${!isAnonymous ? 'text-green-700' : 'text-amber-700'}`}>
+                                                {!isAnonymous ? 'Modo Identificado' : 'Modo Anónimo'}
+                                            </p>
+                                            <p className="text-sm text-slate-500 font-medium tracking-tight">
+                                                {!isAnonymous ? 'Podremos contactarte para darte seguimiento y feedback.' : 'Tu identidad estará protegida.'}
+                                            </p>
                                         </div>
-                                        <span className={`font-bold text-sm ${isAnonymous === true ? 'text-amber-700' : 'text-slate-600'}`}>
-                                            Anónimo
-                                        </span>
                                     </div>
-                                    <p className="text-[11px] text-slate-500 leading-relaxed">
-                                        Tu identidad queda protegida con cifrado total.
-                                    </p>
-                                </button>
-                            </div>
 
-                            {/* Persuasive message when anonymous */}
-                            {isAnonymous === true && (
-                                <div className="mt-4 p-4 bg-white rounded-xl border border-amber-100 animate-in slide-in-from-top-2 duration-300">
-                                    <div className="flex items-start gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                            <Info className="w-4 h-4 text-amber-600" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-amber-800 mb-1">¿Sabías que identificarte tiene ventajas?</p>
-                                            <ul className="text-xs text-amber-700 space-y-1">
-                                                <li className="flex items-center gap-1.5">✅ Recibís notificaciones del avance de tu caso por WhatsApp</li>
-                                                <li className="flex items-center gap-1.5">✅ Podemos contactarte para resolver tu inquietud más rápido</li>
-                                                <li className="flex items-center gap-1.5">✅ Tu información se trata con <strong>estricta confidencialidad</strong></li>
-                                            </ul>
-                                            <button
-                                                type="button"
-                                                onClick={() => setIsAnonymous(false)}
-                                                className="mt-3 text-xs font-bold text-sanatorio-primary hover:underline flex items-center gap-1"
-                                            >
-                                                <User className="w-3 h-3" /> Quiero identificarme
-                                            </button>
-                                        </div>
+                                    <div
+                                        className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-500 cursor-pointer ${isAnonymous ? 'bg-amber-400' : 'bg-green-500'}`}
+                                        onClick={() => setIsAnonymous(!isAnonymous)}
+                                    >
+                                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-500 shadow-md ${isAnonymous ? 'translate-x-6' : 'translate-x-1'}`} />
                                     </div>
                                 </div>
-                            )}
+
+                                {/* Persuasive message when anonymous */}
+                                {isAnonymous && (
+                                    <div className="mt-4 p-4 bg-white rounded-xl border border-amber-100 animate-in slide-in-from-top-2 duration-300">
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                <Info className="w-4 h-4 text-amber-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-amber-800 mb-1">¿Sabías que identificarte tiene ventajas?</p>
+                                                <ul className="text-xs text-amber-700 space-y-1">
+                                                    <li className="flex items-center gap-1.5">✅ Recibís notificaciones del avance de tu caso por WhatsApp</li>
+                                                    <li className="flex items-center gap-1.5">✅ Podemos contactarte para resolver tu inquietud más rápido</li>
+                                                    <li className="flex items-center gap-1.5">✅ Tu información se trata con <strong>estricta confidencialidad</strong></li>
+                                                </ul>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsAnonymous(false)}
+                                                    className="mt-3 text-xs font-bold text-sanatorio-primary hover:underline flex items-center gap-1"
+                                                >
+                                                    <User className="w-3 h-3" /> Quiero identificarme
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
+
+                    </>)}
+
+                    {/* Felicitación header */}
+                    {reportMode === 'felicitacion' && (
+                        <div className="rounded-2xl border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50/50 p-6">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 text-white flex items-center justify-center shadow-lg shadow-amber-400/20">
+                                    <Trophy className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <p className="font-bold text-lg text-amber-700">Enviar Felicitación</p>
+                                    <p className="text-sm text-amber-600/70">Tu reconocimiento será enviado directamente al equipo del sector 💛</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="space-y-8">
-                        {/* Selector de Origen del Hallazgo (OBLIGATORIO) */}
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                Origen del Hallazgo <span className="text-red-500">*</span>
-                                <div className="group relative">
-                                    <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center z-10">
-                                        Indica cómo se detectó este hallazgo: auditoría interna (FDS, Procesos, Solicitudes), auditoría externa, observación directa o reclamo de paciente.
-                                    </div>
-                                </div>
-                            </label>
-                            <div className="relative group">
-                                <select
-                                    required
-                                    className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-sanatorio-primary focus:ring-sanatorio-primary transition-all bg-gray-50 focus:bg-white appearance-none cursor-pointer pr-12 text-gray-700"
-                                    value={formData.originSector}
-                                    onChange={(e) => setFormData({ ...formData, originSector: e.target.value })}
-                                >
-                                    <option value="">Seleccione el origen...</option>
-                                    {ORIGIN_OPTIONS.map((option) => (
-                                        <option key={`origin-${option.value}`} value={option.value}>
-                                            {option.label}
-                                        </option>
-                                    ))}
-                                </select>
-                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none group-focus-within:text-sanatorio-primary transition-colors" />
-                            </div>
-                        </div>
 
                         {/* Selector de Sector al que perteneces (OBLIGATORIO siempre) */}
                         <div>
@@ -400,7 +444,7 @@ export const ReportingForm = () => {
                         {/* Selector de Sector Destino (OBLIGATORIO) */}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                Sector al cual va dirigida su observación <span className="text-red-500">*</span>
+                                {reportMode === 'felicitacion' ? 'Sector que deseas felicitar' : 'Sector al cual va dirigida su observación'} <span className="text-red-500">*</span>
                                 <div className="group relative">
                                     <Info className="w-4 h-4 text-gray-400 cursor-help" />
                                     <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center">
@@ -430,11 +474,11 @@ export const ReportingForm = () => {
 
                         {/* Contenido */}
                         <div className="space-y-2">
-                            <label className="label-text">Detalle del Hallazgo</label>
+                            <label className="label-text">{reportMode === 'felicitacion' ? 'Tu mensaje de felicitación' : 'Detalle del Hallazgo'}</label>
                             <textarea
                                 required
-                                rows={6}
-                                placeholder="Describe brevemente lo sucedido..."
+                                rows={reportMode === 'felicitacion' ? 4 : 6}
+                                placeholder={reportMode === 'felicitacion' ? 'Contanos qué te gustó y por qué querés felicitar a este sector...' : 'Describe brevemente lo sucedido...'}
                                 className="input-field resize-none leading-relaxed placeholder:text-slate-300"
                                 value={formData.content}
                                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
@@ -487,8 +531,8 @@ export const ReportingForm = () => {
                             />
                         </div>
 
-                        {/* Contact Fields — Required when identified, optional when anonymous */}
-                        {isAnonymous === false ? (
+                        {/* Contact Fields — Required when identified, optional when anonymous (hallazgo only) */}
+                        {reportMode === 'hallazgo' && !isAnonymous ? (
                             <div className="space-y-5 p-5 bg-green-50/50 rounded-2xl border border-green-100 animate-in slide-in-from-top-4">
                                 <div className="flex items-center gap-2 mb-1">
                                     <User className="w-4 h-4 text-green-600" />
@@ -527,7 +571,7 @@ export const ReportingForm = () => {
                                     </p>
                                 </div>
                             </div>
-                        ) : isAnonymous === true ? (
+                        ) : reportMode === 'hallazgo' ? (
                             <div className="space-y-5 p-5 bg-slate-50/50 rounded-2xl border border-slate-100 animate-in slide-in-from-top-4">
                                 <div className="flex items-center justify-between mb-1">
                                     <div className="flex items-center gap-2">
@@ -570,16 +614,42 @@ export const ReportingForm = () => {
                                     </p>
                                 </div>
                             </div>
-                        ) : null}
+                        ) : (
+                            /* Felicitación: optional name field */
+                            <div className="space-y-5 p-5 bg-amber-50/50 rounded-2xl border border-amber-100 animate-in slide-in-from-top-4">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <Star className="w-4 h-4 text-amber-500" />
+                                    <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">¿Quién felicita? (Opcional)</span>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="label-text">Tu Nombre</label>
+                                    <div className="relative group">
+                                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 group-focus-within:text-amber-500 transition-colors" />
+                                        <input
+                                            type="text"
+                                            placeholder="Tu nombre (opcional)"
+                                            className="input-field pl-12"
+                                            value={formData.contactName}
+                                            onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <button
                         type="submit"
                         disabled={loading}
-                        className="btn-primary w-full disabled:opacity-50 disabled:hover:scale-100"
+                        className={`w-full disabled:opacity-50 disabled:hover:scale-100 ${reportMode === 'felicitacion' ? 'btn-primary !bg-gradient-to-r !from-amber-400 !to-yellow-500 hover:!from-amber-500 hover:!to-yellow-600' : 'btn-primary'}`}
                     >
                         {loading ? (
                             <Loader2 className="w-6 h-6 animate-spin" />
+                        ) : reportMode === 'felicitacion' ? (
+                            <>
+                                <Trophy className="w-5 h-5" />
+                                Enviar Felicitación 🎉
+                            </>
                         ) : (
                             <>
                                 <Send className="w-5 h-5" />
