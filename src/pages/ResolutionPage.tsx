@@ -148,10 +148,13 @@ export const ResolutionPage = () => {
 
                 if (assignErr) throw assignErr;
 
-                // Also log to report notes
+                // Also update report status + notes so Dashboard shows rejection
                 await supabase
                     .from('reports')
-                    .update({ notes: updatedNotes })
+                    .update({
+                        status: 'assignment_rejected',
+                        notes: updatedNotes,
+                    })
                     .eq('id', reportData.id);
             } else {
                 // Legacy: update report status directly

@@ -2693,525 +2693,566 @@ export const Dashboard = () => {
                                                 </div>
                                             )}
                                         </div>
-                                    ) : selectedReport.status === 'pending_resolution' ? (
-                                        // VISTA ESPERANDO RESPUESTA
-                                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 text-center">
-                                            <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-3" />
-                                            <h4 className="font-bold text-blue-900">Esperando Resolución</h4>
-                                            <p className="text-sm text-blue-700 mt-1 mb-4">
-                                                La solicitud ha sido enviada al responsable. <br />
-                                                El sistema te notificará cuando haya respuesta.
-                                            </p>
-                                            {isAdmin && (
-                                                <button
-                                                    onClick={() => setShowReferralModal(true)}
-                                                    className="text-xs font-bold text-blue-600 hover:underline"
-                                                >
-                                                    Reenviar Solicitud
-                                                </button>
-                                            )}
-                                        </div>
-                                    ) : selectedReport.status === 'quality_validation' ? (() => {
-                                        // VISTA VALIDACIÓN CALIDAD — con soporte multi-sector (hooks are at top-level)
-                                        const isMultiSectorReport = sectorAssignmentsData.length > 0;
-                                        const resolvedAssignments = sectorAssignmentsData.filter(a => a.status === 'resolved' || a.status === 'quality_validation');
-                                        const pendingAssignments = sectorAssignmentsData.filter(a => a.status === 'pending');
-                                        const allSectorsComplete = sectorAssignmentsData.length > 0 && pendingAssignments.length === 0;
+                                    ) : selectedReport.status === 'pending_resolution' ? (() => {
+                                        // Check if all sector assignments are rejected
+                                        const allAssignmentsRejected = sectorAssignmentsData.length > 0 &&
+                                            sectorAssignmentsData.every(a => a.status === 'rejected');
 
-                                        const statusConfig: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-                                            pending: { label: 'Pendiente', color: 'text-yellow-700', bg: 'bg-yellow-100', icon: '⏳' },
-                                            resolved: { label: 'Resuelto', color: 'text-green-700', bg: 'bg-green-100', icon: '✅' },
-                                            quality_validation: { label: 'En Revisión', color: 'text-purple-700', bg: 'bg-purple-100', icon: '🔍' },
-                                            partial: { label: 'Parcial', color: 'text-orange-700', bg: 'bg-orange-100', icon: '⚠️' },
-                                            rejected: { label: 'Rechazado', color: 'text-red-700', bg: 'bg-red-100', icon: '❌' },
-                                        };
+                                        if (allAssignmentsRejected) {
+                                            // Show rejection panel instead
+                                            const lastRejected = sectorAssignmentsData
+                                                .filter(a => a.status === 'rejected')
+                                                .sort((a, b) => new Date(b.resolved_at || 0).getTime() - new Date(a.resolved_at || 0).getTime())[0];
 
-                                        return (
-                                            <div className="bg-purple-50 p-6 rounded-2xl shadow-sm border border-purple-100 flex flex-col h-full overflow-hidden">
-                                                <div className="flex items-center gap-3 mb-4 flex-shrink-0">
-                                                    <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
-                                                        <BrainCircuit className="w-6 h-6" />
+                                            return (
+                                                <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 text-center">
+                                                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                        <XCircle className="w-6 h-6 text-orange-500" />
                                                     </div>
-                                                    <div>
-                                                        <h4 className="font-bold text-gray-900">Validación de Calidad</h4>
-                                                        <p className="text-xs text-purple-600">
-                                                            {isMultiSectorReport
-                                                                ? `${resolvedAssignments.length}/${sectorAssignmentsData.length} sectores respondieron`
-                                                                : 'Revisión requerida para cierre'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                {/* Multi-sector progress indicator */}
-                                                {isMultiSectorReport && !loadingAssignments && (
-                                                    <div className="mb-4 flex-shrink-0">
-                                                        <div className="flex justify-between items-center mb-1.5">
-                                                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Progreso de Sectores</span>
-                                                            <span className="text-[10px] font-bold text-purple-700">
-                                                                {resolvedAssignments.length}/{sectorAssignmentsData.length}
-                                                            </span>
+                                                    <h4 className="font-bold text-orange-900">Asignación Rechazada</h4>
+                                                    <p className="text-sm text-orange-700 mt-1 mb-2">
+                                                        El sector indicó que este caso no le corresponde.
+                                                    </p>
+                                                    {lastRejected?.notes && (
+                                                        <div className="bg-white rounded-lg p-3 border border-orange-100 mb-4 text-left">
+                                                            <p className="text-xs font-bold text-orange-800 uppercase tracking-wider mb-1">Motivo:</p>
+                                                            <p className="text-sm text-gray-700">{lastRejected.notes}</p>
                                                         </div>
-                                                        <div className="w-full h-2 bg-white rounded-full overflow-hidden border border-gray-100">
-                                                            <div
-                                                                className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-500"
-                                                                style={{ width: `${sectorAssignmentsData.length > 0 ? Math.round((resolvedAssignments.length / sectorAssignmentsData.length) * 100) : 0}%` }}
-                                                            />
-                                                        </div>
-                                                        {!allSectorsComplete && (
-                                                            <div className="mt-2 p-2 bg-amber-50 rounded-lg border border-amber-100">
-                                                                <p className="text-[10px] text-amber-700 font-bold flex items-center gap-1">
-                                                                    <AlertTriangle className="w-3 h-3" />
-                                                                    {pendingAssignments.length} sector{pendingAssignments.length !== 1 ? 'es' : ''} aún no respondió
-                                                                </p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 mb-6">
-                                                    {loadingAssignments ? (
-                                                        <div className="flex items-center justify-center p-6 text-gray-400">
-                                                            <Loader2 className="w-5 h-5 animate-spin mr-2" /> Cargando...
-                                                        </div>
-                                                    ) : isMultiSectorReport ? (
-                                                        /* ========== MULTI-SECTOR VIEW ========== */
-                                                        <div className="space-y-3">
-                                                            {sectorAssignmentsData.map((assignment: any) => {
-                                                                const config = statusConfig[assignment.status] || statusConfig.pending;
-                                                                const sectorLabel = SECTOR_OPTIONS.find(s => s.value === assignment.sector)?.label || assignment.sector;
-                                                                const isExpanded = expandedSector === assignment.id;
-                                                                const hasResponse = assignment.status === 'resolved' || assignment.status === 'quality_validation';
-
-                                                                return (
-                                                                    <div
-                                                                        key={assignment.id}
-                                                                        className={`bg-white rounded-xl border shadow-sm transition-all ${hasResponse ? 'border-green-200 hover:shadow-md' : 'border-gray-100 opacity-75'}`}
-                                                                    >
-                                                                        {/* Sector Header — clickable */}
-                                                                        <button
-                                                                            onClick={() => setExpandedSector(isExpanded ? null : assignment.id)}
-                                                                            className="w-full flex items-center justify-between p-4 text-left cursor-pointer"
-                                                                        >
-                                                                            <div className="flex items-center gap-2.5 min-w-0">
-                                                                                <span className={`text-sm px-2.5 py-1 rounded-lg ${config.bg} ${config.color} font-bold shrink-0`}>
-                                                                                    {config.icon}
-                                                                                </span>
-                                                                                <div className="min-w-0">
-                                                                                    <p className="text-sm font-bold text-gray-800 truncate">{sectorLabel}</p>
-                                                                                    <p className="text-[10px] text-gray-400 font-medium">
-                                                                                        {assignment.assigned_phone || 'Sin teléfono'}
-                                                                                        {assignment.resolved_at && ` · ${new Date(assignment.resolved_at).toLocaleString('es-AR')}`}
-                                                                                    </p>
-                                                                                </div>
-                                                                            </div>
-                                                                            <div className="flex items-center gap-2 shrink-0">
-                                                                                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${config.bg} ${config.color}`}>
-                                                                                    {config.label}
-                                                                                </span>
-                                                                                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                                                                            </div>
-                                                                        </button>
-
-                                                                        {/* Expanded Content */}
-                                                                        {isExpanded && hasResponse && (
-                                                                            <div className="px-4 pb-4 space-y-3 border-t border-gray-50 pt-3 animate-in fade-in duration-200">
-                                                                                {/* Acción Inmediata */}
-                                                                                {assignment.immediate_action && (
-                                                                                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                                                                        <h6 className="text-[10px] font-bold text-blue-600 uppercase mb-1 flex items-center gap-1">
-                                                                                            <span className="w-1 h-1 rounded-full bg-blue-500"></span>
-                                                                                            Acción Inmediata
-                                                                                        </h6>
-                                                                                        <p className="text-xs text-gray-700 leading-relaxed">{assignment.immediate_action}</p>
-                                                                                    </div>
-                                                                                )}
-
-                                                                                {/* Causa Raíz */}
-                                                                                {assignment.root_cause && (
-                                                                                    <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
-                                                                                        <h6 className="text-[10px] font-bold text-amber-700 uppercase mb-1 flex items-center gap-1">
-                                                                                            <BrainCircuit className="w-3 h-3" />
-                                                                                            Causa Raíz
-                                                                                        </h6>
-                                                                                        <p className="text-xs text-gray-700 leading-relaxed">{assignment.root_cause}</p>
-                                                                                    </div>
-                                                                                )}
-
-                                                                                {/* Plan de Acción */}
-                                                                                {assignment.corrective_plan && (
-                                                                                    <div className="bg-green-50 p-3 rounded-lg border border-green-100">
-                                                                                        <h6 className="text-[10px] font-bold text-green-700 uppercase mb-1 flex items-center gap-1">
-                                                                                            <CheckCircle className="w-3 h-3" />
-                                                                                            Plan de Acción
-                                                                                        </h6>
-                                                                                        <p className="text-xs text-gray-700 leading-relaxed">{assignment.corrective_plan}</p>
-                                                                                        {assignment.implementation_date && (
-                                                                                            <div className="flex items-center gap-1 text-[10px] font-bold text-green-600 mt-2">
-                                                                                                <Clock className="w-3 h-3" />
-                                                                                                Implementación: {new Date(assignment.implementation_date).toLocaleDateString()}
-                                                                                            </div>
-                                                                                        )}
-                                                                                    </div>
-                                                                                )}
-
-                                                                                {/* Evidencia */}
-                                                                                {assignment.resolution_evidence_urls && assignment.resolution_evidence_urls.length > 0 && (
-                                                                                    <div>
-                                                                                        <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-2 flex items-center gap-1">
-                                                                                            <Camera className="w-3 h-3" />
-                                                                                            Evidencia ({assignment.resolution_evidence_urls.length})
-                                                                                        </h6>
-                                                                                        <div className="flex gap-2 overflow-x-auto pb-1">
-                                                                                            {assignment.resolution_evidence_urls.map((url: string, i: number) => (
-                                                                                                <a
-                                                                                                    key={i}
-                                                                                                    href={url}
-                                                                                                    target="_blank"
-                                                                                                    className="w-14 h-14 rounded-lg bg-gray-100 bg-cover bg-center border border-gray-200 flex-shrink-0 hover:ring-2 ring-purple-500 transition-all cursor-zoom-in"
-                                                                                                    style={{ backgroundImage: `url(${url})` }}
-                                                                                                />
-                                                                                            ))}
-                                                                                        </div>
-                                                                                    </div>
-                                                                                )}
-
-                                                                                {/* Notas adicionales */}
-                                                                                {assignment.resolution_notes && (
-                                                                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                                                                        <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-1">Notas</h6>
-                                                                                        <p className="text-xs text-gray-600">{assignment.resolution_notes}</p>
-                                                                                    </div>
-                                                                                )}
-                                                                            </div>
-                                                                        )}
-
-                                                                        {/* Expanded: Rejected/Partial */}
-                                                                        {isExpanded && assignment.status === 'rejected' && assignment.notes && (
-                                                                            <div className="px-4 pb-4 border-t border-gray-50 pt-3">
-                                                                                <div className="bg-red-50 p-3 rounded-lg border border-red-100">
-                                                                                    <h6 className="text-[10px] font-bold text-red-700 uppercase mb-1">Motivo del Rechazo</h6>
-                                                                                    <p className="text-xs text-red-600">{assignment.notes}</p>
-                                                                                </div>
-                                                                            </div>
-                                                                        )}
-
-                                                                        {isExpanded && assignment.status === 'partial' && assignment.notes && (
-                                                                            <div className="px-4 pb-4 border-t border-gray-50 pt-3">
-                                                                                <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
-                                                                                    <h6 className="text-[10px] font-bold text-orange-700 uppercase mb-1">Nota (Parcial)</h6>
-                                                                                    <p className="text-xs text-orange-600">{assignment.notes}</p>
-                                                                                </div>
-                                                                            </div>
-                                                                        )}
-
-                                                                        {isExpanded && assignment.status === 'pending' && (
-                                                                            <div className="px-4 pb-4 border-t border-gray-50 pt-3">
-                                                                                <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-center space-y-2">
-                                                                                    <p className="text-xs text-yellow-700 font-medium">⏳ Este sector aún no ha enviado su respuesta</p>
-                                                                                    {isAdmin && (
-                                                                                        <button
-                                                                                            onClick={(e) => { e.stopPropagation(); handleSendReminder(assignment); }}
-                                                                                            disabled={sendingReminderId === assignment.id}
-                                                                                            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-green-500 hover:bg-green-600 active:scale-95 text-white text-xs font-bold rounded-lg transition-all shadow-sm shadow-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                                                        >
-                                                                                            {sendingReminderId === assignment.id ? (
-                                                                                                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Enviando...</>
-                                                                                            ) : (
-                                                                                                <><MessageSquare className="w-3.5 h-3.5" /> Reenviar mensaje</>
-                                                                                            )}
-                                                                                        </button>
-                                                                                    )}
-                                                                                </div>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    ) : (
-                                                        /* ========== SINGLE-SECTOR VIEW (original) ========== */
-                                                        <>
-                                                            {/* 1. Acción Inmediata */}
-                                                            <div className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm">
-                                                                <h5 className="text-xs font-bold text-blue-600 uppercase mb-2 flex items-center gap-2">
-                                                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                                                    Acción Inmediata
-                                                                </h5>
-                                                                <p className="text-sm text-gray-700 leading-relaxed">
-                                                                    {selectedReport.resolution_notes || <span className="text-gray-400 italic">Sin datos registrados.</span>}
-                                                                </p>
-                                                            </div>
-
-                                                            {/* 2. Causa Raíz */}
-                                                            {selectedReport.root_cause && (
-                                                                <div className="bg-white p-4 rounded-xl border border-amber-100 shadow-sm relative overflow-hidden">
-                                                                    <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>
-                                                                    <h5 className="text-xs font-bold text-amber-700 uppercase mb-2 flex items-center gap-2">
-                                                                        <BrainCircuit className="w-3 h-3" />
-                                                                        Causa Raíz Identificada
-                                                                    </h5>
-                                                                    <p className="text-sm text-gray-700 leading-relaxed">
-                                                                        {selectedReport.root_cause}
-                                                                    </p>
-                                                                </div>
-                                                            )}
-
-                                                            {/* 3. Plan de Acción */}
-                                                            {selectedReport.corrective_plan && (
-                                                                <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm relative overflow-hidden">
-                                                                    <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
-                                                                    <h5 className="text-xs font-bold text-green-700 uppercase mb-2 flex items-center gap-2">
-                                                                        <CheckCircle className="w-3 h-3" />
-                                                                        Plan de Acción
-                                                                    </h5>
-                                                                    <p className="text-sm text-gray-700 leading-relaxed mb-3">
-                                                                        {selectedReport.corrective_plan}
-                                                                    </p>
-                                                                    {selectedReport.implementation_date && (
-                                                                        <div className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-lg w-fit">
-                                                                            <Clock className="w-3 h-3" />
-                                                                            Implementación: {new Date(selectedReport.implementation_date).toLocaleDateString()}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            )}
-
-                                                            {/* 4. Evidencia */}
-                                                            {selectedReport.resolution_evidence_urls && selectedReport.resolution_evidence_urls.length > 0 && (
-                                                                <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                                                                    <h5 className="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
-                                                                        <Camera className="w-3 h-3" />
-                                                                        Evidencia Adjunta
-                                                                    </h5>
-                                                                    <div className="grid grid-cols-3 gap-2">
-                                                                        {selectedReport.resolution_evidence_urls.map((url: string, i: number) => (
-                                                                            <a
-                                                                                key={i}
-                                                                                href={url}
-                                                                                target="_blank"
-                                                                                className="aspect-square rounded-lg bg-gray-100 bg-cover bg-center border border-gray-200 hover:ring-2 ring-purple-500 transition-all cursor-zoom-in"
-                                                                                style={{ backgroundImage: `url(${url})` }}
-                                                                            />
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                            {/* Info del Responsable */}
-                                                            {selectedReport.assigned_to && (
-                                                                <div className="text-right">
-                                                                    <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
-                                                                        Responsable: {selectedReport.assigned_to}
-                                                                    </span>
-                                                                </div>
-                                                            )}
-                                                        </>
+                                                    )}
+                                                    {isAdmin && (
+                                                        <button
+                                                            onClick={() => setShowReferralModal(true)}
+                                                            className="w-full py-2.5 px-4 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+                                                        >
+                                                            <Send className="w-4 h-4" />
+                                                            Reenviar a otro sector
+                                                        </button>
                                                     )}
                                                 </div>
+                                            );
+                                        }
 
-                                                {/* RENDERIZADO DE HISTORIAL DE RECHAZOS (SOLUCIONES INSUFICIENTES) */}
-                                                {selectedReport.resolution_history && selectedReport.resolution_history.length > 0 && (
-                                                    <div className="bg-red-50 rounded-2xl p-6 border border-red-100 mt-6">
-                                                        <h3 className="text-sm font-bold text-red-800 flex items-center gap-2 mb-4">
-                                                            <AlertTriangle className="w-4 h-4" />
-                                                            Historial de Soluciones Insuficientes
-                                                        </h3>
-                                                        <div className="space-y-4">
-                                                            {selectedReport.resolution_history.map((entry: any, index: number) => (
-                                                                <div key={index} className="bg-white rounded-xl p-4 border border-red-100 shadow-sm relative overflow-hidden">
-                                                                    <div className="absolute top-0 left-0 w-1 h-full bg-red-200"></div>
-
-                                                                    <div className="flex justify-between items-start mb-3">
-                                                                        <div>
-                                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                                                                Rechazado el {new Date(entry.rejected_at).toLocaleString()}
-                                                                            </span>
-                                                                            <p className="text-xs font-bold text-red-600 mt-1">
-                                                                                Motivo: "{entry.reject_reason}"
-                                                                            </p>
-                                                                        </div>
-                                                                        <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-bold rounded-full">
-                                                                            Intento #{index + 1}
-                                                                        </span>
-                                                                    </div>
-
-                                                                    <div className="space-y-3 text-xs text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                                                        <div>
-                                                                            <span className="font-bold text-gray-700 block mb-0.5">Acción Inmediata Propuesta:</span>
-                                                                            {entry.previous_data.immediate_action || '-'}
-                                                                        </div>
-                                                                        {entry.previous_data.root_cause && (
-                                                                            <div>
-                                                                                <span className="font-bold text-gray-700 block mb-0.5">Causa Raíz (RCA):</span>
-                                                                                {entry.previous_data.root_cause}
-                                                                            </div>
-                                                                        )}
-                                                                        <div>
-                                                                            <span className="font-bold text-gray-700 block mb-0.5">Plan de Acción:</span>
-                                                                            {entry.previous_data.corrective_plan || '-'}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-
+                                        return (
+                                            // VISTA ESPERANDO RESPUESTA
+                                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 text-center">
+                                                <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-3" />
+                                                <h4 className="font-bold text-blue-900">Esperando Resolución</h4>
+                                                <p className="text-sm text-blue-700 mt-1 mb-4">
+                                                    La solicitud ha sido enviada al responsable. <br />
+                                                    El sistema te notificará cuando haya respuesta.
+                                                </p>
                                                 {isAdmin && (
-                                                    <div className="flex gap-3 flex-shrink-0 pt-2 border-t border-purple-100">
-                                                        <button
-                                                            onClick={() => setShowQualityReturnModal(true)}
-                                                            className="flex-1 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold text-sm hover:bg-red-50 transition-colors"
-                                                        >
-                                                            Devolver (Rechazo)
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setShowQualityApproveModal(true)}
-                                                            className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 shadow-lg shadow-purple-500/20"
-                                                        >
-                                                            Aprobar y Cerrar
-                                                        </button>
-                                                    </div>
+                                                    <button
+                                                        onClick={() => setShowReferralModal(true)}
+                                                        className="text-xs font-bold text-blue-600 hover:underline"
+                                                    >
+                                                        Reenviar Solicitud
+                                                    </button>
                                                 )}
                                             </div>
                                         );
-                                    })() : selectedReport.status === 'assignment_rejected' ? (
-                                        // VISTA RECHAZO DEL RESPONSABLE
-                                        <div className="space-y-4">
-                                            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 relative overflow-hidden">
-                                                <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500"></div>
-                                                <div className="flex items-center gap-3 mb-4">
-                                                    <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
-                                                        <XCircle className="w-6 h-6" />
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="font-bold text-red-900 text-lg">Asignación Rechazada</h4>
-                                                        <p className="text-xs text-red-600 font-medium">El responsable indica que este caso no le corresponde</p>
-                                                    </div>
-                                                </div>
+                                    })()
+                                        : selectedReport.status === 'quality_validation' ? (() => {
+                                            // VISTA VALIDACIÓN CALIDAD — con soporte multi-sector (hooks are at top-level)
+                                            const isMultiSectorReport = sectorAssignmentsData.length > 0;
+                                            const resolvedAssignments = sectorAssignmentsData.filter(a => a.status === 'resolved' || a.status === 'quality_validation');
+                                            const pendingAssignments = sectorAssignmentsData.filter(a => a.status === 'pending');
+                                            const allSectorsComplete = sectorAssignmentsData.length > 0 && pendingAssignments.length === 0;
 
-                                                {/* Extract rejection reason from notes */}
-                                                {(() => {
-                                                    const notes = selectedReport.notes || '';
-                                                    const rejectionMatch = notes.match(/RECHAZO DE ASIGNACIÓN:\s*(.+?)(?:\n|$)/);
-                                                    const rejectionReason = rejectionMatch ? rejectionMatch[1].trim() : null;
-                                                    // Extract timestamp
-                                                    const timestampMatch = notes.match(/\[([^\]]+)\]\s*🔴\s*RECHAZO/);
-                                                    const rejectionTime = timestampMatch ? timestampMatch[1] : null;
+                                            const statusConfig: Record<string, { label: string; color: string; bg: string; icon: string }> = {
+                                                pending: { label: 'Pendiente', color: 'text-yellow-700', bg: 'bg-yellow-100', icon: '⏳' },
+                                                resolved: { label: 'Resuelto', color: 'text-green-700', bg: 'bg-green-100', icon: '✅' },
+                                                quality_validation: { label: 'En Revisión', color: 'text-purple-700', bg: 'bg-purple-100', icon: '🔍' },
+                                                partial: { label: 'Parcial', color: 'text-orange-700', bg: 'bg-orange-100', icon: '⚠️' },
+                                                rejected: { label: 'Rechazado', color: 'text-red-700', bg: 'bg-red-100', icon: '❌' },
+                                            };
 
-                                                    return (
-                                                        <div className="space-y-3">
-                                                            {rejectionTime && (
-                                                                <div className="flex items-center gap-2 text-xs text-red-500 font-medium">
-                                                                    <Clock className="w-3 h-3" />
-                                                                    Rechazado el {rejectionTime}
+                                            return (
+                                                <div className="bg-purple-50 p-6 rounded-2xl shadow-sm border border-purple-100 flex flex-col h-full overflow-hidden">
+                                                    <div className="flex items-center gap-3 mb-4 flex-shrink-0">
+                                                        <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+                                                            <BrainCircuit className="w-6 h-6" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-bold text-gray-900">Validación de Calidad</h4>
+                                                            <p className="text-xs text-purple-600">
+                                                                {isMultiSectorReport
+                                                                    ? `${resolvedAssignments.length}/${sectorAssignmentsData.length} sectores respondieron`
+                                                                    : 'Revisión requerida para cierre'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Multi-sector progress indicator */}
+                                                    {isMultiSectorReport && !loadingAssignments && (
+                                                        <div className="mb-4 flex-shrink-0">
+                                                            <div className="flex justify-between items-center mb-1.5">
+                                                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Progreso de Sectores</span>
+                                                                <span className="text-[10px] font-bold text-purple-700">
+                                                                    {resolvedAssignments.length}/{sectorAssignmentsData.length}
+                                                                </span>
+                                                            </div>
+                                                            <div className="w-full h-2 bg-white rounded-full overflow-hidden border border-gray-100">
+                                                                <div
+                                                                    className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-500"
+                                                                    style={{ width: `${sectorAssignmentsData.length > 0 ? Math.round((resolvedAssignments.length / sectorAssignmentsData.length) * 100) : 0}%` }}
+                                                                />
+                                                            </div>
+                                                            {!allSectorsComplete && (
+                                                                <div className="mt-2 p-2 bg-amber-50 rounded-lg border border-amber-100">
+                                                                    <p className="text-[10px] text-amber-700 font-bold flex items-center gap-1">
+                                                                        <AlertTriangle className="w-3 h-3" />
+                                                                        {pendingAssignments.length} sector{pendingAssignments.length !== 1 ? 'es' : ''} aún no respondió
+                                                                    </p>
                                                                 </div>
                                                             )}
-                                                            <div className="bg-white p-4 rounded-xl border border-red-100 shadow-sm">
-                                                                <h5 className="text-xs font-bold text-red-700 uppercase tracking-wider mb-2">Motivo del Rechazo</h5>
-                                                                <p className="text-sm text-gray-700 leading-relaxed italic">
-                                                                    "{rejectionReason || 'Motivo no especificado'}"
-                                                                </p>
-                                                            </div>
                                                         </div>
-                                                    );
-                                                })()}
-                                            </div>
+                                                    )}
 
-                                            {/* Responsable info */}
-                                            {selectedReport.assigned_to && (
-                                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-500">
-                                                        <UserCog className="w-4 h-4" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs text-gray-400 font-bold uppercase">Rechazado por</p>
-                                                        <p className="text-sm font-bold text-gray-700">{selectedReport.assigned_to}</p>
-                                                    </div>
-                                                </div>
-                                            )}
+                                                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 mb-6">
+                                                        {loadingAssignments ? (
+                                                            <div className="flex items-center justify-center p-6 text-gray-400">
+                                                                <Loader2 className="w-5 h-5 animate-spin mr-2" /> Cargando...
+                                                            </div>
+                                                        ) : isMultiSectorReport ? (
+                                                            /* ========== MULTI-SECTOR VIEW ========== */
+                                                            <div className="space-y-3">
+                                                                {sectorAssignmentsData.map((assignment: any) => {
+                                                                    const config = statusConfig[assignment.status] || statusConfig.pending;
+                                                                    const sectorLabel = SECTOR_OPTIONS.find(s => s.value === assignment.sector)?.label || assignment.sector;
+                                                                    const isExpanded = expandedSector === assignment.id;
+                                                                    const hasResponse = assignment.status === 'resolved' || assignment.status === 'quality_validation';
 
-                                            {/* Actions - Admin Only */}
-                                            {isAdmin ? (
-                                                <>
-                                                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                                                        <h4 className="font-bold text-gray-800 mb-2">Rederivación Requerida</h4>
-                                                        <p className="text-xs text-gray-500 mb-4">
-                                                            Asigná este caso a otro responsable o al sector correcto enviando una nueva solicitud por WhatsApp.
-                                                        </p>
-                                                        <button
-                                                            onClick={() => setShowReferralModal(true)}
-                                                            className="w-full py-3 bg-sanatorio-primary text-white rounded-xl font-bold text-sm hover:opacity-90 shadow-lg shadow-blue-900/10 flex items-center justify-center gap-2"
-                                                        >
-                                                            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                                                                <Send className="w-3 h-3" />
-                                                            </div>
-                                                            Rederivación (WhatsApp)
-                                                        </button>
-                                                    </div>
-                                                    <div className="text-center py-4 border-t border-gray-100">
-                                                        <p className="text-xs text-gray-400 mb-2">Otras acciones</p>
-                                                        <button
-                                                            onClick={handleDiscardClick}
-                                                            className="text-gray-400 hover:text-gray-600 text-xs font-bold transition-colors flex items-center justify-center gap-1 mx-auto"
-                                                        >
-                                                            <Archive className="w-3 h-3" /> Descartar Caso
-                                                        </button>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center">
-                                                    <p className="text-sm text-blue-700 font-medium">👀 Solo lectura — la gestión de este caso está a cargo del equipo de Calidad.</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        // VISTA ACCIONES INICIALES (DERIVAR) - Admin Only
-                                        <div className="space-y-4">
-                                            {isAdmin ? (
-                                                <>
-                                                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                                                        <h4 className="font-bold text-gray-800 mb-2">Derivar a Responsable</h4>
-                                                        <p className="text-xs text-gray-500 mb-4">
-                                                            Envía un formulario de gestión automático al encargado del sector.
-                                                        </p>
-                                                        <button
-                                                            onClick={() => setShowReferralModal(true)}
-                                                            className="w-full py-3 bg-sanatorio-primary text-white rounded-xl font-bold text-sm hover:opacity-90 shadow-lg shadow-blue-900/10 flex items-center justify-center gap-2"
-                                                        >
-                                                            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                                                                <Send className="w-3 h-3" />
-                                                            </div>
-                                                            Solicitar Gestión (WhatsApp)
-                                                        </button>
+                                                                    return (
+                                                                        <div
+                                                                            key={assignment.id}
+                                                                            className={`bg-white rounded-xl border shadow-sm transition-all ${hasResponse ? 'border-green-200 hover:shadow-md' : 'border-gray-100 opacity-75'}`}
+                                                                        >
+                                                                            {/* Sector Header — clickable */}
+                                                                            <button
+                                                                                onClick={() => setExpandedSector(isExpanded ? null : assignment.id)}
+                                                                                className="w-full flex items-center justify-between p-4 text-left cursor-pointer"
+                                                                            >
+                                                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                                                    <span className={`text-sm px-2.5 py-1 rounded-lg ${config.bg} ${config.color} font-bold shrink-0`}>
+                                                                                        {config.icon}
+                                                                                    </span>
+                                                                                    <div className="min-w-0">
+                                                                                        <p className="text-sm font-bold text-gray-800 truncate">{sectorLabel}</p>
+                                                                                        <p className="text-[10px] text-gray-400 font-medium">
+                                                                                            {assignment.assigned_phone || 'Sin teléfono'}
+                                                                                            {assignment.resolved_at && ` · ${new Date(assignment.resolved_at).toLocaleString('es-AR')}`}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className="flex items-center gap-2 shrink-0">
+                                                                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${config.bg} ${config.color}`}>
+                                                                                        {config.label}
+                                                                                    </span>
+                                                                                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                                                                </div>
+                                                                            </button>
 
-                                                        {selectedReport.last_whatsapp_status === 'sent' && selectedReport.last_whatsapp_sent_at && (
-                                                            <div className="flex items-center justify-center gap-1.5 mt-3 text-xs text-green-600 font-medium bg-green-50 py-2 rounded-lg border border-green-100">
-                                                                <CheckCircle className="w-3 h-3" />
-                                                                Enviado: {new Date(selectedReport.last_whatsapp_sent_at).toLocaleString()}
+                                                                            {/* Expanded Content */}
+                                                                            {isExpanded && hasResponse && (
+                                                                                <div className="px-4 pb-4 space-y-3 border-t border-gray-50 pt-3 animate-in fade-in duration-200">
+                                                                                    {/* Acción Inmediata */}
+                                                                                    {assignment.immediate_action && (
+                                                                                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                                                                            <h6 className="text-[10px] font-bold text-blue-600 uppercase mb-1 flex items-center gap-1">
+                                                                                                <span className="w-1 h-1 rounded-full bg-blue-500"></span>
+                                                                                                Acción Inmediata
+                                                                                            </h6>
+                                                                                            <p className="text-xs text-gray-700 leading-relaxed">{assignment.immediate_action}</p>
+                                                                                        </div>
+                                                                                    )}
+
+                                                                                    {/* Causa Raíz */}
+                                                                                    {assignment.root_cause && (
+                                                                                        <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
+                                                                                            <h6 className="text-[10px] font-bold text-amber-700 uppercase mb-1 flex items-center gap-1">
+                                                                                                <BrainCircuit className="w-3 h-3" />
+                                                                                                Causa Raíz
+                                                                                            </h6>
+                                                                                            <p className="text-xs text-gray-700 leading-relaxed">{assignment.root_cause}</p>
+                                                                                        </div>
+                                                                                    )}
+
+                                                                                    {/* Plan de Acción */}
+                                                                                    {assignment.corrective_plan && (
+                                                                                        <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                                                                                            <h6 className="text-[10px] font-bold text-green-700 uppercase mb-1 flex items-center gap-1">
+                                                                                                <CheckCircle className="w-3 h-3" />
+                                                                                                Plan de Acción
+                                                                                            </h6>
+                                                                                            <p className="text-xs text-gray-700 leading-relaxed">{assignment.corrective_plan}</p>
+                                                                                            {assignment.implementation_date && (
+                                                                                                <div className="flex items-center gap-1 text-[10px] font-bold text-green-600 mt-2">
+                                                                                                    <Clock className="w-3 h-3" />
+                                                                                                    Implementación: {new Date(assignment.implementation_date).toLocaleDateString()}
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    )}
+
+                                                                                    {/* Evidencia */}
+                                                                                    {assignment.resolution_evidence_urls && assignment.resolution_evidence_urls.length > 0 && (
+                                                                                        <div>
+                                                                                            <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-2 flex items-center gap-1">
+                                                                                                <Camera className="w-3 h-3" />
+                                                                                                Evidencia ({assignment.resolution_evidence_urls.length})
+                                                                                            </h6>
+                                                                                            <div className="flex gap-2 overflow-x-auto pb-1">
+                                                                                                {assignment.resolution_evidence_urls.map((url: string, i: number) => (
+                                                                                                    <a
+                                                                                                        key={i}
+                                                                                                        href={url}
+                                                                                                        target="_blank"
+                                                                                                        className="w-14 h-14 rounded-lg bg-gray-100 bg-cover bg-center border border-gray-200 flex-shrink-0 hover:ring-2 ring-purple-500 transition-all cursor-zoom-in"
+                                                                                                        style={{ backgroundImage: `url(${url})` }}
+                                                                                                    />
+                                                                                                ))}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    )}
+
+                                                                                    {/* Notas adicionales */}
+                                                                                    {assignment.resolution_notes && (
+                                                                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                                                            <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-1">Notas</h6>
+                                                                                            <p className="text-xs text-gray-600">{assignment.resolution_notes}</p>
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
+
+                                                                            {/* Expanded: Rejected/Partial */}
+                                                                            {isExpanded && assignment.status === 'rejected' && assignment.notes && (
+                                                                                <div className="px-4 pb-4 border-t border-gray-50 pt-3">
+                                                                                    <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+                                                                                        <h6 className="text-[10px] font-bold text-red-700 uppercase mb-1">Motivo del Rechazo</h6>
+                                                                                        <p className="text-xs text-red-600">{assignment.notes}</p>
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+
+                                                                            {isExpanded && assignment.status === 'partial' && assignment.notes && (
+                                                                                <div className="px-4 pb-4 border-t border-gray-50 pt-3">
+                                                                                    <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
+                                                                                        <h6 className="text-[10px] font-bold text-orange-700 uppercase mb-1">Nota (Parcial)</h6>
+                                                                                        <p className="text-xs text-orange-600">{assignment.notes}</p>
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+
+                                                                            {isExpanded && assignment.status === 'pending' && (
+                                                                                <div className="px-4 pb-4 border-t border-gray-50 pt-3">
+                                                                                    <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-center space-y-2">
+                                                                                        <p className="text-xs text-yellow-700 font-medium">⏳ Este sector aún no ha enviado su respuesta</p>
+                                                                                        {isAdmin && (
+                                                                                            <button
+                                                                                                onClick={(e) => { e.stopPropagation(); handleSendReminder(assignment); }}
+                                                                                                disabled={sendingReminderId === assignment.id}
+                                                                                                className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-green-500 hover:bg-green-600 active:scale-95 text-white text-xs font-bold rounded-lg transition-all shadow-sm shadow-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                                            >
+                                                                                                {sendingReminderId === assignment.id ? (
+                                                                                                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Enviando...</>
+                                                                                                ) : (
+                                                                                                    <><MessageSquare className="w-3.5 h-3.5" /> Reenviar mensaje</>
+                                                                                                )}
+                                                                                            </button>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                })}
                                                             </div>
+                                                        ) : (
+                                                            /* ========== SINGLE-SECTOR VIEW (original) ========== */
+                                                            <>
+                                                                {/* 1. Acción Inmediata */}
+                                                                <div className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm">
+                                                                    <h5 className="text-xs font-bold text-blue-600 uppercase mb-2 flex items-center gap-2">
+                                                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                                                        Acción Inmediata
+                                                                    </h5>
+                                                                    <p className="text-sm text-gray-700 leading-relaxed">
+                                                                        {selectedReport.resolution_notes || <span className="text-gray-400 italic">Sin datos registrados.</span>}
+                                                                    </p>
+                                                                </div>
+
+                                                                {/* 2. Causa Raíz */}
+                                                                {selectedReport.root_cause && (
+                                                                    <div className="bg-white p-4 rounded-xl border border-amber-100 shadow-sm relative overflow-hidden">
+                                                                        <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>
+                                                                        <h5 className="text-xs font-bold text-amber-700 uppercase mb-2 flex items-center gap-2">
+                                                                            <BrainCircuit className="w-3 h-3" />
+                                                                            Causa Raíz Identificada
+                                                                        </h5>
+                                                                        <p className="text-sm text-gray-700 leading-relaxed">
+                                                                            {selectedReport.root_cause}
+                                                                        </p>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* 3. Plan de Acción */}
+                                                                {selectedReport.corrective_plan && (
+                                                                    <div className="bg-white p-4 rounded-xl border border-green-100 shadow-sm relative overflow-hidden">
+                                                                        <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
+                                                                        <h5 className="text-xs font-bold text-green-700 uppercase mb-2 flex items-center gap-2">
+                                                                            <CheckCircle className="w-3 h-3" />
+                                                                            Plan de Acción
+                                                                        </h5>
+                                                                        <p className="text-sm text-gray-700 leading-relaxed mb-3">
+                                                                            {selectedReport.corrective_plan}
+                                                                        </p>
+                                                                        {selectedReport.implementation_date && (
+                                                                            <div className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-lg w-fit">
+                                                                                <Clock className="w-3 h-3" />
+                                                                                Implementación: {new Date(selectedReport.implementation_date).toLocaleDateString()}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+
+                                                                {/* 4. Evidencia */}
+                                                                {selectedReport.resolution_evidence_urls && selectedReport.resolution_evidence_urls.length > 0 && (
+                                                                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                                                        <h5 className="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
+                                                                            <Camera className="w-3 h-3" />
+                                                                            Evidencia Adjunta
+                                                                        </h5>
+                                                                        <div className="grid grid-cols-3 gap-2">
+                                                                            {selectedReport.resolution_evidence_urls.map((url: string, i: number) => (
+                                                                                <a
+                                                                                    key={i}
+                                                                                    href={url}
+                                                                                    target="_blank"
+                                                                                    className="aspect-square rounded-lg bg-gray-100 bg-cover bg-center border border-gray-200 hover:ring-2 ring-purple-500 transition-all cursor-zoom-in"
+                                                                                    style={{ backgroundImage: `url(${url})` }}
+                                                                                />
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Info del Responsable */}
+                                                                {selectedReport.assigned_to && (
+                                                                    <div className="text-right">
+                                                                        <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
+                                                                            Responsable: {selectedReport.assigned_to}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                            </>
                                                         )}
                                                     </div>
 
-                                                    <div className="text-center py-4 border-t border-gray-100">
-                                                        <p className="text-xs text-gray-400 mb-2">Otras acciones</p>
-                                                        <button
-                                                            onClick={handleDiscardClick}
-                                                            className="text-gray-400 hover:text-gray-600 text-xs font-bold transition-colors flex items-center justify-center gap-1 mx-auto"
-                                                        >
-                                                            <Archive className="w-3 h-3" /> Descartar Caso
-                                                        </button>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 text-center space-y-2">
-                                                    <Eye className="w-8 h-8 text-blue-400 mx-auto" />
-                                                    <h4 className="font-bold text-blue-800 text-sm">Modo Visualización</h4>
-                                                    <p className="text-xs text-blue-600">Este caso está pendiente de derivación por el equipo de Calidad. Aquí podrás seguir su progreso.</p>
+                                                    {/* RENDERIZADO DE HISTORIAL DE RECHAZOS (SOLUCIONES INSUFICIENTES) */}
+                                                    {selectedReport.resolution_history && selectedReport.resolution_history.length > 0 && (
+                                                        <div className="bg-red-50 rounded-2xl p-6 border border-red-100 mt-6">
+                                                            <h3 className="text-sm font-bold text-red-800 flex items-center gap-2 mb-4">
+                                                                <AlertTriangle className="w-4 h-4" />
+                                                                Historial de Soluciones Insuficientes
+                                                            </h3>
+                                                            <div className="space-y-4">
+                                                                {selectedReport.resolution_history.map((entry: any, index: number) => (
+                                                                    <div key={index} className="bg-white rounded-xl p-4 border border-red-100 shadow-sm relative overflow-hidden">
+                                                                        <div className="absolute top-0 left-0 w-1 h-full bg-red-200"></div>
+
+                                                                        <div className="flex justify-between items-start mb-3">
+                                                                            <div>
+                                                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                                                                    Rechazado el {new Date(entry.rejected_at).toLocaleString()}
+                                                                                </span>
+                                                                                <p className="text-xs font-bold text-red-600 mt-1">
+                                                                                    Motivo: "{entry.reject_reason}"
+                                                                                </p>
+                                                                            </div>
+                                                                            <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-bold rounded-full">
+                                                                                Intento #{index + 1}
+                                                                            </span>
+                                                                        </div>
+
+                                                                        <div className="space-y-3 text-xs text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                                            <div>
+                                                                                <span className="font-bold text-gray-700 block mb-0.5">Acción Inmediata Propuesta:</span>
+                                                                                {entry.previous_data.immediate_action || '-'}
+                                                                            </div>
+                                                                            {entry.previous_data.root_cause && (
+                                                                                <div>
+                                                                                    <span className="font-bold text-gray-700 block mb-0.5">Causa Raíz (RCA):</span>
+                                                                                    {entry.previous_data.root_cause}
+                                                                                </div>
+                                                                            )}
+                                                                            <div>
+                                                                                <span className="font-bold text-gray-700 block mb-0.5">Plan de Acción:</span>
+                                                                                {entry.previous_data.corrective_plan || '-'}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {isAdmin && (
+                                                        <div className="flex gap-3 flex-shrink-0 pt-2 border-t border-purple-100">
+                                                            <button
+                                                                onClick={() => setShowQualityReturnModal(true)}
+                                                                className="flex-1 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold text-sm hover:bg-red-50 transition-colors"
+                                                            >
+                                                                Devolver (Rechazo)
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setShowQualityApproveModal(true)}
+                                                                className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 shadow-lg shadow-purple-500/20"
+                                                            >
+                                                                Aprobar y Cerrar
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
-                                    )}
+                                            );
+                                        })() : selectedReport.status === 'assignment_rejected' ? (
+                                            // VISTA RECHAZO DEL RESPONSABLE
+                                            <div className="space-y-4">
+                                                <div className="bg-red-50 border border-red-200 rounded-2xl p-6 relative overflow-hidden">
+                                                    <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500"></div>
+                                                    <div className="flex items-center gap-3 mb-4">
+                                                        <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
+                                                            <XCircle className="w-6 h-6" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-bold text-red-900 text-lg">Asignación Rechazada</h4>
+                                                            <p className="text-xs text-red-600 font-medium">El responsable indica que este caso no le corresponde</p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Extract rejection reason from notes */}
+                                                    {(() => {
+                                                        const notes = selectedReport.notes || '';
+                                                        const rejectionMatch = notes.match(/RECHAZO DE ASIGNACIÓN:\s*(.+?)(?:\n|$)/);
+                                                        const rejectionReason = rejectionMatch ? rejectionMatch[1].trim() : null;
+                                                        // Extract timestamp
+                                                        const timestampMatch = notes.match(/\[([^\]]+)\]\s*🔴\s*RECHAZO/);
+                                                        const rejectionTime = timestampMatch ? timestampMatch[1] : null;
+
+                                                        return (
+                                                            <div className="space-y-3">
+                                                                {rejectionTime && (
+                                                                    <div className="flex items-center gap-2 text-xs text-red-500 font-medium">
+                                                                        <Clock className="w-3 h-3" />
+                                                                        Rechazado el {rejectionTime}
+                                                                    </div>
+                                                                )}
+                                                                <div className="bg-white p-4 rounded-xl border border-red-100 shadow-sm">
+                                                                    <h5 className="text-xs font-bold text-red-700 uppercase tracking-wider mb-2">Motivo del Rechazo</h5>
+                                                                    <p className="text-sm text-gray-700 leading-relaxed italic">
+                                                                        "{rejectionReason || 'Motivo no especificado'}"
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </div>
+
+                                                {/* Responsable info */}
+                                                {selectedReport.assigned_to && (
+                                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                                        <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-500">
+                                                            <UserCog className="w-4 h-4" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs text-gray-400 font-bold uppercase">Rechazado por</p>
+                                                            <p className="text-sm font-bold text-gray-700">{selectedReport.assigned_to}</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Actions - Admin Only */}
+                                                {isAdmin ? (
+                                                    <>
+                                                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                                                            <h4 className="font-bold text-gray-800 mb-2">Rederivación Requerida</h4>
+                                                            <p className="text-xs text-gray-500 mb-4">
+                                                                Asigná este caso a otro responsable o al sector correcto enviando una nueva solicitud por WhatsApp.
+                                                            </p>
+                                                            <button
+                                                                onClick={() => setShowReferralModal(true)}
+                                                                className="w-full py-3 bg-sanatorio-primary text-white rounded-xl font-bold text-sm hover:opacity-90 shadow-lg shadow-blue-900/10 flex items-center justify-center gap-2"
+                                                            >
+                                                                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+                                                                    <Send className="w-3 h-3" />
+                                                                </div>
+                                                                Rederivación (WhatsApp)
+                                                            </button>
+                                                        </div>
+                                                        <div className="text-center py-4 border-t border-gray-100">
+                                                            <p className="text-xs text-gray-400 mb-2">Otras acciones</p>
+                                                            <button
+                                                                onClick={handleDiscardClick}
+                                                                className="text-gray-400 hover:text-gray-600 text-xs font-bold transition-colors flex items-center justify-center gap-1 mx-auto"
+                                                            >
+                                                                <Archive className="w-3 h-3" /> Descartar Caso
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center">
+                                                        <p className="text-sm text-blue-700 font-medium">👀 Solo lectura — la gestión de este caso está a cargo del equipo de Calidad.</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            // VISTA ACCIONES INICIALES (DERIVAR) - Admin Only
+                                            <div className="space-y-4">
+                                                {isAdmin ? (
+                                                    <>
+                                                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                                                            <h4 className="font-bold text-gray-800 mb-2">Derivar a Responsable</h4>
+                                                            <p className="text-xs text-gray-500 mb-4">
+                                                                Envía un formulario de gestión automático al encargado del sector.
+                                                            </p>
+                                                            <button
+                                                                onClick={() => setShowReferralModal(true)}
+                                                                className="w-full py-3 bg-sanatorio-primary text-white rounded-xl font-bold text-sm hover:opacity-90 shadow-lg shadow-blue-900/10 flex items-center justify-center gap-2"
+                                                            >
+                                                                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+                                                                    <Send className="w-3 h-3" />
+                                                                </div>
+                                                                Solicitar Gestión (WhatsApp)
+                                                            </button>
+
+                                                            {selectedReport.last_whatsapp_status === 'sent' && selectedReport.last_whatsapp_sent_at && (
+                                                                <div className="flex items-center justify-center gap-1.5 mt-3 text-xs text-green-600 font-medium bg-green-50 py-2 rounded-lg border border-green-100">
+                                                                    <CheckCircle className="w-3 h-3" />
+                                                                    Enviado: {new Date(selectedReport.last_whatsapp_sent_at).toLocaleString()}
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="text-center py-4 border-t border-gray-100">
+                                                            <p className="text-xs text-gray-400 mb-2">Otras acciones</p>
+                                                            <button
+                                                                onClick={handleDiscardClick}
+                                                                className="text-gray-400 hover:text-gray-600 text-xs font-bold transition-colors flex items-center justify-center gap-1 mx-auto"
+                                                            >
+                                                                <Archive className="w-3 h-3" /> Descartar Caso
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 text-center space-y-2">
+                                                        <Eye className="w-8 h-8 text-blue-400 mx-auto" />
+                                                        <h4 className="font-bold text-blue-800 text-sm">Modo Visualización</h4>
+                                                        <p className="text-xs text-blue-600">Este caso está pendiente de derivación por el equipo de Calidad. Aquí podrás seguir su progreso.</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                             </div>
                         </div>
                     </div>
