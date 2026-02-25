@@ -2661,7 +2661,39 @@ export const Dashboard = () => {
                                         </div>
                                     );
                                 })()
-                                    : selectedReport.status === 'pending_resolution' ? (
+                                    : selectedReport.status === 'assignment_rejected' ? (
+                                        // VISTA ASIGNACIÓN RECHAZADA POR SECTOR
+                                        <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 text-center">
+                                            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                <XCircle className="w-6 h-6 text-orange-500" />
+                                            </div>
+                                            <h4 className="font-bold text-orange-900">Asignación Rechazada</h4>
+                                            <p className="text-sm text-orange-700 mt-1 mb-2">
+                                                El sector indicó que este caso no le corresponde.
+                                            </p>
+                                            {/* Show rejection reason from notes */}
+                                            {selectedReport.notes && (() => {
+                                                const rejectionMatch = selectedReport.notes.match(/RECHAZO DE ASIGNACIÓN:\s*(.+)/);
+                                                return rejectionMatch ? (
+                                                    <div className="bg-white rounded-lg p-3 border border-orange-100 mb-4 text-left">
+                                                        <p className="text-xs font-bold text-orange-800 uppercase tracking-wider mb-1">Motivo:</p>
+                                                        <p className="text-sm text-gray-700">{rejectionMatch[1].trim()}</p>
+                                                    </div>
+                                                ) : null;
+                                            })()}
+                                            {isAdmin && (
+                                                <div className="space-y-2">
+                                                    <button
+                                                        onClick={() => setShowReferralModal(true)}
+                                                        className="w-full py-2.5 px-4 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+                                                    >
+                                                        <Send className="w-4 h-4" />
+                                                        Reenviar a otro sector
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : selectedReport.status === 'pending_resolution' ? (
                                         // VISTA ESPERANDO RESPUESTA
                                         <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 text-center">
                                             <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-3" />
