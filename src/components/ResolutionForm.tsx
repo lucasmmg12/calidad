@@ -30,6 +30,8 @@ interface Props {
         sector: string;
         originSector?: string;
         reporterSector?: string;
+        contactNumber?: string;
+        status?: string;
         resolutionStep?: string;
         draftData?: any;
         draftUpdatedAt?: string;
@@ -44,6 +46,18 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
     // Determine initial step from DB
     const getInitialStep = (): 'step1' | 'step2' | 'completed' => {
         const dbStep = reportData.resolutionStep;
+        const reportStatus = reportData.status;
+
+        // CRITICAL: If report was reopened by Quality, always start fresh
+        if (reportStatus === 'pending_resolution' || reportStatus === 'pending') {
+            // If there's a draft, resume from step2
+            if (dbStep === 'step2_draft') return 'step2';
+            // If step1 was done before rejection, go to step2 for adverse events
+            if (dbStep === 'step1_completed' && reportData.isAdverseEvent) return 'step2';
+            // Otherwise start from step1
+            return 'step1';
+        }
+
         if (dbStep === 'step1_completed' || dbStep === 'step2_draft') return 'step2';
         if (dbStep === 'step2_submitted') return 'completed';
         return 'step1';
@@ -757,10 +771,10 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                                     onClick={handleSaveDraft}
                                     disabled={autoSaveStatus === 'saving'}
                                     className={`flex-1 py-4 rounded-xl font-bold shadow-sm transition-all flex items-center justify-center gap-2 text-sm ${autoSaveStatus === 'saved'
-                                            ? 'bg-green-50 border-2 border-green-300 text-green-700'
-                                            : autoSaveStatus === 'error'
-                                                ? 'bg-red-50 border-2 border-red-300 text-red-700'
-                                                : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                                        ? 'bg-green-50 border-2 border-green-300 text-green-700'
+                                        : autoSaveStatus === 'error'
+                                            ? 'bg-red-50 border-2 border-red-300 text-red-700'
+                                            : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                                         }`}
                                 >
                                     {autoSaveStatus === 'saving' ? (
