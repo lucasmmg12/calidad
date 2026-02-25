@@ -48,9 +48,12 @@ export const ResolutionPage = () => {
                         setRejected(true);
                     }
 
-                    // For multi-sector: determine step from the ASSIGNMENT status, not the report
+                    // For multi-sector: determine step from the ASSIGNMENT + report data
                     const getAssignmentStep = () => {
                         if (assignment.status === 'resolved' || assignment.status === 'quality_validation') return 'step2_submitted';
+                        // Check report-level step for draft state (draft is saved to reports table)
+                        if (data.resolution_step === 'step2_draft') return 'step2_draft';
+                        if (data.resolution_step === 'step1_completed') return 'step1_completed';
                         if (assignment.immediate_action) return 'step1_completed';
                         return 'step1_pending';
                     };
@@ -70,10 +73,10 @@ export const ResolutionPage = () => {
                         status: assignment.status,
                         notes: data.notes,
                         resolutionStep: getAssignmentStep(),
-                        draftData: null,
-                        draftUpdatedAt: null,
-                        immediateAction: assignment.immediate_action || '',
-                        step1EvidenceUrls: assignment.resolution_evidence_urls || [],
+                        draftData: data.draft_data || null,
+                        draftUpdatedAt: data.draft_updated_at || null,
+                        immediateAction: assignment.immediate_action || data.resolution_notes || '',
+                        step1EvidenceUrls: assignment.resolution_evidence_urls || data.step1_evidence_urls || [],
                     });
                 } else {
                     // Legacy: Check if already rejected at report level
