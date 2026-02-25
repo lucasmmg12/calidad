@@ -10,6 +10,45 @@ interface ChangelogEntry {
 }
 
 const rawChangelog: ChangelogEntry[] = [
+    // === 25 de Febrero 2026 ===
+    { hash: '3fe00b7', date: '2026-02-25', type: 'fix', title: 'Deduplicación de Asignaciones por Sector', description: 'Se corrigió el conteo de sectores en el Dashboard: re-derivaciones al mismo sector ya no aparecen como sectores separados. Solo se muestra la asignación más reciente por sector.' },
+    { hash: 'b31afbc', date: '2026-02-25', type: 'feat', title: 'Reapertura con Derivación Multi-Sector', description: 'El flujo de reapertura de tickets ahora resetea el caso a "Pendiente" y abre automáticamente el panel de derivación estándar, permitiendo reenviar a uno o más sectores.' },
+    { hash: '5f9f51f', date: '2026-02-25', type: 'fix', title: 'Rechazo Multi-Sector actualiza estado del reporte', description: 'Cuando un sector rechaza la asignación, el reporte ahora cambia a "assignment_rejected" tanto para flujos legacy como multi-sector.' },
+    { hash: '148af4b', date: '2026-02-25', type: 'feat', title: 'Panel de Asignación Rechazada en Dashboard', description: 'Nuevo panel naranja en el Centro de Gestión que muestra el motivo del rechazo y permite reenviar a otro sector directamente.' },
+    { hash: '8a1a5c0', date: '2026-02-25', type: 'fix', title: 'Guard contra estado "Completado" en tickets reabiertos', description: 'El formulario de resolución ahora verifica el status del reporte para evitar mostrar "Gestión Registrada" en tickets reabiertos por Calidad.' },
+    { hash: '853e674', date: '2026-02-25', type: 'fix', title: 'Carga de borradores en Multi-Sector', description: 'Los borradores del Paso 2 (draft_data) ahora se cargan correctamente desde la tabla reports para asignaciones multi-sector.' },
+    { hash: 'de1bffb', date: '2026-02-25', type: 'feat', title: 'Feedback visual en Guardar Borrador', description: 'El botón "Guardar Borrador" ahora muestra estados de carga (spinner), éxito (verde) y error (rojo) para mayor claridad.' },
+    { hash: '297e5ef', date: '2026-02-25', type: 'fix', title: 'Paso 1 guarda en sector_assignments', description: 'El Paso 1 de resolución ahora actualiza correctamente las asignaciones de sector para tickets multi-sector.' },
+    { hash: '0f7e0f2', date: '2026-02-25', type: 'feat', title: 'Buscador de Sectores y Origen Dinámico', description: 'Se agregó un campo de búsqueda con filtro en el selector de sectores del formulario público. Las opciones de Origen en el Dashboard se generan dinámicamente.' },
+    { hash: '8eb5267', date: '2026-02-25', type: 'fix', title: 'Sector Assignments se actualizan a Resuelto', description: 'Se corrigió que las asignaciones de sector no cambiaban a "resolved" tras la respuesta del responsable.' },
+    { hash: 'af6e918', date: '2026-02-25', type: 'feat', title: 'Módulo de Felicitaciones', description: 'Nuevo formulario público para enviar felicitaciones, con notificación automática por WhatsApp al sector destinatario. Incluye KPI en Métricas y badge especial en el Dashboard.' },
+
+    // === 24 de Febrero 2026 ===
+    { hash: 'e0388d0', date: '2026-02-24', type: 'feat', title: 'Origen de Hallazgo con 6 opciones', description: 'Se ampliaron las opciones de origen del hallazgo (Auditoría FDS, Ronda Seguridad, etc.), se hizo obligatorio el sector reportante y se agregaron tooltips en las pestañas del Dashboard.' },
+    { hash: '75a024a', date: '2026-02-24', type: 'feat', title: 'Botón Reenviar en Multi-Sector', description: 'Los sectores pendientes en la vista multi-sector ahora tienen un botón para reenviar el mensaje por WhatsApp individualmente.' },
+    { hash: 'ac52a42', date: '2026-02-24', type: 'fix', title: 'Modales siempre centrados en viewport', description: 'Los modales de edición, creación y eliminación de usuarios ahora se centran correctamente en la pantalla.' },
+    { hash: '5851b53', date: '2026-02-24', type: 'feat', title: 'Migración Excel Legacy 156 registros', description: 'Se cargaron 156 registros históricos desde Excel al sistema, incluyendo formulario de hallazgo y recordatorio multi-sector.' },
+
+    // === 20 de Febrero 2026 ===
+    { hash: 'b3a07d4', date: '2026-02-20', type: 'feat', title: 'Asignación de Sector para todos los roles', description: 'Todos los roles ahora pueden tener sectores asignados. Se añadió wallpaper institucional al fondo de la aplicación.' },
+    { hash: 'ceea657', date: '2026-02-20', type: 'feat', title: 'Columna Fecha + Filtros + Exportación XLSX/PDF', description: 'Se agregó columna de fecha en la tabla de casos, filtros por sector y rango de fechas, orden por más reciente, y exportación a XLSX y PDF con logo institucional.' },
+    { hash: '2eca9c8', date: '2026-02-20', type: 'feat', title: 'Filas expandibles en Clasificaciones', description: 'Las filas de clasificación en Métricas ahora son expandibles y muestran los casos asociados con detalles.' },
+    { hash: '6e3a030', date: '2026-02-20', type: 'feat', title: 'Multi-Select de Sectores y Métricas de Anonimato', description: 'Filtros de métricas con selección múltiple de sectores, rango de fechas y nueva métrica de reportes anónimos vs. identificados.' },
+    { hash: '03f672a', date: '2026-02-20', type: 'feat', title: 'Eliminación de Reportes por Admin', description: 'Los administradores ahora pueden eliminar reportes directamente. Se corrigió la sintaxis de migración RLS.' },
+    { hash: '86d6590', date: '2026-02-20', type: 'feat', title: 'Respuestas Multi-Sector en Validación', description: 'La vista de validación de calidad ahora soporta y muestra correctamente las respuestas de múltiples sectores.' },
+    { hash: '46ec264', date: '2026-02-20', type: 'feat', title: 'Gestión Dinámica de Destinatarios de Alertas', description: 'Sistema configurable para gestionar los destinatarios de alertas rojas (SLA) dinámicamente.' },
+    { hash: 'e8b334b', date: '2026-02-20', type: 'feat', title: 'Filtros de Métricas + Compatibilidad Browsers', description: 'Se añadieron filtros avanzados en el panel de métricas con soporte para navegadores antiguos.' },
+    { hash: 'f0f0c25', date: '2026-02-20', type: 'fix', title: 'React Error #310 — Hooks fuera de IIFEs', description: 'Se resolvió un error crítico de React moviendo hooks desde funciones inmediatas (IIFEs) al nivel superior del componente.' },
+    { hash: '2988f94', date: '2026-02-20', type: 'fix', title: 'Z-index del dropdown de Sectores', description: 'Se corrigió el z-index del dropdown de sectores para que se superponga correctamente sobre los KPI cards.' },
+
+    // === 19 de Febrero 2026 ===
+    { hash: 'bafc8c7', date: '2026-02-19', type: 'feat', title: 'Resolución en 2 Pasos + Terminología Observación', description: 'Se implementó el formulario de resolución en 2 pasos: Paso 1 (Acción Inmediata con evidencia) y Paso 2 (Análisis de Causa + Plan de Acción con auto-guardado). Se actualizó la terminología de "reporte" a "observación".' },
+    { hash: '575dd1c', date: '2026-02-19', type: 'feat', title: 'Nuevo Sector PYT + Limpieza de Sectores', description: 'Se agregó el sector "PYT – Pagos y Tesorería" y se eliminaron los sectores de prueba (Limpieza, Guardia, Quirófano).' },
+
+    // === 13 de Febrero 2026 ===
+    { hash: '343b81b', date: '2026-02-13', type: 'feat', title: 'Reenvío WhatsApp en Alertas SLA', description: 'Se añadió botón de reenvío de WhatsApp en alertas de SLA, análisis de recurrencia mapeado por sector, selector cascada sector-responsable, y observaciones de calidad con tipo de hallazgo.' },
+    { hash: '5f86274', date: '2026-02-13', type: 'feat', title: 'Desglose de Gravedad por Sector', description: 'Se añadió panel expandible por sector con desglose de gravedad (Leve/Medio/Crítico) en el análisis de recurrencia.' },
+    { hash: '0e0649c', date: '2026-02-13', type: 'fix', title: 'Terminología SLA → Tiempo de Respuesta', description: 'Se reemplazó la terminología técnica "SLA" por "Tiempo de Respuesta" en toda la interfaz para mayor claridad.' },
     { hash: 'e2ff7d5', date: '2026-02-11', type: 'fix', title: 'Fix padding en inputs del Login', description: 'Se fuerza padding-left inline para evitar que los íconos se superpongan con el texto ingresado en los campos de correo y contraseña.' },
     { hash: 'ed91c14', date: '2026-02-11', type: 'fix', title: 'Limpieza del avatar Dora en Guía Rápida', description: 'Se removió el avatar de Dora del recuadro de Guía Rápida de Reporte, restaurando el diseño limpio original. Se actualizó el logo del login.' },
     { hash: 'dc2581c', date: '2026-02-11', type: 'fix', title: 'Login: logo institucional y padding', description: 'Se reemplazó el ícono de candado por el logo del Sanatorio Argentino en la pantalla de inicio de sesión.' },
