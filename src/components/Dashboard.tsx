@@ -36,6 +36,7 @@ import {
 import { useMemo } from 'react';
 import { CLASSIFICATION_CATEGORIES } from '../constants/classification_categories';
 import { SECTOR_OPTIONS } from '../constants/sectors';
+import { ORIGIN_OPTIONS } from '../constants/origin_options';
 import type { UserProfile } from '../contexts/AuthContext';
 import { generateId } from '../utils/compat';
 import * as XLSX from 'xlsx';
@@ -1271,13 +1272,25 @@ export const Dashboard = () => {
         const currentHistory = selectedReport.resolution_history || [];
         const updatedHistory = [...currentHistory, historyEntry];
 
-        // 1. Update Database
+        // 1. Update Database — reset resolution fields so sector can re-submit
         const { error } = await supabase
             .from('reports')
             .update({
                 status: 'pending_resolution',
                 notes: updatedNotes,
-                resolution_history: updatedHistory
+                resolution_history: updatedHistory,
+                // CRITICAL: Reset resolution step so the form reopens fresh
+                resolution_step: null,
+                resolved_at: null,
+                resolution_notes: null,
+                root_cause: null,
+                corrective_plan: null,
+                implementation_date: null,
+                resolution_evidence_urls: null,
+                step1_evidence_urls: null,
+                step2_evidence_urls: null,
+                draft_data: null,
+                draft_updated_at: null,
             })
             .eq('id', selectedReport.id);
 
@@ -1303,7 +1316,18 @@ export const Dashboard = () => {
                 ...r,
                 status: 'pending_resolution',
                 notes: updatedNotes,
-                resolution_history: updatedHistory
+                resolution_history: updatedHistory,
+                resolution_step: null,
+                resolved_at: null,
+                resolution_notes: null,
+                root_cause: null,
+                corrective_plan: null,
+                implementation_date: null,
+                resolution_evidence_urls: null,
+                step1_evidence_urls: null,
+                step2_evidence_urls: null,
+                draft_data: null,
+                draft_updated_at: null,
             } : r));
             setSelectedReport(null);
             setShowReopenModal(false);
@@ -2127,11 +2151,9 @@ export const Dashboard = () => {
                                                 }}
                                                 className="w-full bg-white border border-gray-200 text-gray-700 text-sm rounded-lg p-2.5 outline-none focus:border-sanatorio-primary focus:ring-1 focus:ring-sanatorio-primary"
                                             >
-                                                <option value="Observación/Hallazgo">Observación/Hallazgo</option>
-                                                <option value="Auditoría fin de semana">Auditoría fin de semana</option>
-                                                <option value="Auditoría de proceso">Auditoría de proceso</option>
-                                                <option value="5S">5S</option>
-                                                <option value="Evento Adverso">Evento Adverso</option>
+                                                {ORIGIN_OPTIONS.map(opt => (
+                                                    <option key={opt.value} value={opt.label}>{opt.label}</option>
+                                                ))}
                                             </select>
                                         ) : (
                                             <p className="text-sm text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100">

@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../utils/supabase';
-import { Send, ShieldAlert, Loader2, ChevronDown, User, Lock, Info, AlertTriangle, Lightbulb, Paperclip, X, Phone, Star, Trophy } from 'lucide-react';
+import { Send, ShieldAlert, Loader2, User, Lock, Info, AlertTriangle, Lightbulb, Paperclip, X, Phone, Star, Trophy } from 'lucide-react';
 import { DoraAssistant } from './DoraAssistant';
+import { SearchableSelect } from './SearchableSelect';
 import { SECTOR_OPTIONS } from '../constants/sectors';
 
 type ReportMode = 'hallazgo' | 'felicitacion';
@@ -266,8 +267,8 @@ export const ReportingForm = () => {
                     type="button"
                     onClick={() => setReportMode('hallazgo')}
                     className={`flex-1 p-5 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-3 group ${reportMode === 'hallazgo'
-                            ? 'border-sanatorio-primary bg-sanatorio-primary/5 shadow-lg shadow-sanatorio-primary/10'
-                            : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+                        ? 'border-sanatorio-primary bg-sanatorio-primary/5 shadow-lg shadow-sanatorio-primary/10'
+                        : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
                         }`}
                 >
                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${reportMode === 'hallazgo' ? 'bg-sanatorio-primary text-white shadow-lg' : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'
@@ -283,8 +284,8 @@ export const ReportingForm = () => {
                     type="button"
                     onClick={() => { setReportMode('felicitacion'); setIsAnonymous(false); }}
                     className={`flex-1 p-5 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-3 group ${reportMode === 'felicitacion'
-                            ? 'border-amber-400 bg-amber-50/50 shadow-lg shadow-amber-400/10'
-                            : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+                        ? 'border-amber-400 bg-amber-50/50 shadow-lg shadow-amber-400/10'
+                        : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
                         }`}
                 >
                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${reportMode === 'felicitacion' ? 'bg-gradient-to-br from-amber-400 to-yellow-500 text-white shadow-lg' : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'
@@ -423,22 +424,13 @@ export const ReportingForm = () => {
                                     </div>
                                 </div>
                             </label>
-                            <div className="relative group">
-                                <select
-                                    required
-                                    className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-sanatorio-primary focus:ring-sanatorio-primary transition-all bg-gray-50 focus:bg-white appearance-none cursor-pointer pr-12 text-gray-700"
-                                    value={formData.reporterSector}
-                                    onChange={(e) => setFormData({ ...formData, reporterSector: e.target.value })}
-                                >
-                                    <option value="">Selecciona tu sector...</option>
-                                    {SECTOR_OPTIONS.map((option) => (
-                                        <option key={`reporter-${option.value}`} value={option.value}>
-                                            {option.label}
-                                        </option>
-                                    ))}
-                                </select>
-                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none group-focus-within:text-sanatorio-primary transition-colors" />
-                            </div>
+                            <SearchableSelect
+                                options={SECTOR_OPTIONS}
+                                value={formData.reporterSector}
+                                onChange={(val) => setFormData({ ...formData, reporterSector: val })}
+                                placeholder="Selecciona tu sector..."
+                                required
+                            />
                         </div>
 
                         {/* Selector de Sector Destino (OBLIGATORIO) */}
@@ -452,22 +444,13 @@ export const ReportingForm = () => {
                                     </div>
                                 </div>
                             </label>
-                            <div className="relative group">
-                                <select
-                                    required
-                                    className="w-full px-4 py-3 rounded-xl border-gray-200 focus:border-sanatorio-primary focus:ring-sanatorio-primary transition-all bg-gray-50 focus:bg-white appearance-none cursor-pointer pr-12 text-gray-700"
-                                    value={formData.sector}
-                                    onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
-                                >
-                                    <option value="">Selecciona el área relacionada...</option>
-                                    {SECTOR_OPTIONS.map((option) => (
-                                        <option key={`dest-${option.value}`} value={option.value}>
-                                            {option.label}
-                                        </option>
-                                    ))}
-                                </select>
-                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none group-focus-within:text-sanatorio-primary transition-colors" />
-                            </div>
+                            <SearchableSelect
+                                options={SECTOR_OPTIONS}
+                                value={formData.sector}
+                                onChange={(val) => setFormData({ ...formData, sector: val })}
+                                placeholder="Selecciona el área relacionada..."
+                                required
+                            />
                         </div>
 
 
