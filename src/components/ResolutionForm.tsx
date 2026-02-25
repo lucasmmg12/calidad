@@ -756,10 +756,34 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                                     type="button"
                                     onClick={handleSaveDraft}
                                     disabled={autoSaveStatus === 'saving'}
-                                    className="flex-1 py-4 rounded-xl font-bold text-gray-700 bg-white border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 shadow-sm transition-all flex items-center justify-center gap-2 text-sm"
+                                    className={`flex-1 py-4 rounded-xl font-bold shadow-sm transition-all flex items-center justify-center gap-2 text-sm ${autoSaveStatus === 'saved'
+                                            ? 'bg-green-50 border-2 border-green-300 text-green-700'
+                                            : autoSaveStatus === 'error'
+                                                ? 'bg-red-50 border-2 border-red-300 text-red-700'
+                                                : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                                        }`}
                                 >
-                                    <Save className="w-4 h-4" />
-                                    Guardar Borrador
+                                    {autoSaveStatus === 'saving' ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            Guardando...
+                                        </>
+                                    ) : autoSaveStatus === 'saved' ? (
+                                        <>
+                                            <CheckCircle2 className="w-4 h-4" />
+                                            ¡Borrador guardado!
+                                        </>
+                                    ) : autoSaveStatus === 'error' ? (
+                                        <>
+                                            <AlertTriangle className="w-4 h-4" />
+                                            Error al guardar
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="w-4 h-4" />
+                                            Guardar Borrador
+                                        </>
+                                    )}
                                 </button>
 
                                 {/* Submit to Quality */}
