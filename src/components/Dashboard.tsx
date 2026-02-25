@@ -580,44 +580,18 @@ const ReopenModal = ({
     isOpen,
     onClose,
     onConfirm,
-    initialPhone,
     isSubmitting,
-    responsables,
-    loadingResponsables,
-    reportSector,
 }: {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: (reason: string, phone: string) => void;
-    initialPhone: string;
+    onConfirm: (reason: string) => void;
     isSubmitting: boolean;
-    responsables: UserProfile[];
-    loadingResponsables: boolean;
-    reportSector?: string;
 }) => {
     const [reason, setReason] = useState('');
-    const [phone, setPhone] = useState(initialPhone || '');
-    const [selectedUserId, setSelectedUserId] = useState('');
 
     useEffect(() => {
-        if (isOpen) {
-            setReason('');
-            // Try to find the responsable by their phone (for pre-selection)
-            if (initialPhone) {
-                const found = responsables.find(r => r.phone_number === initialPhone);
-                if (found) {
-                    setSelectedUserId(found.user_id);
-                    setPhone(found.phone_number || '');
-                } else {
-                    setSelectedUserId('__manual__');
-                    setPhone(initialPhone);
-                }
-            } else {
-                setSelectedUserId('');
-                setPhone('');
-            }
-        }
-    }, [isOpen, initialPhone, responsables]);
+        if (isOpen) setReason('');
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -629,7 +603,7 @@ const ReopenModal = ({
                     Reapertura de Caso
                 </h3>
                 <p className="text-sm text-gray-500 mb-6">
-                    Indique el motivo de la corrección. El caso volverá a estado pendiente.
+                    Indique el motivo de la corrección. Luego podrá derivar el caso a los sectores correspondientes.
                 </p>
 
                 <div className="space-y-4 mb-6">
@@ -644,15 +618,12 @@ const ReopenModal = ({
                         />
                     </div>
 
-                    <ResponsablePhoneSelector
-                        responsables={responsables}
-                        loadingResponsables={loadingResponsables}
-                        phone={phone}
-                        setPhone={setPhone}
-                        selectedUserId={selectedUserId}
-                        setSelectedUserId={setSelectedUserId}
-                        reportSector={reportSector}
-                    />
+                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex gap-2 items-start">
+                        <AlertCircle className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-blue-700">
+                            Al confirmar, se reseteará la resolución y se abrirá el panel de derivación para reenviar a uno o más sectores.
+                        </p>
+                    </div>
                 </div>
 
                 <div className="flex gap-3 w-full">
@@ -664,12 +635,12 @@ const ReopenModal = ({
                         Cancelar
                     </button>
                     <button
-                        onClick={() => onConfirm(reason, phone)}
+                        onClick={() => onConfirm(reason)}
                         disabled={!reason.trim() || isSubmitting}
                         className="flex-1 py-2.5 px-4 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-500/30 flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                         {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
-                        Confirmar Reapertura
+                        Confirmar y Derivar
                     </button>
                 </div>
             </div>
@@ -1246,7 +1217,7 @@ export const Dashboard = () => {
         setIsSendingReferral(false);
     };
 
-    const handleReopenCase = async (reason: string, phoneTarget: string) => {
+    const handleReopenCase = async (reason: string) => {
         if (!selectedReport) return;
         setIsReopening(true);
 
@@ -1276,7 +1247,7 @@ export const Dashboard = () => {
         const { error } = await supabase
             .from('reports')
             .update({
-                status: 'pending_resolution',
+                status: 'pending',
                 notes: updatedNotes,
                 resolution_history: updatedHistory,
                 // CRITICAL: Reset resolution step so the form reopens fresh
@@ -1291,30 +1262,15 @@ export const Dashboard = () => {
                 step2_evidence_urls: null,
                 draft_data: null,
                 draft_updated_at: null,
+                assigned_to: null,
             })
             .eq('id', selectedReport.id);
 
         if (!error) {
-            // 2. Send WhatsApp if phone provided
-            if (phoneTarget && phoneTarget.length > 5) {
-                const botNumber = `549${phoneTarget.replace(/\D/g, '').replace(/^549/, '')}`;
-                const resolutionLink = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}`;
-
-                const { error: waError } = await supabase.functions.invoke('send-whatsapp', {
-                    body: {
-                        number: botNumber,
-                        message: `🛑 *Solución Insuficiente - Caso Reabierto*\n\nSe ha reabierto el caso *${selectedReport.tracking_id}* tras revisión de Calidad.\n\n⚠️ *Motivo:* ${reason}\n\n👉 *Se requiere una nueva gestión del caso:* ${resolutionLink}`,
-                        mediaUrl: "https://i.imgur.com/GfBdckl.jpeg"
-                    }
-                });
-
-                if (waError) console.error("Error sending WA rejection:", waError);
-            }
-
-            // 3. Update local state
-            setReports(reports.map(r => r.id === selectedReport.id ? {
-                ...r,
-                status: 'pending_resolution',
+            // 2. Update local state — set to 'pending' so it appears in Pendientes tab
+            const updatedReport = {
+                ...selectedReport,
+                status: 'pending',
                 notes: updatedNotes,
                 resolution_history: updatedHistory,
                 resolution_step: null,
@@ -1328,10 +1284,15 @@ export const Dashboard = () => {
                 step2_evidence_urls: null,
                 draft_data: null,
                 draft_updated_at: null,
-            } : r));
-            setSelectedReport(null);
+                assigned_to: null,
+            };
+            setReports(reports.map(r => r.id === selectedReport.id ? updatedReport : r));
+            setSelectedReport(updatedReport as any);
             setShowReopenModal(false);
-            setFeedbackModal({ isOpen: true, type: 'success', title: 'Caso Reabierto', message: 'El ticket ha vuelto a estado pendiente para corrección.' });
+
+            // 3. Immediately open the referral modal so Calidad can re-derive
+            setShowReferralModal(true);
+            setFeedbackModal({ isOpen: true, type: 'success', title: 'Caso Reabierto', message: 'El caso fue reseteado. Ahora derive a los sectores correspondientes.' });
         } else {
             setFeedbackModal({ isOpen: true, type: 'error', title: 'Error', message: 'No se pudo reabrir el caso: ' + error.message });
         }
@@ -3273,11 +3234,7 @@ export const Dashboard = () => {
                 isOpen={showReopenModal}
                 onClose={() => setShowReopenModal(false)}
                 onConfirm={handleReopenCase}
-                initialPhone={selectedReport?.assigned_to || ''}
                 isSubmitting={isReopening}
-                responsables={responsables}
-                loadingResponsables={loadingResponsables}
-                reportSector={selectedReport?.sector}
             />
 
             <QualityReturnModal
