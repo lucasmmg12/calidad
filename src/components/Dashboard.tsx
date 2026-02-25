@@ -874,7 +874,8 @@ export const Dashboard = () => {
             return;
         }
         // Only fetch if the report could have sector assignments
-        if (selectedReport.status === 'multi_sector_pending' || selectedReport.status === 'quality_validation') {
+        const fetchableStatuses = ['multi_sector_pending', 'quality_validation', 'pending_resolution', 'assignment_rejected'];
+        if (fetchableStatuses.includes(selectedReport.status)) {
             const fetchAssignments = async () => {
                 setLoadingAssignments(true);
                 setExpandedSector(null);
@@ -885,7 +886,17 @@ export const Dashboard = () => {
                     .order('created_at', { ascending: true });
 
                 if (!error && data) {
-                    setSectorAssignmentsData(data);
+                    // Deduplicate: keep only the LATEST assignment per sector
+                    // This prevents historical rejected assignments from showing as separate "sectors"
+                    const latestBySector = new Map<string, typeof data[0]>();
+                    for (const assignment of data) {
+                        const sectorKey = assignment.sector || assignment.id;
+                        const existing = latestBySector.get(sectorKey);
+                        if (!existing || new Date(assignment.created_at) > new Date(existing.created_at)) {
+                            latestBySector.set(sectorKey, assignment);
+                        }
+                    }
+                    setSectorAssignmentsData(Array.from(latestBySector.values()));
                 } else {
                     setSectorAssignmentsData([]);
                 }
