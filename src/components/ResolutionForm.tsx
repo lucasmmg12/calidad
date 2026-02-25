@@ -155,7 +155,14 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                 setStep1Files([]);
                 setCurrentStep('step2');
             } else {
-                // For simple cases, we're done
+                // For simple cases, call onSubmit so multi-sector assignments get updated
+                await onSubmit({
+                    reportId: reportData.id,
+                    isAdverseEvent: false,
+                    reportSummary: reportData.description,
+                    immediateAction: immediateAction.trim(),
+                    evidenceUrls: allStep1Urls,
+                });
                 setStatus('submitted');
                 setCurrentStep('completed');
             }
