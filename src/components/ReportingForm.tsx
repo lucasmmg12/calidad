@@ -13,6 +13,7 @@ type ReportMode = 'hallazgo' | 'felicitacion';
 export const ReportingForm = () => {
     const [loading, setLoading] = useState(false);
     const [successId, setSuccessId] = useState<string | null>(null);
+    const [copied, setCopied] = useState(false);
     const [isAnonymous, setIsAnonymous] = useState(false);
     const [reportMode, setReportMode] = useState<ReportMode>('hallazgo');
     const [felicitacionSent, setFelicitacionSent] = useState(false);
@@ -235,9 +236,39 @@ export const ReportingForm = () => {
                         ? (felicitacionSent ? 'Tu reconocimiento fue enviado directamente al equipo del sector. ¡Gracias!' : 'Tu felicitación fue registrada exitosamente.')
                         : 'Gracias por ayudarnos a mejorar. Tu código de seguimiento es:'}
                 </p>
-                <div className="bg-slate-50 border border-slate-200 p-6 rounded-2xl mb-8 group cursor-pointer hover:border-sanatorio-primary transition-colors">
-                    <p className="text-3xl font-mono font-black text-sanatorio-primary tracking-wider group-active:scale-95 transition-transform">{successId}</p>
+                <div className="bg-slate-50 border border-slate-200 p-6 rounded-2xl mb-8">
+                    <p className="text-3xl font-mono font-black text-sanatorio-primary tracking-wider">{successId}</p>
                     <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-widest">Guarda este código para consultas futuras</p>
+                    <button
+                        type="button"
+                        onClick={async () => {
+                            try {
+                                await navigator.clipboard.writeText(successId);
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 2000);
+                            } catch {
+                                // Fallback for older browsers
+                                const input = document.createElement('input');
+                                input.value = successId;
+                                document.body.appendChild(input);
+                                input.select();
+                                document.execCommand('copy');
+                                document.body.removeChild(input);
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 2000);
+                            }
+                        }}
+                        className={`mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${copied
+                            ? 'bg-green-100 text-green-700 border border-green-200'
+                            : 'bg-white text-sanatorio-primary border border-sanatorio-primary/20 hover:bg-sanatorio-primary hover:text-white shadow-sm hover:shadow-md'
+                            }`}
+                    >
+                        {copied ? (
+                            <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg> ¡Copiado!</>
+                        ) : (
+                            <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> Copiar código</>
+                        )}
+                    </button>
                 </div>
                 <button
                     onClick={() => { setSuccessId(null); setFormData({ originSector: '', reporterSector: '', sector: '', content: '', contactName: '', contactNumber: '' }); setFiles([]); setPreviewUrls([]); setIsAnonymous(false); setReportMode('hallazgo'); setFelicitacionSent(false); }}
