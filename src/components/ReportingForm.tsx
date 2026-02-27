@@ -4,6 +4,7 @@ import { Send, ShieldAlert, Loader2, User, Lock, Info, AlertTriangle, Lightbulb,
 import { DoraAssistant } from './DoraAssistant';
 import { SearchableSelect } from './SearchableSelect';
 import { SECTOR_OPTIONS } from '../constants/sectors';
+import { VoiceRecorder } from './VoiceRecorder';
 
 type ReportMode = 'hallazgo' | 'felicitacion';
 
@@ -467,6 +468,20 @@ export const ReportingForm = () => {
                                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                             />
                         </div>
+
+                        {/* Voice Recorder */}
+                        <VoiceRecorder
+                            onTranscription={(text) => {
+                                setFormData(prev => ({
+                                    ...prev,
+                                    content: prev.content
+                                        ? prev.content.trimEnd() + '\n\n' + text
+                                        : text
+                                }));
+                            }}
+                            disabled={loading}
+                            maxDurationSeconds={300}
+                        />
 
                         {/* File Upload */}
                         <div className="space-y-2">
