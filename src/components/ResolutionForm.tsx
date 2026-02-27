@@ -20,6 +20,7 @@ import {
 import type { ResolutionFormData, ResolutionStatus } from '../types/resolution';
 import { SECTOR_OPTIONS } from '../constants/sectors';
 import { ORIGIN_OPTIONS } from '../constants/origin_options';
+import { VoiceRecorder } from './VoiceRecorder';
 
 interface Props {
     reportData: {
@@ -569,6 +570,13 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                                         value={immediateAction}
                                         onChange={e => setImmediateAction(e.target.value)}
                                     />
+                                    <VoiceRecorder
+                                        onTranscription={(text) => {
+                                            setImmediateAction(prev => prev ? prev.trimEnd() + '\n\n' + text : text);
+                                        }}
+                                        disabled={isUploading}
+                                        maxDurationSeconds={300}
+                                    />
                                 </div>
 
                                 <FileUploadSection
@@ -724,6 +732,13 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                                         value={step2Data.rootCause}
                                         onChange={e => setStep2Data(prev => ({ ...prev, rootCause: e.target.value }))}
                                     />
+                                    <VoiceRecorder
+                                        onTranscription={(text) => {
+                                            setStep2Data(prev => ({ ...prev, rootCause: prev.rootCause ? prev.rootCause.trimEnd() + '\n\n' + text : text }));
+                                        }}
+                                        disabled={isUploading}
+                                        maxDurationSeconds={300}
+                                    />
                                 </div>
 
                                 <div>
@@ -735,6 +750,13 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                                         placeholder="¿Qué se hará para que esto NO vuelva a ocurrir?"
                                         value={step2Data.correctivePlan}
                                         onChange={e => setStep2Data(prev => ({ ...prev, correctivePlan: e.target.value }))}
+                                    />
+                                    <VoiceRecorder
+                                        onTranscription={(text) => {
+                                            setStep2Data(prev => ({ ...prev, correctivePlan: prev.correctivePlan ? prev.correctivePlan.trimEnd() + '\n\n' + text : text }));
+                                        }}
+                                        disabled={isUploading}
+                                        maxDurationSeconds={300}
                                     />
                                 </div>
 

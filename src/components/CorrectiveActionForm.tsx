@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 
 import { supabase } from '../utils/supabase';
+import { VoiceRecorder } from './VoiceRecorder';
 
 interface CorrectiveActionFormProps {
     reportId?: string;
@@ -46,7 +47,7 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const { register, handleSubmit, formState: { errors } } = useForm<CorrectiveActionFormData>({
+    const { register, handleSubmit, formState: { errors }, setValue, getValues } = useForm<CorrectiveActionFormData>({
         defaultValues: {
             origin: 'observacion',
             sector: initialData?.sector || '',
@@ -223,6 +224,14 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                                 className="w-full bg-blue-50/30 border border-gray-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none transition-all resize-none"
                                 placeholder="Ej: Se aisló el lote afectado, se contuvo al paciente, se llamó a mantenimiento..."
                             ></textarea>
+                            <VoiceRecorder
+                                onTranscription={(text) => {
+                                    const current = getValues('immediateAction') || '';
+                                    setValue('immediateAction', current ? current.trimEnd() + '\n\n' + text : text, { shouldValidate: true });
+                                }}
+                                disabled={isSubmitting}
+                                maxDurationSeconds={300}
+                            />
                             {errors.immediateAction && <span className="text-xs text-red-500 font-medium">Debe detallar qué hizo en el momento.</span>}
                         </div>
 
@@ -244,6 +253,14 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                                 className="w-full bg-orange-50/30 border border-gray-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none transition-all resize-none"
                                 placeholder="1. ¿Por qué ocurrió? ... 2. ¿Por qué? ... Identifique la causa sistémica, no solo el error humano."
                             ></textarea>
+                            <VoiceRecorder
+                                onTranscription={(text) => {
+                                    const current = getValues('rootCauseAnalysis') || '';
+                                    setValue('rootCauseAnalysis', current ? current.trimEnd() + '\n\n' + text : text, { shouldValidate: true });
+                                }}
+                                disabled={isSubmitting}
+                                maxDurationSeconds={300}
+                            />
                             {errors.rootCauseAnalysis && <span className="text-xs text-red-500 font-medium">El análisis es obligatorio para eventos adversos.</span>}
                         </div>
 
@@ -264,6 +281,14 @@ export const CorrectiveActionForm: React.FC<CorrectiveActionFormProps> = ({
                                     className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none transition-all resize-none"
                                     placeholder="Describa la acción concreta para prevenir la recurrencia..."
                                 ></textarea>
+                                <VoiceRecorder
+                                    onTranscription={(text) => {
+                                        const current = getValues('actionPlan') || '';
+                                        setValue('actionPlan', current ? current.trimEnd() + '\n\n' + text : text, { shouldValidate: true });
+                                    }}
+                                    disabled={isSubmitting}
+                                    maxDurationSeconds={300}
+                                />
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
