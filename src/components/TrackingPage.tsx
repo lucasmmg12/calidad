@@ -3,14 +3,20 @@ import { supabase } from '../utils/supabase';
 import { Search, Clock, CheckCircle, AlertCircle, Activity, XCircle, AlertTriangle } from 'lucide-react';
 
 export const TrackingPage = () => {
-    const [trackingId, setTrackingId] = useState('');
+    const PREFIX = 'SA-2026-';
+    const [suffix, setSuffix] = useState('');
+    const [useFullInput, setUseFullInput] = useState(false);
+    const [fullCode, setFullCode] = useState('');
     const [loading, setLoading] = useState(false);
     const [report, setReport] = useState<any>(null);
     const [error, setError] = useState('');
 
+    const computedTrackingId = useFullInput ? fullCode.trim() : `${PREFIX}${suffix}`;
+    const canSearch = useFullInput ? fullCode.trim().length > 0 : suffix.length === 4;
+
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!trackingId.trim()) return;
+        if (!canSearch) return;
 
         setLoading(true);
         setError('');
@@ -20,7 +26,7 @@ export const TrackingPage = () => {
             const { data, error } = await supabase
                 .from('reports')
                 .select('*')
-                .ilike('tracking_id', trackingId.trim())
+                .ilike('tracking_id', computedTrackingId)
                 .single();
 
             if (error) throw error;
@@ -48,21 +54,72 @@ export const TrackingPage = () => {
 
             {/* Search Card */}
             <div className="bg-white rounded-3xl shadow-card p-8 border border-gray-100 mb-8">
-                <form onSubmit={handleSearch} className="relative">
-                    <div className="relative">
-                        <input
-                            type="text"
-                            placeholder="Ej: SA-2024-X9Y2"
-                            className="w-full p-4 pl-12 border-2 border-gray-200 rounded-xl text-lg uppercase font-mono tracking-wider focus:border-sanatorio-primary focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:normal-case placeholder:font-sans placeholder:tracking-normal"
-                            value={trackingId}
-                            onChange={(e) => setTrackingId(e.target.value.toUpperCase())}
-                        />
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-6 h-6" />
-                    </div>
+                <form onSubmit={handleSearch} className="space-y-4">
+                    {!useFullInput ? (
+                        <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
+                                Ingresá los últimos 4 caracteres de tu código
+                            </label>
+                            <div className="relative flex items-stretch">
+                                {/* Fixed prefix */}
+                                <div className="flex items-center bg-gray-100 border-2 border-r-0 border-gray-200 rounded-l-xl px-4 select-none">
+                                    <span className="text-lg font-mono font-bold text-gray-400 tracking-wider">{PREFIX}</span>
+                                </div>
+                                {/* Editable suffix */}
+                                <input
+                                    type="text"
+                                    maxLength={4}
+                                    placeholder="X9Y2"
+                                    className="flex-1 p-4 border-2 border-gray-200 rounded-r-xl text-2xl uppercase font-mono tracking-[0.3em] text-center focus:border-sanatorio-primary focus:ring-4 focus:ring-blue-50 outline-none transition-all"
+                                    value={suffix}
+                                    onChange={(e) => setSuffix(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4))}
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="flex items-center justify-between mt-2">
+                                <p className="text-[11px] text-gray-400">
+                                    {suffix.length < 4 ? `Faltan ${4 - suffix.length} caracteres` : '✅ Listo para buscar'}
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => { setUseFullInput(true); setFullCode(suffix ? `${PREFIX}${suffix}` : ''); }}
+                                    className="text-[11px] text-sanatorio-primary hover:underline font-medium"
+                                >
+                                    Ingresar código completo
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
+                                Código completo de seguimiento
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="SA-2026-X9Y2"
+                                    className="w-full p-4 pl-12 border-2 border-gray-200 rounded-xl text-lg uppercase font-mono tracking-wider focus:border-sanatorio-primary focus:ring-4 focus:ring-blue-50 outline-none transition-all"
+                                    value={fullCode}
+                                    onChange={(e) => setFullCode(e.target.value.toUpperCase())}
+                                    autoFocus
+                                />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            </div>
+                            <div className="flex justify-end mt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => { setUseFullInput(false); setSuffix(''); }}
+                                    className="text-[11px] text-sanatorio-primary hover:underline font-medium"
+                                >
+                                    ← Solo últimos 4 dígitos
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     <button
                         type="submit"
-                        disabled={loading || !trackingId}
-                        className="mt-4 w-full py-3 bg-sanatorio-primary text-white rounded-xl font-bold hover:bg-[#004270] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                        disabled={loading || !canSearch}
+                        className="w-full py-3 bg-sanatorio-primary text-white rounded-xl font-bold hover:bg-[#004270] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
                     >
                         {loading ? 'Buscando...' : 'Consultar Estado'}
                     </button>
