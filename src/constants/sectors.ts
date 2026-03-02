@@ -41,6 +41,7 @@ export const SECTOR_OPTIONS = [
     { value: "MAN-Mantenimiento-Edilicio", label: "🔨 MAN – Mantenimiento Edilicio" },
     { value: "NUT-Nutricion-y-Alimentacion", label: "🥗 NUT – Nutrición y Alimentación" },
     { value: "PYT-Pagos-y-Tesoreria", label: "💰 PyT – Pagos y Tesorería" },
+    { value: "PREST-Prestadores", label: "🩺 PREST – Prestadores" },
     { value: "QUI-Quirofano", label: "🏥 QUI – Quirófano" },
     { value: "REC-S1-Recepcion-Sede-1", label: "🤒 REC S1 – Recepción Sede 1" },
     { value: "RES-Residencias-Medicas", label: "🩺 RES – Residencias Médicas" },
