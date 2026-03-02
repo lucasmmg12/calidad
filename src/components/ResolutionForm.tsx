@@ -771,12 +771,34 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                 {currentStep === 'step1' && (
                     <form onSubmit={handleStep1Submit} className="space-y-6 animate-in slide-in-from-bottom-4 duration-300">
                         <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200/60 transition-all focus-within:ring-2 focus-within:ring-blue-500/20">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-sm">1</div>
-                                <div>
-                                    <h2 className="font-bold text-gray-800">Respuesta Rápida</h2>
-                                    <p className="text-xs text-gray-400">¿Qué hiciste en el momento para resolver o contener la situación?</p>
+                            <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-sm">1</div>
+                                    <div>
+                                        <h2 className="font-bold text-gray-800">Respuesta Rápida</h2>
+                                        <p className="text-xs text-gray-400">¿Qué hiciste en el momento para resolver o contener la situación?</p>
+                                    </div>
                                 </div>
+                                {/* Insufficient Data — inline with header */}
+                                {reportData.contactNumber ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowInsufficientDataModal(true)}
+                                        className="px-3 py-2 bg-amber-50 border border-amber-200 text-amber-700 font-bold text-xs rounded-xl hover:bg-amber-100 transition-all flex items-center gap-1.5 flex-shrink-0"
+                                    >
+                                        <FileQuestion className="w-3.5 h-3.5" />
+                                        Datos Insuficientes
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={handleDiscardInsufficientData}
+                                        className="px-3 py-2 bg-red-50 border border-red-200 text-red-600 font-bold text-xs rounded-xl hover:bg-red-100 transition-all flex items-center gap-1.5 flex-shrink-0"
+                                    >
+                                        <FileQuestion className="w-3.5 h-3.5" />
+                                        Datos Insuficientes
+                                    </button>
+                                )}
                             </div>
 
                             {/* Tip */}
@@ -852,42 +874,6 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                                     Después de este paso, podrás completar el Análisis de Causa Raíz en el momento que quieras.
                                 </p>
                             )}
-
-                            {/* Insufficient Data Option */}
-                            <div className="border-2 border-dashed border-amber-200 rounded-xl p-4 bg-amber-50/30">
-                                <div className="flex items-center justify-between flex-wrap gap-3">
-                                    <div className="flex items-center gap-2">
-                                        <FileQuestion className="w-4 h-4 text-amber-500" />
-                                        <span className="text-sm text-gray-600">¿El reporte no tiene datos suficientes?</span>
-                                    </div>
-                                    {reportData.contactNumber ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowInsufficientDataModal(true)}
-                                            className="px-4 py-2 bg-white border border-amber-200 text-amber-700 font-bold text-xs rounded-lg hover:bg-amber-50 transition-all flex items-center gap-1.5"
-                                        >
-                                            <MessageSquare className="w-3 h-3" />
-                                            Pedir Más Información
-                                        </button>
-                                    ) : (
-                                        <button
-                                            type="button"
-                                            onClick={handleDiscardInsufficientData}
-                                            className="px-4 py-2 bg-white border border-red-200 text-red-600 font-bold text-xs rounded-lg hover:bg-red-50 transition-all flex items-center gap-1.5"
-                                        >
-                                            <XCircle className="w-3 h-3" />
-                                            Descartar por Datos Insuficientes
-                                        </button>
-                                    )}
-                                </div>
-                                {!reportData.contactNumber && (
-                                    <p className="text-[10px] text-gray-400 mt-2">
-                                        {reportData.isAnonymous
-                                            ? 'El reportante es anónimo y no dejó datos de contacto.'
-                                            : 'El reportante no dejó un número de teléfono de contacto.'}
-                                    </p>
-                                )}
-                            </div>
 
                             {/* Reject Option */}
                             {onReject && (
