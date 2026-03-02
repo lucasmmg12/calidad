@@ -71,11 +71,11 @@ function Navbar() {
           </Link>
 
           <nav className="flex items-center gap-1">
-            <Link to="/track" className="p-2.5 rounded-xl text-slate-500 hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 transition-all duration-200" title="Seguimiento">
-              <LayoutDashboard className="w-5 h-5" />
+            <Link to="/track" className="flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all" title="Seguimiento">
+              <LayoutDashboard className="w-4 h-4" /> <span className="hidden sm:inline">Seguimiento</span>
             </Link>
-            <Link to="/guia" className="p-2.5 rounded-xl text-slate-500 hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 transition-all duration-200" title="Guía">
-              <HelpCircle className="w-5 h-5" />
+            <Link to="/guia" className="flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all" title="Guía">
+              <HelpCircle className="w-4 h-4" /> <span className="hidden sm:inline">Guía</span>
             </Link>
 
             <div className="w-px h-6 bg-slate-200 mx-2 hidden sm:block"></div>
