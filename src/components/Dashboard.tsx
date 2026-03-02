@@ -255,8 +255,11 @@ const ResponsablePhoneSelector = ({
 interface SectorAssignmentRow {
     id: string;
     sector: string;
-    selectedUserId: string;
-    phone: string;
+    selectedUserId: string; // legacy single selection / '__manual__'
+    phone: string; // primary phone (for manual entry)
+    selectedUserIds: string[]; // multi-select: user_ids
+    phones: string[]; // all phones to notify
+    sendToAll: boolean; // flag: send to entire sector
 }
 
 const MultiSectorRowSelector = ({
@@ -280,8 +283,46 @@ const MultiSectorRowSelector = ({
         ? responsables.filter(r => r.assigned_sectors?.includes(row.sector))
         : [];
 
-    const selectedProfile = responsables.find(r => r.user_id === row.selectedUserId);
-    const selectedHasNoPhone = row.selectedUserId && row.selectedUserId !== '__manual__' && !selectedProfile?.phone_number;
+    const sectorPhonesAvailable = filteredBySector.filter(r => r.phone_number);
+
+    const handleToggleAll = () => {
+        if (row.sendToAll) {
+            // Deselect all
+            onUpdate({ ...row, sendToAll: false, selectedUserIds: [], phones: [], selectedUserId: '', phone: '' });
+        } else {
+            // Select all with phones
+            const allIds = sectorPhonesAvailable.map(r => r.user_id);
+            const allPhones = sectorPhonesAvailable.map(r => r.phone_number!).filter(Boolean);
+            onUpdate({ ...row, sendToAll: true, selectedUserIds: allIds, phones: allPhones, selectedUserId: allIds[0] || '', phone: allPhones[0] || '' });
+        }
+    };
+
+    const handleToggleUser = (userId: string) => {
+        const user = responsables.find(r => r.user_id === userId);
+        if (!user?.phone_number) return;
+
+        const isSelected = row.selectedUserIds.includes(userId);
+        let newIds: string[];
+        let newPhones: string[];
+
+        if (isSelected) {
+            newIds = row.selectedUserIds.filter(id => id !== userId);
+            newPhones = row.phones.filter(p => p !== user.phone_number);
+        } else {
+            newIds = [...row.selectedUserIds, userId];
+            newPhones = [...row.phones, user.phone_number!];
+        }
+
+        const allSelected = newIds.length === sectorPhonesAvailable.length && sectorPhonesAvailable.length > 0;
+        onUpdate({
+            ...row,
+            sendToAll: allSelected,
+            selectedUserIds: newIds,
+            phones: newPhones,
+            selectedUserId: newIds[0] || '',
+            phone: newPhones[0] || '',
+        });
+    };
 
     return (
         <div className="relative bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3 transition-all hover:border-gray-300">
@@ -301,7 +342,7 @@ const MultiSectorRowSelector = ({
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Sector</label>
                 <select
                     value={row.sector}
-                    onChange={(e) => onUpdate({ ...row, sector: e.target.value, selectedUserId: '', phone: '' })}
+                    onChange={(e) => onUpdate({ ...row, sector: e.target.value, selectedUserId: '', phone: '', selectedUserIds: [], phones: [], sendToAll: false })}
                     className="w-full p-2.5 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-sanatorio-primary/50 transition-all text-sm bg-white"
                 >
                     <option value="">-- Seleccionar sector --</option>
@@ -311,14 +352,14 @@ const MultiSectorRowSelector = ({
                 </select>
             </div>
 
-            {/* Responsable */}
+            {/* Responsables — Multi-select with checkboxes */}
             {row.sector && (
                 <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">
-                        Responsable
-                        {filteredBySector.length > 0 && (
+                        Responsables
+                        {sectorPhonesAvailable.length > 0 && (
                             <span className="text-[9px] font-normal text-gray-400 ml-1">
-                                ({filteredBySector.length} disponible{filteredBySector.length !== 1 ? 's' : ''})
+                                ({sectorPhonesAvailable.length} con teléfono)
                             </span>
                         )}
                     </label>
@@ -326,60 +367,91 @@ const MultiSectorRowSelector = ({
                         <div className="flex items-center gap-2 p-2 text-xs text-gray-400">
                             <Loader2 className="w-3 h-3 animate-spin" /> Cargando...
                         </div>
-                    ) : filteredBySector.length > 0 ? (
-                        <select
-                            value={row.selectedUserId}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                if (val === '__manual__') {
-                                    onUpdate({ ...row, selectedUserId: val, phone: '' });
-                                } else {
-                                    const found = responsables.find(r => r.user_id === val);
-                                    onUpdate({ ...row, selectedUserId: val, phone: found?.phone_number || '' });
-                                }
-                            }}
-                            className="w-full p-2.5 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-sanatorio-primary/50 transition-all text-sm bg-white"
-                        >
-                            <option value="">-- Seleccionar --</option>
+                    ) : sectorPhonesAvailable.length > 0 ? (
+                        <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100 max-h-40 overflow-y-auto">
+                            {/* Select All */}
+                            <label className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-blue-50/50 transition-colors">
+                                <input
+                                    type="checkbox"
+                                    checked={row.sendToAll}
+                                    onChange={handleToggleAll}
+                                    className="w-4 h-4 rounded border-gray-300 text-sanatorio-primary focus:ring-sanatorio-primary/50"
+                                />
+                                <div className="flex-1">
+                                    <span className="text-xs font-bold text-sanatorio-primary">📢 Enviar a todo el sector</span>
+                                    <p className="text-[10px] text-gray-400">Notifica a los {sectorPhonesAvailable.length} responsables</p>
+                                </div>
+                            </label>
+                            {/* Individual responsables */}
                             {filteredBySector.map(r => (
-                                <option key={r.user_id} value={r.user_id}>
-                                    {r.display_name || r.user_id}{r.phone_number ? ` (${r.phone_number})` : ' ⚠️ Sin tel'}
-                                </option>
+                                <label
+                                    key={r.user_id}
+                                    className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors ${!r.phone_number ? 'opacity-40' : ''}`}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={row.selectedUserIds.includes(r.user_id)}
+                                        onChange={() => handleToggleUser(r.user_id)}
+                                        disabled={!r.phone_number}
+                                        className="w-4 h-4 rounded border-gray-300 text-sanatorio-primary focus:ring-sanatorio-primary/50"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                        <span className="text-xs font-medium text-gray-700 truncate block">{r.display_name || r.user_id}</span>
+                                        <span className="text-[10px] text-gray-400">
+                                            {r.phone_number ? r.phone_number : '⚠️ Sin teléfono'}
+                                        </span>
+                                    </div>
+                                </label>
                             ))}
-                            <optgroup label="──────────">
-                                <option value="__manual__">✏️ Ingresar manualmente</option>
-                            </optgroup>
-                        </select>
+                        </div>
                     ) : (
                         <div className="flex items-center justify-between p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs">
                             <span className="text-amber-700 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Sin responsables</span>
-                            <button type="button" onClick={() => onUpdate({ ...row, selectedUserId: '__manual__', phone: '' })} className="text-sanatorio-primary font-bold hover:underline">Manual</button>
+                            <button type="button" onClick={() => onUpdate({ ...row, selectedUserId: '__manual__', phone: '', selectedUserIds: [], phones: [], sendToAll: false })} className="text-sanatorio-primary font-bold hover:underline">Manual</button>
                         </div>
+                    )}
+
+                    {/* Manual entry option */}
+                    {sectorPhonesAvailable.length > 0 && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (isManual) {
+                                    onUpdate({ ...row, selectedUserId: '', phone: '', selectedUserIds: [], phones: [], sendToAll: false });
+                                } else {
+                                    onUpdate({ ...row, selectedUserId: '__manual__', phone: '', selectedUserIds: [], phones: [], sendToAll: false });
+                                }
+                            }}
+                            className={`mt-1.5 text-[10px] font-bold flex items-center gap-1 ${isManual ? 'text-sanatorio-primary' : 'text-gray-400 hover:text-sanatorio-primary'} transition-colors`}
+                        >
+                            ✏️ {isManual ? 'Cancelar ingreso manual' : 'Ingresar número manualmente'}
+                        </button>
                     )}
                 </div>
             )}
 
-            {/* Phone */}
-            {row.sector && (
+            {/* Manual Phone Input */}
+            {row.sector && isManual && (
                 <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">WhatsApp</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">WhatsApp (Manual)</label>
                     <input
                         type="tel"
                         maxLength={10}
                         placeholder="2645438114"
-                        className={`w-full p-2.5 rounded-lg border outline-none focus:ring-2 focus:ring-sanatorio-primary/50 transition-all font-mono text-sm ${(isManual || selectedHasNoPhone)
-                            ? 'border-gray-200 bg-white'
-                            : 'border-gray-100 bg-gray-100 text-gray-500 cursor-not-allowed'
-                            }`}
+                        className="w-full p-2.5 rounded-lg border border-gray-200 bg-white outline-none focus:ring-2 focus:ring-sanatorio-primary/50 transition-all font-mono text-sm"
                         value={row.phone}
-                        onChange={(e) => onUpdate({ ...row, phone: e.target.value.replace(/\D/g, '') })}
-                        readOnly={!isManual && !selectedHasNoPhone}
+                        onChange={(e) => onUpdate({ ...row, phone: e.target.value.replace(/\D/g, ''), phones: [e.target.value.replace(/\D/g, '')], selectedUserIds: [] })}
                     />
                 </div>
             )}
 
-            {/* Sector badge indicator */}
-            {row.sector && row.phone.length >= 8 && (
+            {/* Selected summary */}
+            {row.phones.length > 1 && (
+                <div className="flex items-center gap-1.5 text-[10px] text-green-600 font-bold">
+                    <CheckCircle className="w-3 h-3" /> {row.phones.length} responsables seleccionados
+                </div>
+            )}
+            {row.phones.length === 1 && (
                 <div className="flex items-center gap-1.5 text-[10px] text-green-600 font-bold">
                     <CheckCircle className="w-3 h-3" /> Listo para enviar
                 </div>
@@ -407,18 +479,18 @@ const ReferralModal = ({
 }) => {
     const [managementType, setManagementType] = useState<'simple' | 'desvio' | 'adverse'>('simple');
     const [rows, setRows] = useState<SectorAssignmentRow[]>([
-        { id: generateId(), sector: reportSector || '', selectedUserId: '', phone: '' }
+        { id: generateId(), sector: reportSector || '', selectedUserId: '', phone: '', selectedUserIds: [], phones: [], sendToAll: false }
     ]);
 
     useEffect(() => {
         if (isOpen) {
             setManagementType('simple');
-            setRows([{ id: generateId(), sector: reportSector || '', selectedUserId: '', phone: '' }]);
+            setRows([{ id: generateId(), sector: reportSector || '', selectedUserId: '', phone: '', selectedUserIds: [], phones: [], sendToAll: false }]);
         }
     }, [isOpen]);
 
     const addRow = () => {
-        setRows(prev => [...prev, { id: generateId(), sector: '', selectedUserId: '', phone: '' }]);
+        setRows(prev => [...prev, { id: generateId(), sector: '', selectedUserId: '', phone: '', selectedUserIds: [], phones: [], sendToAll: false }]);
     };
 
     const updateRow = (id: string, updated: SectorAssignmentRow) => {
@@ -429,7 +501,7 @@ const ReferralModal = ({
         setRows(prev => prev.filter(r => r.id !== id));
     };
 
-    const validRows = rows.filter(r => r.sector && r.phone.length >= 8);
+    const validRows = rows.filter(r => r.sector && (r.phones.length > 0 || r.phone.length >= 8));
     const isMultiSector = rows.length > 1;
 
     if (!isOpen) return null;
@@ -1099,8 +1171,8 @@ export const Dashboard = () => {
 
         // Determine the valid rows to process
         const validRows = sectorAssignments
-            ? sectorAssignments.filter(r => r.sector && r.phone.length >= 8)
-            : [{ id: '', sector: selectedReport.sector || '', selectedUserId: '', phone: responsiblePhone }];
+            ? sectorAssignments.filter(r => r.sector && (r.phones.length > 0 || r.phone.length >= 8))
+            : [{ id: '', sector: selectedReport.sector || '', selectedUserId: '', phone: responsiblePhone, selectedUserIds: [], phones: [responsiblePhone], sendToAll: false }];
 
         const isMultiSector = validRows.length > 1;
         let allSuccess = true;
@@ -1133,7 +1205,6 @@ export const Dashboard = () => {
 
             // 2. Generate unique resolution link per assignment
             const resolutionLink = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}/${assignmentId}`;
-            const botNumber = `549${row.phone}`;
 
             // 3. Build WhatsApp message
             const sectorLabel = SECTOR_OPTIONS.find(s => s.value === row.sector)?.label || row.sector;
@@ -1153,22 +1224,26 @@ export const Dashboard = () => {
 
             messageBody += `\n\n👉 *Gestione el caso aquí:* ${resolutionLink}`;
 
-            // 4. Send WhatsApp
-            console.log(`[MultiSector] Enviando a ${botNumber} (${sectorLabel}). Link: ${resolutionLink}`);
-            const { error: waError } = await supabase.functions.invoke('send-whatsapp', {
-                body: {
-                    number: botNumber,
-                    message: messageBody,
-                    mediaUrl: managementType === 'adverse' ? "https://i.imgur.com/jgX2y4n.png" : "https://i.imgur.com/JGQlbiJ.jpeg"
-                }
-            });
+            // 4. Send WhatsApp to ALL selected phones for this sector
+            const phonesToNotify = row.phones.length > 0 ? row.phones : [row.phone];
+            for (const phoneNum of phonesToNotify) {
+                const botNumber = `549${phoneNum}`;
+                console.log(`[MultiSector] Enviando a ${botNumber} (${sectorLabel}). Link: ${resolutionLink}`);
+                const { error: waError } = await supabase.functions.invoke('send-whatsapp', {
+                    body: {
+                        number: botNumber,
+                        message: messageBody,
+                        mediaUrl: managementType === 'adverse' ? "https://i.imgur.com/jgX2y4n.png" : "https://i.imgur.com/JGQlbiJ.jpeg"
+                    }
+                });
 
-            if (waError) {
-                console.error(`[MultiSector] WhatsApp error for ${sectorLabel}:`, waError);
-                logEntries.push(`[${timestamp}] ❌ ERROR AL ENVIAR: Fallo WhatsApp a ${row.phone} (${sectorLabel})`);
-                allSuccess = false;
-            } else {
-                logEntries.push(`[${timestamp}] 📤 DERIVADO: Enviado a ${row.phone} como [${typeLabel}] → ${sectorLabel}`);
+                if (waError) {
+                    console.error(`[MultiSector] WhatsApp error for ${sectorLabel} (${phoneNum}):`, waError);
+                    logEntries.push(`[${timestamp}] ❌ ERROR AL ENVIAR: Fallo WhatsApp a ${phoneNum} (${sectorLabel})`);
+                    allSuccess = false;
+                } else {
+                    logEntries.push(`[${timestamp}] 📤 DERIVADO: Enviado a ${phoneNum} como [${typeLabel}] → ${sectorLabel}`);
+                }
             }
         }
 

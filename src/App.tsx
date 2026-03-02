@@ -13,6 +13,7 @@ import { AlertRecipientsManager } from './components/AlertRecipientsManager';
 import { UserManagement } from './pages/UserManagement';
 import { ResolutionPage } from './pages/ResolutionPage';
 import { SupplementaryInfoPage } from './pages/SupplementaryInfoPage';
+import { MyCases } from './pages/MyCases';
 import Presentation from './pages/Presentation';
 import ProfileSettings from './pages/ProfileSettings';
 import Register from './pages/Register';
@@ -29,7 +30,8 @@ import {
   UserCog,
   Shield,
   Users,
-  Bell
+  Bell,
+  Briefcase
 } from 'lucide-react';
 import { supabase } from './utils/supabase';
 
@@ -107,6 +109,14 @@ function Navbar() {
                     <LayoutDashboard className="w-4 h-4" /> Casos
                   </Link>
                 )}
+
+                {/* Mis Casos — All roles */}
+                <Link
+                  to="/mis-casos"
+                  className="hidden sm:flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all"
+                >
+                  <Briefcase className="w-4 h-4" /> Mis Casos
+                </Link>
 
                 {/* Metrics — All roles */}
                 <Link
@@ -214,6 +224,7 @@ function App() {
               {/* Perfil — Cualquier rol autenticado */}
               <Route element={<ProtectedRoute />}>
                 <Route path="/perfil" element={<ProfileSettings />} />
+                <Route path="/mis-casos" element={<MyCases />} />
               </Route>
             </Routes>
           </main>
