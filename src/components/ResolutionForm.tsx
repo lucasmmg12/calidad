@@ -179,14 +179,15 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
             if (insertErr) throw insertErr;
 
             // 2. Send WhatsApp to reporter
-            const reporterPhone = reportData.contactNumber?.replace(/\D/g, '').replace(/^549/, '') || '';
-            const botNumber = `549${reporterPhone}`;
+            const rawPhone = (reportData.contactNumber || '').replace(/\D/g, '');
+            const botNumber = `549${rawPhone}`;
             const infoLink = `${window.location.origin}/info-adicional/${newReq.id}`;
 
             await supabase.functions.invoke('send-whatsapp', {
                 body: {
                     number: botNumber,
                     message: `📋 *Solicitud de Información Adicional*\n\nEl responsable del sector *${sectorLabel}* necesita más información para gestionar su caso *${reportData.trackingId}*.\n\n💬 Mensaje: "${insufficientDataMessage.trim()}"\n\n👉 *Complete aquí:* ${infoLink}\n\nSanatorio Argentino | Gestión de Calidad`,
+                    mediaUrl: "https://i.imgur.com/JGQlbiJ.jpeg"
                 }
             });
 
@@ -796,7 +797,7 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                                     <button
                                         type="button"
                                         onClick={() => setShowConfirmDiscard(true)}
-                                        className="px-3 py-2 bg-red-50 border border-red-200 text-red-600 font-bold text-xs rounded-xl hover:bg-red-100 transition-all flex items-center gap-1.5 flex-shrink-0"
+                                        className="px-3 py-2 bg-gray-100 border border-gray-200 text-gray-400 font-bold text-xs rounded-xl hover:bg-gray-200 hover:text-gray-500 transition-all flex items-center gap-1.5 flex-shrink-0"
                                     >
                                         <FileQuestion className="w-3.5 h-3.5" />
                                         Datos Insuficientes
