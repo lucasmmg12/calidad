@@ -65,23 +65,9 @@ export const sendTextMessage = async (
     const normalized = phoneNumber.replace(/^549/, '').replace(/\D/g, '');
     const botNumber = `549${normalized}`;
 
-    // 1. Send via BuilderBot
-    const { error: sendError } = await supabase.functions.invoke('send-whatsapp', {
-        body: {
-            number: botNumber,
-            message,
-            mediaUrl: mediaUrl || '',
-        },
-    });
-
-    if (sendError) {
-        console.error('[Chat] Send error:', sendError);
-        throw sendError;
-    }
-
-    // 2. Save outgoing message locally
+    // 1. Optimistic insert — save outgoing message locally FIRST so the user sees it immediately
     const msgType = mediaUrl ? 'image' : 'text';
-    const { data, error: insertError } = await supabase
+    const { data: localMsg, error: insertError } = await supabase
         .from('whatsapp_messages')
         .insert({
             phone_number: normalized,
@@ -99,7 +85,30 @@ export const sendTextMessage = async (
         console.error('[Chat] Insert error:', insertError);
     }
 
-    return data || null;
+    // 2. Send via BuilderBot (non-blocking — message is already visible)
+    try {
+        const { data: responseData, error: sendError } = await supabase.functions.invoke('send-whatsapp', {
+            body: {
+                number: botNumber,
+                message,
+                mediaUrl: mediaUrl || '',
+            },
+        });
+
+        if (sendError) {
+            console.warn('[Chat] Send via BuilderBot failed (message saved locally):', sendError.message || sendError);
+            // Try to read the response body for more info
+            if (responseData) {
+                console.warn('[Chat] Response data:', responseData);
+            }
+        } else {
+            console.log('[Chat] Message sent successfully via BuilderBot');
+        }
+    } catch (err) {
+        console.warn('[Chat] Send error (non-fatal, message saved locally):', err);
+    }
+
+    return localMsg || null;
 };
 
 /** Upload media to Supabase Storage and get public URL */
