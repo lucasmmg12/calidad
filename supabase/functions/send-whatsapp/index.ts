@@ -27,6 +27,12 @@ serve(async (req) => {
 
         console.log(`[WhatsApp] Sending to ${number}: ${message.substring(0, 80)}...`)
 
+        // Build messages payload — only include mediaUrl if it's actually set
+        const messagesPayload: any = { content: message };
+        if (mediaUrl && mediaUrl.trim() !== '') {
+            messagesPayload.mediaUrl = mediaUrl;
+        }
+
         const response = await fetch('https://app.builderbot.cloud/api/v2/9981a143-f290-4ebe-a426-21c4d234371c/messages', {
             method: 'POST',
             headers: {
@@ -34,10 +40,7 @@ serve(async (req) => {
                 'x-api-builderbot': builderbotToken
             },
             body: JSON.stringify({
-                messages: {
-                    content: message,
-                    mediaUrl: mediaUrl || ""
-                },
+                messages: messagesPayload,
                 number: number,
                 checkIfExists: false
             })
