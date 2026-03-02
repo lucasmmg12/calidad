@@ -40,15 +40,14 @@ serve(async (req) => {
             });
         }
 
-        // Determine message direction
-        let direction: 'incoming' | 'outgoing' = 'incoming';
+        // At this point, only incoming messages proceed
+        const direction = 'incoming';
         let body = '';
         let mediaUrl = '';
         let messageType = 'text';
         let contactName = '';
 
         if (eventName === 'message.incoming') {
-            direction = 'incoming';
             body = data.body || '';
             contactName = data.name || '';
 
@@ -78,17 +77,13 @@ serve(async (req) => {
                 }
             }
         } else if (eventName === 'message.outgoing') {
-            direction = 'outgoing';
-            body = data.answer || '';
-
-            // Process outgoing attachments
-            if (data.attachment && Array.isArray(data.attachment) && data.attachment.length > 0) {
-                const att = data.attachment[0];
-                mediaUrl = att.url || att.payload || '';
-                if (mediaUrl) {
-                    messageType = 'image'; // default
-                }
-            }
+            // SKIP outgoing — we already save outgoing messages via chatService.sendTextMessage
+            // Inserting here would cause duplicate messages in the chat.
+            console.log('[Webhook] Skipping outgoing (handled by chatService):', normalizedPhone);
+            return new Response(JSON.stringify({ ok: true, skipped: 'outgoing' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 200,
+            });
         } else if (eventName === 'message.calling') {
             // Skip call events
             return new Response(JSON.stringify({ ok: true, skipped: 'calling' }), {
@@ -114,8 +109,8 @@ serve(async (req) => {
                 body: body || null,
                 media_url: mediaUrl || null,
                 contact_name: contactName || null,
-                sender_name: direction === 'outgoing' ? 'Sistema Calidad' : contactName || null,
-                is_read: direction === 'outgoing',
+                sender_name: contactName || null,
+                is_read: false,
                 metadata: {
                     eventName,
                     projectId: data.projectId,

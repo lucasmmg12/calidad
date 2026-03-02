@@ -127,7 +127,10 @@ export const ChatWindow = ({ phoneNumber, contactName, onClose, reportTrackingId
         try {
             const newMsg = await sendTextMessage(normalized, text, 'Calidad');
             if (newMsg) {
-                setMessages(prev => [...prev, newMsg]);
+                setMessages(prev => {
+                    if (prev.find(m => m.id === newMsg.id)) return prev;
+                    return [...prev, newMsg];
+                });
             }
             setTimeout(() => scrollToBottom(), 100);
         } catch (err) {
