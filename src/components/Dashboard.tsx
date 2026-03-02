@@ -905,6 +905,21 @@ export const Dashboard = () => {
     // Chat state
     const [chatPhone, setChatPhone] = useState<string | null>(null);
     const [chatContactName, setChatContactName] = useState<string>('');
+    const [showChatWarningModal, setShowChatWarningModal] = useState(false);
+    const [pendingChatPhone, setPendingChatPhone] = useState<string>('');
+    const [pendingChatName, setPendingChatName] = useState<string>('');
+
+    const handleOpenChat = (phone: string, name: string) => {
+        const normalizedPhone = phone.replace(/\D/g, '');
+        if (role === 'responsable' || role === 'directivo') {
+            setPendingChatPhone(normalizedPhone);
+            setPendingChatName(name);
+            setShowChatWarningModal(true);
+        } else {
+            setChatPhone(normalizedPhone);
+            setChatContactName(name);
+        }
+    };
 
     // Send reminder WhatsApp for a pending sector assignment
     const handleSendReminder = async (assignment: any) => {
@@ -2121,10 +2136,7 @@ export const Dashboard = () => {
                                                             </div>
                                                         </div>
                                                         <button
-                                                            onClick={() => {
-                                                                setChatPhone(selectedReport.contact_number.replace(/\D/g, ''));
-                                                                setChatContactName(selectedReport.contact_name || 'Paciente');
-                                                            }}
+                                                            onClick={() => handleOpenChat(selectedReport.contact_number, selectedReport.contact_name || 'Paciente')}
                                                             className="flex items-center gap-2 px-4 py-2.5 bg-[#25D366] hover:bg-[#1fb855] text-white rounded-xl font-bold text-xs shadow-md shadow-green-200 hover:shadow-lg hover:scale-105 transition-all duration-200 active:scale-95 cursor-pointer"
                                                             title="Abrir chat de WhatsApp"
                                                         >
@@ -3514,6 +3526,64 @@ export const Dashboard = () => {
                     </div>
                 </div>
             )}
+
+            {/* ─── WhatsApp Warning Modal (responsable/directivo) ─── */}
+            {showChatWarningModal && (
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowChatWarningModal(false)} />
+                    <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                                <AlertTriangle className="w-6 h-6 text-amber-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-800">Chat de WhatsApp Institucional</h3>
+                                <p className="text-xs text-gray-400">Aviso importante antes de continuar</p>
+                            </div>
+                        </div>
+
+                        {/* Body */}
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 space-y-3">
+                            <div className="flex items-start gap-2">
+                                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-[#25D366] flex-shrink-0 mt-0.5"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
+                                <p className="text-sm text-amber-800 font-medium leading-relaxed">
+                                    Este es el <strong>chat de WhatsApp de Dora</strong> (el asistente virtual del Sanatorio Argentino).
+                                </p>
+                            </div>
+                            <p className="text-sm text-amber-700 leading-relaxed">
+                                Si le escribe al reportante desde aquí, <strong>el mensaje le llegará como si fuese Dora</strong>.
+                                Por favor, utilice esta herramienta con <strong>responsabilidad y sin abuso</strong>.
+                            </p>
+                            <p className="text-xs text-amber-600/70 italic">
+                                Recuerde que todas las conversaciones quedan registradas en el historial del sistema.
+                            </p>
+                        </div>
+
+                        {/* Buttons */}
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowChatWarningModal(false)}
+                                className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowChatWarningModal(false);
+                                    setChatPhone(pendingChatPhone);
+                                    setChatContactName(pendingChatName);
+                                }}
+                                className="flex-1 px-4 py-2.5 bg-[#25D366] text-white rounded-xl font-bold text-sm hover:bg-[#1fb855] transition-colors shadow-md shadow-green-200 flex items-center justify-center gap-2"
+                            >
+                                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" /></svg>
+                                Entendido, continuar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ─── WhatsApp Chat Window ─── */}
             {chatPhone && (
                 <ChatWindow
