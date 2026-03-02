@@ -6,10 +6,7 @@ import {
     Paperclip,
     Mic,
     MicOff,
-    Image as ImageIcon,
     FileText,
-    Play,
-    Pause,
     Loader2,
     MessageSquare,
     ChevronDown,
@@ -42,7 +39,7 @@ interface ChatWindowProps {
     reportTrackingId?: string;
 }
 
-export const ChatWindow = ({ phoneNumber, contactName, onClose, reportTrackingId }: ChatWindowProps) => {
+export const ChatWindow = ({ phoneNumber, contactName, onClose, reportTrackingId: _reportTrackingId }: ChatWindowProps) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputText, setInputText] = useState('');
     const [loading, setLoading] = useState(true);
