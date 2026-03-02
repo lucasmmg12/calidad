@@ -187,7 +187,7 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                 body: {
                     number: botNumber,
                     message: `📋 *Solicitud de Información Adicional*\n\nEl responsable del sector *${sectorLabel}* necesita más información para gestionar su caso *${reportData.trackingId}*.\n\n💬 Mensaje: "${insufficientDataMessage.trim()}"\n\n👉 *Complete aquí:* ${infoLink}\n\nSanatorio Argentino | Gestión de Calidad`,
-                    mediaUrl: "https://i.imgur.com/JGQlbiJ.jpeg"
+                    mediaUrl: "https://i.imgur.com/534kAhJ.jpeg"
                 }
             });
 
