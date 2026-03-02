@@ -16,11 +16,24 @@ import {
     Clock,
     ChevronRight,
     Image,
+    MessageSquare,
+    FileQuestion,
 } from 'lucide-react';
 import type { ResolutionFormData, ResolutionStatus } from '../types/resolution';
 import { SECTOR_OPTIONS } from '../constants/sectors';
 import { ORIGIN_OPTIONS } from '../constants/origin_options';
 import { VoiceRecorder } from './VoiceRecorder';
+
+interface SupplementaryRequest {
+    id: string;
+    request_message: string;
+    response_text: string | null;
+    response_evidence_urls: string[] | null;
+    responded_at: string | null;
+    status: string;
+    created_at: string;
+    requested_by_sector: string;
+}
 
 interface Props {
     reportData: {
@@ -32,6 +45,8 @@ interface Props {
         originSector?: string;
         reporterSector?: string;
         contactNumber?: string;
+        isAnonymous?: boolean;
+        assignmentId?: string;
         status?: string;
         resolutionStep?: string;
         draftData?: any;
@@ -88,7 +103,152 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
     const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
     const [lastSavedAt, setLastSavedAt] = useState<string | null>(reportData.draftUpdatedAt || null);
     const [showDraftBanner, setShowDraftBanner] = useState(!!reportData.draftData);
+    const [showAutoSaveOnboarding, setShowAutoSaveOnboarding] = useState(() => {
+        return !localStorage.getItem('calidad_autosave_onboarding_seen');
+    });
     const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Supplementary Information Request state
+    const [showInsufficientDataModal, setShowInsufficientDataModal] = useState(false);
+    const [insufficientDataMessage, setInsufficientDataMessage] = useState('');
+    const [isSendingInfoRequest, setIsSendingInfoRequest] = useState(false);
+    const [supplementaryRequests, setSupplementaryRequests] = useState<SupplementaryRequest[]>([]);
+    const [loadingSupplementary, setLoadingSupplementary] = useState(true);
+
+    const dismissAutoSaveOnboarding = () => {
+        setShowAutoSaveOnboarding(false);
+        localStorage.setItem('calidad_autosave_onboarding_seen', 'true');
+    };
+
+    // ═══════════════════════════════════════════
+    //  FETCH SUPPLEMENTARY REQUESTS
+    // ═══════════════════════════════════════════
+    useEffect(() => {
+        const fetchSupplementary = async () => {
+            try {
+                let query = supabase
+                    .from('supplementary_requests')
+                    .select('*')
+                    .eq('report_id', reportData.id)
+                    .order('created_at', { ascending: false });
+
+                if (reportData.assignmentId) {
+                    query = query.eq('assignment_id', reportData.assignmentId);
+                }
+
+                const { data, error } = await query;
+                if (!error && data) {
+                    setSupplementaryRequests(data);
+                }
+            } catch (err) {
+                console.error('[SupplementaryRequests] Error fetching:', err);
+            } finally {
+                setLoadingSupplementary(false);
+            }
+        };
+        fetchSupplementary();
+    }, [reportData.id, reportData.assignmentId]);
+
+    // ═══════════════════════════════════════════
+    //  HANDLE INSUFFICIENT DATA REQUEST
+    // ═══════════════════════════════════════════
+    const handleRequestMoreInfo = async () => {
+        if (!insufficientDataMessage.trim()) return;
+        setIsSendingInfoRequest(true);
+
+        try {
+            const sectorLabel = SECTOR_OPTIONS.find(s => s.value === reportData.sector)?.label || reportData.sector;
+
+            // 1. Create supplementary request in DB
+            const { data: newReq, error: insertErr } = await supabase
+                .from('supplementary_requests')
+                .insert({
+                    report_id: reportData.id,
+                    assignment_id: reportData.assignmentId || null,
+                    requested_by_sector: sectorLabel,
+                    reporter_phone: reportData.contactNumber || null,
+                    request_message: insufficientDataMessage.trim(),
+                })
+                .select()
+                .single();
+
+            if (insertErr) throw insertErr;
+
+            // 2. Send WhatsApp to reporter
+            const reporterPhone = reportData.contactNumber?.replace(/\D/g, '').replace(/^549/, '') || '';
+            const botNumber = `549${reporterPhone}`;
+            const infoLink = `${window.location.origin}/info-adicional/${newReq.id}`;
+
+            await supabase.functions.invoke('send-whatsapp', {
+                body: {
+                    number: botNumber,
+                    message: `📋 *Solicitud de Información Adicional*\n\nEl responsable del sector *${sectorLabel}* necesita más información para gestionar su caso *${reportData.trackingId}*.\n\n💬 Mensaje: "${insufficientDataMessage.trim()}"\n\n👉 *Complete aquí:* ${infoLink}\n\nSanatorio Argentino | Gestión de Calidad`,
+                }
+            });
+
+            // 3. Log in report notes
+            const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+            const logEntry = `[${timestamp}] ⚠️ DATOS INSUFICIENTES: ${sectorLabel} solicitó más información al reportante. Pregunta: "${insufficientDataMessage.trim()}"`;
+
+            const { data: currentReport } = await supabase
+                .from('reports')
+                .select('notes')
+                .eq('id', reportData.id)
+                .single();
+
+            const updatedNotes = currentReport?.notes ? `${currentReport.notes}\n\n${logEntry}` : logEntry;
+            await supabase.from('reports').update({ notes: updatedNotes }).eq('id', reportData.id);
+
+            // 4. Update local state
+            setSupplementaryRequests(prev => [newReq, ...prev]);
+            setShowInsufficientDataModal(false);
+            setInsufficientDataMessage('');
+            alert('✅ Se envió la solicitud de información al reportante por WhatsApp.');
+        } catch (err: any) {
+            console.error('[InsufficientData] Error:', err);
+            alert('Error al enviar la solicitud: ' + err.message);
+        } finally {
+            setIsSendingInfoRequest(false);
+        }
+    };
+
+    const handleDiscardInsufficientData = async () => {
+        if (!confirm('¿Descartar este caso por datos insuficientes? El reportante es anónimo y no dejó forma de contacto.')) return;
+
+        try {
+            const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+            const sectorLabel = SECTOR_OPTIONS.find(s => s.value === reportData.sector)?.label || reportData.sector;
+            const logEntry = `[${timestamp}] ❌ DESCARTADO POR DATOS INSUFICIENTES: ${sectorLabel} no puede resolver — reportante anónimo sin datos de contacto.`;
+
+            const { data: currentReport } = await supabase
+                .from('reports')
+                .select('notes')
+                .eq('id', reportData.id)
+                .single();
+
+            const updatedNotes = currentReport?.notes ? `${currentReport.notes}\n\n${logEntry}` : logEntry;
+
+            // Update report to discarded
+            await supabase.from('reports').update({
+                status: 'discarded',
+                notes: updatedNotes,
+            }).eq('id', reportData.id);
+
+            // If multi-sector, also update assignment
+            if (reportData.assignmentId) {
+                await supabase.from('sector_assignments').update({
+                    status: 'rejected',
+                    notes: 'Descartado por datos insuficientes — reportante anónimo sin contacto.',
+                }).eq('id', reportData.assignmentId);
+            }
+
+            alert('Caso descartado por datos insuficientes.');
+            window.location.reload();
+        } catch (err: any) {
+            console.error('[DiscardInsufficient] Error:', err);
+            alert('Error: ' + err.message);
+        }
+    };
 
     // ═══════════════════════════════════════════
     //  FILE UPLOAD LOGIC (shared)
@@ -537,6 +697,75 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                 </section>
 
                 {/* ═══════════════════════════════════
+                    SUPPLEMENTARY INFO SECTION
+                ═══════════════════════════════════ */}
+                {!loadingSupplementary && supplementaryRequests.length > 0 && (
+                    <section className="space-y-3 animate-in fade-in duration-300">
+                        {supplementaryRequests.map((req) => (
+                            <div
+                                key={req.id}
+                                className={`rounded-2xl p-5 shadow-sm border transition-all ${req.status === 'completed'
+                                    ? 'bg-green-50 border-green-200'
+                                    : 'bg-amber-50 border-amber-200'
+                                    }`}
+                            >
+                                <div className="flex items-center gap-2 mb-3">
+                                    {req.status === 'completed' ? (
+                                        <CheckCircle2 className="w-5 h-5 text-green-600" />
+                                    ) : (
+                                        <Loader2 className="w-5 h-5 text-amber-600 animate-spin" />
+                                    )}
+                                    <h3 className="text-sm font-bold text-gray-800">
+                                        {req.status === 'completed'
+                                            ? '📎 Información Complementaria Recibida'
+                                            : '⏳ Esperando Información del Reportante'}
+                                    </h3>
+                                </div>
+
+                                <div className="bg-white/70 rounded-xl p-3 border border-gray-200/50 mb-3">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Tu Pregunta</p>
+                                    <p className="text-sm text-gray-700 italic">"{req.request_message}"</p>
+                                </div>
+
+                                {req.status === 'completed' && (
+                                    <>
+                                        {req.response_text && (
+                                            <div className="bg-white/70 rounded-xl p-3 border border-green-200/50 mb-3">
+                                                <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider mb-1">Respuesta del Reportante</p>
+                                                <p className="text-sm text-gray-800">{req.response_text}</p>
+                                            </div>
+                                        )}
+                                        {req.response_evidence_urls && req.response_evidence_urls.length > 0 && (
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">📷 Evidencia Adicional</p>
+                                                <div className="flex gap-2 overflow-x-auto pb-2">
+                                                    {req.response_evidence_urls.map((url, i) => (
+                                                        <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                                                            className="w-20 h-20 rounded-xl bg-gray-100 bg-cover bg-center border border-gray-200 flex-shrink-0 hover:ring-2 ring-blue-400 transition-all"
+                                                            style={{ backgroundImage: `url(${url})` }}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                        <p className="text-[10px] text-gray-400 mt-2">
+                                            Respondido el {new Date(req.responded_at!).toLocaleString('es-AR')}
+                                        </p>
+                                    </>
+                                )}
+
+                                {req.status === 'pending' && (
+                                    <p className="text-xs text-amber-700 font-medium">
+                                        El reportante aún no completó la información solicitada.
+                                        Solicitado el {new Date(req.created_at).toLocaleString('es-AR')}
+                                    </p>
+                                )}
+                            </div>
+                        ))}
+                    </section>
+                )}
+
+                {/* ═══════════════════════════════════
                     STEP 1: IMMEDIATE ACTION
                 ═══════════════════════════════════ */}
                 {currentStep === 'step1' && (
@@ -624,6 +853,42 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                                 </p>
                             )}
 
+                            {/* Insufficient Data Option */}
+                            <div className="border-2 border-dashed border-amber-200 rounded-xl p-4 bg-amber-50/30">
+                                <div className="flex items-center justify-between flex-wrap gap-3">
+                                    <div className="flex items-center gap-2">
+                                        <FileQuestion className="w-4 h-4 text-amber-500" />
+                                        <span className="text-sm text-gray-600">¿El reporte no tiene datos suficientes?</span>
+                                    </div>
+                                    {reportData.contactNumber ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowInsufficientDataModal(true)}
+                                            className="px-4 py-2 bg-white border border-amber-200 text-amber-700 font-bold text-xs rounded-lg hover:bg-amber-50 transition-all flex items-center gap-1.5"
+                                        >
+                                            <MessageSquare className="w-3 h-3" />
+                                            Pedir Más Información
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={handleDiscardInsufficientData}
+                                            className="px-4 py-2 bg-white border border-red-200 text-red-600 font-bold text-xs rounded-lg hover:bg-red-50 transition-all flex items-center gap-1.5"
+                                        >
+                                            <XCircle className="w-3 h-3" />
+                                            Descartar por Datos Insuficientes
+                                        </button>
+                                    )}
+                                </div>
+                                {!reportData.contactNumber && (
+                                    <p className="text-[10px] text-gray-400 mt-2">
+                                        {reportData.isAnonymous
+                                            ? 'El reportante es anónimo y no dejó datos de contacto.'
+                                            : 'El reportante no dejó un número de teléfono de contacto.'}
+                                    </p>
+                                )}
+                            </div>
+
                             {/* Reject Option */}
                             {onReject && (
                                 <div className="border-2 border-dashed border-red-200 rounded-xl p-4 bg-red-50/30">
@@ -655,6 +920,39 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                 ═══════════════════════════════════ */}
                 {currentStep === 'step2' && (
                     <form onSubmit={handleStep2Submit} className="space-y-6 animate-in slide-in-from-right-4 duration-500">
+
+                        {/* Auto-save Onboarding Banner (first time only) */}
+                        {showAutoSaveOnboarding && (
+                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-5 border border-blue-200/60 shadow-sm animate-in slide-in-from-top-3 duration-500">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                        <Info className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    <div className="flex-1 space-y-2">
+                                        <p className="text-sm font-bold text-blue-900">💡 ¿Sabías que tu progreso se guarda automáticamente?</p>
+                                        <p className="text-xs text-blue-700 leading-relaxed">
+                                            Mientras completás este formulario, el sistema guarda tu borrador cada vez que dejás de escribir.
+                                            Podés cerrar esta página, volver otro día, y tu trabajo estará exactamente donde lo dejaste.
+                                            <span className="font-semibold"> ¡Sin miedo a perder lo que escribiste!</span>
+                                        </p>
+                                        <div className="flex items-center gap-3 pt-1">
+                                            <button
+                                                type="button"
+                                                onClick={dismissAutoSaveOnboarding}
+                                                className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 shadow-sm"
+                                            >
+                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                                Entendido
+                                            </button>
+                                            <span className="text-[10px] text-blue-400">No volverás a ver este mensaje</span>
+                                        </div>
+                                    </div>
+                                    <button type="button" onClick={dismissAutoSaveOnboarding} className="p-1 hover:bg-blue-100 rounded-lg transition-colors flex-shrink-0">
+                                        <X className="w-4 h-4 text-blue-300" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Draft Recovery Banner */}
                         {showDraftBanner && (
@@ -854,6 +1152,93 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                 )}
 
             </main>
+
+            {/* ═══════════════════════════════════
+                INSUFFICIENT DATA MODAL
+            ═══════════════════════════════════ */}
+            {showInsufficientDataModal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden">
+                        {/* Modal Header */}
+                        <div className="bg-gradient-to-r from-amber-50 to-orange-50 px-6 py-5 border-b border-amber-100">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                                    <MessageSquare className="w-5 h-5 text-amber-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-900">Solicitar Información Adicional</h3>
+                                    <p className="text-xs text-amber-700">El reportante recibirá un WhatsApp con un formulario</p>
+                                </div>
+                                <button
+                                    onClick={() => { setShowInsufficientDataModal(false); setInsufficientDataMessage(''); }}
+                                    className="ml-auto p-2 hover:bg-amber-100 rounded-xl transition-colors"
+                                >
+                                    <X className="w-4 h-4 text-gray-500" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">
+                                    ¿Qué información necesitás del reportante?
+                                </label>
+                                <textarea
+                                    className="w-full p-3 rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all resize-none h-28 text-sm"
+                                    placeholder="Ej: ¿En qué piso y sala está la ventana rota? ¿Podés enviar una foto?"
+                                    value={insufficientDataMessage}
+                                    onChange={e => setInsufficientDataMessage(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
+
+                            {/* Preview */}
+                            {insufficientDataMessage.trim() && (
+                                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Vista previa del mensaje</p>
+                                    <div className="bg-green-50 rounded-lg p-3 border border-green-100 text-xs text-gray-700 leading-relaxed font-mono">
+                                        📋 <strong>Solicitud de Información Adicional</strong><br />
+                                        <br />
+                                        El responsable del sector necesita más información para su caso <strong>#{reportData.trackingId}</strong>.<br />
+                                        <br />
+                                        💬 "{insufficientDataMessage.trim()}"<br />
+                                        <br />
+                                        👉 [Link al formulario]
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="px-6 pb-6 flex gap-3">
+                            <button
+                                onClick={() => { setShowInsufficientDataModal(false); setInsufficientDataMessage(''); }}
+                                className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold text-sm rounded-xl hover:bg-gray-200 transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleRequestMoreInfo}
+                                disabled={!insufficientDataMessage.trim() || isSendingInfoRequest}
+                                className="flex-1 py-3 bg-amber-500 text-white font-bold text-sm rounded-xl hover:bg-amber-600 shadow-lg shadow-amber-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {isSendingInfoRequest ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Enviando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send className="w-4 h-4" />
+                                        Enviar por WhatsApp
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

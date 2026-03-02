@@ -12,6 +12,7 @@ import { Changelog } from './components/Changelog';
 import { AlertRecipientsManager } from './components/AlertRecipientsManager';
 import { UserManagement } from './pages/UserManagement';
 import { ResolutionPage } from './pages/ResolutionPage';
+import { SupplementaryInfoPage } from './pages/SupplementaryInfoPage';
 import Presentation from './pages/Presentation';
 import ProfileSettings from './pages/ProfileSettings';
 import Register from './pages/Register';
@@ -190,6 +191,7 @@ function App() {
               <Route path="/terminos" element={<LegalContent />} />
               <Route path="/resolver-caso/:ticketId" element={<ResolutionPage />} />
               <Route path="/resolver-caso/:ticketId/:assignmentId" element={<ResolutionPage />} />
+              <Route path="/info-adicional/:requestId" element={<SupplementaryInfoPage />} />
               <Route path="/presentacion" element={<Presentation />} />
               <Route path="/changelog" element={<Changelog />} />
 
