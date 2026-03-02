@@ -3,6 +3,7 @@ import { supabase } from '../utils/supabase';
 import {
     CheckCircle2,
     AlertTriangle,
+    AlertCircle,
     Camera,
     Send,
     ClipboardCheck,
@@ -18,6 +19,7 @@ import {
     Image,
     MessageSquare,
     FileQuestion,
+    CheckCircle,
 } from 'lucide-react';
 import type { ResolutionFormData, ResolutionStatus } from '../types/resolution';
 import { SECTOR_OPTIONS } from '../constants/sectors';
@@ -114,6 +116,8 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
     const [isSendingInfoRequest, setIsSendingInfoRequest] = useState(false);
     const [supplementaryRequests, setSupplementaryRequests] = useState<SupplementaryRequest[]>([]);
     const [loadingSupplementary, setLoadingSupplementary] = useState(true);
+    const [feedbackModal, setFeedbackModal] = useState<{ isOpen: boolean; type: 'success' | 'error'; title: string; message: string }>({ isOpen: false, type: 'success', title: '', message: '' });
+    const [showConfirmDiscard, setShowConfirmDiscard] = useState(false);
 
     const dismissAutoSaveOnboarding = () => {
         setShowAutoSaveOnboarding(false);
@@ -203,17 +207,16 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
             setSupplementaryRequests(prev => [newReq, ...prev]);
             setShowInsufficientDataModal(false);
             setInsufficientDataMessage('');
-            alert('✅ Se envió la solicitud de información al reportante por WhatsApp.');
+            setFeedbackModal({ isOpen: true, type: 'success', title: 'Solicitud Enviada', message: 'Se envió la solicitud de información al reportante por WhatsApp.' });
         } catch (err: any) {
             console.error('[InsufficientData] Error:', err);
-            alert('Error al enviar la solicitud: ' + err.message);
+            setFeedbackModal({ isOpen: true, type: 'error', title: 'Error', message: 'No se pudo enviar la solicitud: ' + err.message });
         } finally {
             setIsSendingInfoRequest(false);
         }
     };
 
     const handleDiscardInsufficientData = async () => {
-        if (!confirm('¿Descartar este caso por datos insuficientes? El reportante es anónimo y no dejó forma de contacto.')) return;
 
         try {
             const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
@@ -242,11 +245,11 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                 }).eq('id', reportData.assignmentId);
             }
 
-            alert('Caso descartado por datos insuficientes.');
-            window.location.reload();
+            setFeedbackModal({ isOpen: true, type: 'success', title: 'Caso Descartado', message: 'El caso fue descartado por datos insuficientes.' });
+            setTimeout(() => window.location.reload(), 2000);
         } catch (err: any) {
             console.error('[DiscardInsufficient] Error:', err);
-            alert('Error: ' + err.message);
+            setFeedbackModal({ isOpen: true, type: 'error', title: 'Error', message: 'No se pudo descartar: ' + err.message });
         }
     };
 
@@ -792,7 +795,7 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                                 ) : (
                                     <button
                                         type="button"
-                                        onClick={handleDiscardInsufficientData}
+                                        onClick={() => setShowConfirmDiscard(true)}
                                         className="px-3 py-2 bg-red-50 border border-red-200 text-red-600 font-bold text-xs rounded-xl hover:bg-red-100 transition-all flex items-center gap-1.5 flex-shrink-0"
                                     >
                                         <FileQuestion className="w-3.5 h-3.5" />
@@ -1220,6 +1223,59 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                                         Enviar por WhatsApp
                                     </>
                                 )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ═══════════════════════════════════
+                FEEDBACK MODAL (success / error)
+            ═══════════════════════════════════ */}
+            {feedbackModal.isOpen && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 transform transition-all animate-in zoom-in-95 text-center">
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 mx-auto ${feedbackModal.type === 'success' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                            {feedbackModal.type === 'success' ? <CheckCircle className="w-8 h-8" /> : <AlertCircle className="w-8 h-8" />}
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">{feedbackModal.title}</h3>
+                        <p className="text-sm text-gray-500 mb-6 leading-relaxed">{feedbackModal.message}</p>
+                        <button
+                            onClick={() => setFeedbackModal({ ...feedbackModal, isOpen: false })}
+                            className={`w-full py-3 px-4 text-white font-bold rounded-xl transition-colors shadow-lg flex items-center justify-center gap-2
+                                ${feedbackModal.type === 'success' ? 'bg-green-600 hover:bg-green-700 shadow-green-500/30' : 'bg-red-600 hover:bg-red-700 shadow-red-500/30'}`}
+                        >
+                            {feedbackModal.type === 'success' ? 'Aceptar' : 'Entendido'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* ═══════════════════════════════════
+                CONFIRM DISCARD MODAL
+            ═══════════════════════════════════ */}
+            {showConfirmDiscard && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 transform transition-all animate-in zoom-in-95 text-center">
+                        <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 mx-auto bg-red-100 text-red-600">
+                            <AlertCircle className="w-8 h-8" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">¿Descartar este caso?</h3>
+                        <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                            El reportante es anónimo y no dejó forma de contacto. El caso será descartado por datos insuficientes.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowConfirmDiscard(false)}
+                                className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold text-sm rounded-xl hover:bg-gray-200 transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => { setShowConfirmDiscard(false); handleDiscardInsufficientData(); }}
+                                className="flex-1 py-3 bg-red-600 text-white font-bold text-sm rounded-xl hover:bg-red-700 shadow-lg shadow-red-500/30 transition-all"
+                            >
+                                Sí, Descartar
                             </button>
                         </div>
                     </div>
