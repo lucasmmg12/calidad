@@ -49,31 +49,37 @@ serve(async (req) => {
 
         if (eventName === 'message.incoming') {
             body = data.body || '';
-            contactName = data.name || '';
+            contactName = data.name || data.pushName || '';
 
-            // Process attachments
-            if (data.attachment && Array.isArray(data.attachment) && data.attachment.length > 0) {
-                const att = data.attachment[0];
-                mediaUrl = att.url || att.payload || '';
+            // BuilderBot media: the real URL is in urlTempFile, not in attachment (which is just filename)
+            const tempFileUrl = data.urlTempFile || '';
+            const attachmentFilename = (data.attachment && Array.isArray(data.attachment) && data.attachment.length > 0)
+                ? data.attachment[0]
+                : '';
 
-                // Detect type from URL or MIME
-                if (mediaUrl) {
-                    if (mediaUrl.match(/\.(jpg|jpeg|png|gif|webp)/i)) {
-                        messageType = 'image';
-                    } else if (mediaUrl.match(/\.(mp4|mov|avi|webm)/i)) {
-                        messageType = 'video';
-                    } else if (mediaUrl.match(/\.(ogg|opus|mp3|m4a|wav)/i)) {
-                        messageType = 'audio';
-                    } else if (mediaUrl.match(/\.(pdf|doc|docx|xls|xlsx)/i)) {
-                        messageType = 'document';
-                    } else {
-                        messageType = 'image'; // default for unknown media
-                    }
+            // Detect if this is a media message
+            if (tempFileUrl || body.startsWith('_event_media__')) {
+                mediaUrl = tempFileUrl;
+
+                // Detect type from filename or URL
+                const detectFrom = attachmentFilename || tempFileUrl || '';
+                if (detectFrom.match(/\.(jpg|jpeg|png|gif|webp)/i)) {
+                    messageType = 'image';
+                } else if (detectFrom.match(/\.(mp4|mov|avi|webm|3gp)/i)) {
+                    messageType = 'video';
+                } else if (detectFrom.match(/\.(ogg|opus|mp3|m4a|wav|amr)/i)) {
+                    messageType = 'audio';
+                } else if (detectFrom.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx)/i)) {
+                    messageType = 'document';
+                } else if (detectFrom.match(/\.(webp|sticker)/i)) {
+                    messageType = 'sticker';
+                } else {
+                    messageType = 'image'; // default for unknown media
                 }
 
-                // If there's both text and media, keep the text in body
-                if (!body && messageType !== 'text') {
-                    body = `[${messageType}]`;
+                // Clean up body for media messages
+                if (body.startsWith('_event_media__')) {
+                    body = ''; // remove the internal reference
                 }
             }
         } else if (eventName === 'message.outgoing') {

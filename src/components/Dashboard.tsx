@@ -1547,27 +1547,27 @@ export const Dashboard = () => {
     }, [expirationAlerts.length]);
 
     return (
-        <div className="max-w-7xl mx-auto p-6">
+        <div className="max-w-7xl mx-auto p-3 sm:p-6">
 
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 sm:mb-8 gap-3 sm:gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-                        <LayoutDashboard className="text-sanatorio-primary" />
+                    <h1 className="text-xl sm:text-3xl font-bold text-gray-800 flex items-center gap-2">
+                        <LayoutDashboard className="text-sanatorio-primary w-5 h-5 sm:w-6 sm:h-6" />
                         Tablero de Control
                     </h1>
-                    <p className="text-gray-500">Gestión de Calidad y Seguridad del Paciente</p>
+                    <p className="text-gray-500 text-sm sm:text-base">Gestión de Calidad y Seguridad del Paciente</p>
                 </div>
                 {/* Stats Summary */}
-                <div className="flex gap-3">
+                <div className="flex gap-2 sm:gap-3 w-full md:w-auto">
                     <button
                         onClick={() => setShowNotifications(!showNotifications)}
-                        className={`bg-white px-4 py-2 rounded-lg border border-gray-200 flex items-center gap-2 text-sm font-medium shadow-sm transition-all hover:bg-gray-50
+                        className={`bg-white px-3 sm:px-4 py-2 rounded-lg border border-gray-200 flex items-center gap-2 text-xs sm:text-sm font-medium shadow-sm transition-all hover:bg-gray-50 flex-1 md:flex-initial justify-center
                             ${showNotifications ? 'ring-2 ring-orange-100 border-orange-200' : ''}
                         `}
                     >
                         <Bell className={`w-4 h-4 ${expirationAlerts.length > 0 ? 'text-orange-600 animate-pulse' : 'text-gray-400'}`} />
-                        <span className="text-gray-700">Notificaciones</span>
+                        <span className="text-gray-700 hidden xs:inline">Notificaciones</span>
                         {expirationAlerts.length > 0 && (
                             <span className="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
                                 {expirationAlerts.length}
@@ -1575,10 +1575,10 @@ export const Dashboard = () => {
                         )}
                     </button>
 
-                    <div className="bg-white px-4 py-2 rounded-lg border border-gray-200 flex items-center gap-4 text-sm font-medium shadow-sm">
+                    <div className="bg-white px-3 sm:px-4 py-2 rounded-lg border border-gray-200 flex items-center gap-2 sm:gap-4 text-xs sm:text-sm font-medium shadow-sm">
                         <span className="flex items-center gap-1 text-red-600 font-bold">
                             <ShieldAlert className="w-4 h-4" />
-                            {reports.filter(r => r.ai_urgency === 'Rojo').length} Críticos
+                            {reports.filter(r => r.ai_urgency === 'Rojo').length} <span className="hidden sm:inline">Críticos</span>
                         </span>
                     </div>
                 </div>
@@ -1599,7 +1599,7 @@ export const Dashboard = () => {
                         </div>
 
                         {expirationAlerts.length > 0 ? (
-                            <div className="p-2 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                            <div className="p-2 grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                                 {expirationAlerts.map(alert => {
                                     const implDate = new Date(alert.implementation_date);
                                     const today = new Date();
@@ -1649,10 +1649,10 @@ export const Dashboard = () => {
             )}
 
             {/* Barra de Filtros */}
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
+            <div className="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-100 mb-4 sm:mb-6 flex flex-col md:flex-row gap-3 sm:gap-4 justify-between items-stretch md:items-center">
 
                 {/* Tabs de Estado */}
-                <div className="flex bg-gray-100 p-1 rounded-lg w-full md:w-auto flex-wrap">
+                <div className="flex bg-gray-100 p-1 rounded-lg w-full md:w-auto overflow-x-auto scrollbar-hide gap-0.5 sm:gap-0 sm:flex-wrap">
                     {[
                         { id: 'all', label: 'Todos', tooltip: 'Vista general de todos los casos activos (excluye descartados y rechazados).' },
                         { id: 'pending', label: 'Pendientes', tooltip: 'Hallazgos nuevos que aún no fueron derivados a ningún responsable. Calidad todavía no les envió WhatsApp.' },
@@ -1665,7 +1665,7 @@ export const Dashboard = () => {
                         <div key={tab.id} className="group relative">
                             <button
                                 onClick={() => setStatusFilter(tab.id as 'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation' | 'discarded' | 'assignment_rejected')}
-                                className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${statusFilter === tab.id
+                                className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-sm font-bold transition-all whitespace-nowrap ${statusFilter === tab.id
                                     ? 'bg-white text-sanatorio-primary shadow-sm'
                                     : 'text-gray-500 hover:text-gray-700'
                                     }`}
@@ -1681,7 +1681,7 @@ export const Dashboard = () => {
                 </div>
 
                 {/* Buscador */}
-                <div className="relative w-full md:w-96">
+                <div className="relative w-full md:w-80 lg:w-96">
                     <input
                         type="text"
                         placeholder="Buscar por ID, sector o problema..."
@@ -1696,361 +1696,439 @@ export const Dashboard = () => {
             </div>
 
             {/* Filtros de Sector + Fecha + Export */}
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 relative z-30">
-                <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3">
-                    <div className="flex items-center gap-2 shrink-0">
-                        <Filter className="w-4 h-4 text-gray-400" />
-                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Filtros</span>
-                    </div>
+            <div className="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-100 mb-4 sm:mb-6 relative z-30">
+                <div className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <div className="flex items-center gap-2 shrink-0">
+                            <Filter className="w-4 h-4 text-gray-400" />
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Filtros</span>
+                        </div>
 
-                    {/* Sector Multi-Select */}
-                    <div className="relative flex-1 min-w-[200px]" ref={listSectorDropdownRef}>
-                        <button
-                            type="button"
-                            onClick={() => setListSectorDropdownOpen(!listSectorDropdownOpen)}
-                            className={`w-full flex items-center gap-2 bg-gray-50 border rounded-xl px-3 py-2.5 text-xs font-medium transition-all ${listSectorFilter.length > 0 ? 'border-blue-300 bg-blue-50/50' : 'border-gray-200 hover:border-gray-300'
-                                }`}
-                        >
-                            <Building2 className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                            <span className="truncate flex-1 text-left">
-                                {listSectorFilter.length === 0 ? 'Todos los sectores' :
-                                    listSectorFilter.length === 1 ? listSectorFilter[0] :
-                                        `${listSectorFilter.length} sectores`}
-                            </span>
-                            {listSectorFilter.length > 0 && (
-                                <span className="shrink-0 w-5 h-5 bg-sanatorio-primary text-white rounded-full text-[10px] font-bold flex items-center justify-center">
-                                    {listSectorFilter.length}
+                        {/* Sector Multi-Select */}
+                        <div className="relative flex-1 min-w-[160px] sm:min-w-[200px]" ref={listSectorDropdownRef}>
+                            <button
+                                type="button"
+                                onClick={() => setListSectorDropdownOpen(!listSectorDropdownOpen)}
+                                className={`w-full flex items-center gap-2 bg-gray-50 border rounded-xl px-3 py-2.5 text-xs font-medium transition-all ${listSectorFilter.length > 0 ? 'border-blue-300 bg-blue-50/50' : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                            >
+                                <Building2 className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                <span className="truncate flex-1 text-left">
+                                    {listSectorFilter.length === 0 ? 'Todos los sectores' :
+                                        listSectorFilter.length === 1 ? listSectorFilter[0] :
+                                            `${listSectorFilter.length} sectores`}
                                 </span>
-                            )}
-                            <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${listSectorDropdownOpen ? 'rotate-180' : ''}`} />
-                        </button>
+                                {listSectorFilter.length > 0 && (
+                                    <span className="shrink-0 w-5 h-5 bg-sanatorio-primary text-white rounded-full text-[10px] font-bold flex items-center justify-center">
+                                        {listSectorFilter.length}
+                                    </span>
+                                )}
+                                <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${listSectorDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
 
-                        {listSectorDropdownOpen && (
-                            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-w-md">
-                                <div className="p-2 border-b border-gray-100">
-                                    <div className="relative">
-                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                                        <input
-                                            type="text"
-                                            value={listSectorSearch}
-                                            onChange={(e) => setListSectorSearch(e.target.value)}
-                                            placeholder="Buscar sector..."
-                                            className="w-full pl-8 pr-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:ring-1 focus:ring-sanatorio-primary/30 outline-none"
-                                        />
+                            {listSectorDropdownOpen && (
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-w-md">
+                                    <div className="p-2 border-b border-gray-100">
+                                        <div className="relative">
+                                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                                            <input
+                                                type="text"
+                                                value={listSectorSearch}
+                                                onChange={(e) => setListSectorSearch(e.target.value)}
+                                                placeholder="Buscar sector..."
+                                                className="w-full pl-8 pr-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:ring-1 focus:ring-sanatorio-primary/30 outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="px-2 py-1.5 border-b border-gray-100 flex gap-2">
+                                        <button type="button" onClick={() => { setListSectorFilter(SECTOR_OPTIONS.map(s => s.value)); }} className="text-[10px] font-bold text-sanatorio-primary hover:underline">Todos</button>
+                                        {listSectorFilter.length > 0 && (
+                                            <button type="button" onClick={() => setListSectorFilter([])} className="text-[10px] font-bold text-red-500 hover:underline">Limpiar</button>
+                                        )}
+                                    </div>
+                                    <div className="max-h-[240px] overflow-y-auto">
+                                        {SECTOR_OPTIONS.filter(s =>
+                                            s.label.toLowerCase().includes(listSectorSearch.toLowerCase()) ||
+                                            s.value.toLowerCase().includes(listSectorSearch.toLowerCase())
+                                        ).map(s => {
+                                            const isSelected = listSectorFilter.includes(s.value);
+                                            return (
+                                                <button
+                                                    key={s.value}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setListSectorFilter(prev =>
+                                                            isSelected ? prev.filter(v => v !== s.value) : [...prev, s.value]
+                                                        );
+                                                    }}
+                                                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs transition-colors ${isSelected ? 'bg-sanatorio-primary/5 font-bold text-sanatorio-primary' : 'text-gray-700 hover:bg-gray-50'
+                                                        }`}
+                                                >
+                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-sanatorio-primary border-sanatorio-primary' : 'border-gray-300 bg-white'
+                                                        }`}>
+                                                        {isSelected && <Check className="w-3 h-3 text-white" />}
+                                                    </div>
+                                                    <span className="truncate">{s.label}</span>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
-                                <div className="px-2 py-1.5 border-b border-gray-100 flex gap-2">
-                                    <button type="button" onClick={() => { setListSectorFilter(SECTOR_OPTIONS.map(s => s.value)); }} className="text-[10px] font-bold text-sanatorio-primary hover:underline">Todos</button>
-                                    {listSectorFilter.length > 0 && (
-                                        <button type="button" onClick={() => setListSectorFilter([])} className="text-[10px] font-bold text-red-500 hover:underline">Limpiar</button>
-                                    )}
-                                </div>
-                                <div className="max-h-[240px] overflow-y-auto">
-                                    {SECTOR_OPTIONS.filter(s =>
-                                        s.label.toLowerCase().includes(listSectorSearch.toLowerCase()) ||
-                                        s.value.toLowerCase().includes(listSectorSearch.toLowerCase())
-                                    ).map(s => {
-                                        const isSelected = listSectorFilter.includes(s.value);
-                                        return (
-                                            <button
-                                                key={s.value}
-                                                type="button"
-                                                onClick={() => {
-                                                    setListSectorFilter(prev =>
-                                                        isSelected ? prev.filter(v => v !== s.value) : [...prev, s.value]
-                                                    );
-                                                }}
-                                                className={`w-full flex items-center gap-2 px-3 py-2 text-xs transition-colors ${isSelected ? 'bg-sanatorio-primary/5 font-bold text-sanatorio-primary' : 'text-gray-700 hover:bg-gray-50'
-                                                    }`}
-                                            >
-                                                <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-sanatorio-primary border-sanatorio-primary' : 'border-gray-300 bg-white'
-                                                    }`}>
-                                                    {isSelected && <Check className="w-3 h-3 text-white" />}
-                                                </div>
-                                                <span className="truncate">{s.label}</span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                        {/* Date From */}
+                        <div className="flex items-center gap-1.5 min-w-[140px] sm:min-w-[170px] flex-1 sm:flex-initial">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider shrink-0">Desde</span>
+                            <div className="relative flex-1">
+                                <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                                <input
+                                    type="date"
+                                    value={listDateFrom}
+                                    onChange={(e) => setListDateFrom(e.target.value)}
+                                    max={listDateTo || undefined}
+                                    className={`w-full bg-gray-50 border rounded-xl pl-9 pr-3 py-2.5 text-xs font-medium transition-all outline-none focus:ring-1 focus:ring-sanatorio-primary/30 ${listDateFrom ? 'border-purple-300 bg-purple-50/50' : 'border-gray-200'}`}
+                                    title="Fecha desde"
+                                />
                             </div>
+                        </div>
+
+                        {/* Date To */}
+                        <div className="flex items-center gap-1.5 min-w-[140px] sm:min-w-[170px] flex-1 sm:flex-initial">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider shrink-0">Hasta</span>
+                            <div className="relative flex-1">
+                                <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                                <input
+                                    type="date"
+                                    value={listDateTo}
+                                    onChange={(e) => setListDateTo(e.target.value)}
+                                    min={listDateFrom || undefined}
+                                    className={`w-full bg-gray-50 border rounded-xl pl-9 pr-3 py-2.5 text-xs font-medium transition-all outline-none focus:ring-1 focus:ring-sanatorio-primary/30 ${listDateTo ? 'border-purple-300 bg-purple-50/50' : 'border-gray-200'}`}
+                                    title="Fecha hasta"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Clear filters */}
+                        {(listSectorFilter.length > 0 || listDateFrom || listDateTo) && (
+                            <button
+                                type="button"
+                                onClick={() => { setListSectorFilter([]); setListDateFrom(''); setListDateTo(''); }}
+                                className="text-[10px] font-bold text-red-500 hover:text-red-700 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors shrink-0"
+                            >
+                                ✕ Limpiar
+                            </button>
                         )}
-                    </div>
 
-                    {/* Date From */}
-                    <div className="flex items-center gap-1.5 min-w-[170px]">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider shrink-0">Desde</span>
-                        <div className="relative flex-1">
-                            <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                            <input
-                                type="date"
-                                value={listDateFrom}
-                                onChange={(e) => setListDateFrom(e.target.value)}
-                                max={listDateTo || undefined}
-                                className={`w-full bg-gray-50 border rounded-xl pl-9 pr-3 py-2.5 text-xs font-medium transition-all outline-none focus:ring-1 focus:ring-sanatorio-primary/30 ${listDateFrom ? 'border-purple-300 bg-purple-50/50' : 'border-gray-200'}`}
-                                title="Fecha desde"
-                            />
-                        </div>
-                    </div>
+                        {/* Spacer — desktop only */}
+                        <div className="hidden lg:block flex-1" />
 
-                    {/* Date To */}
-                    <div className="flex items-center gap-1.5 min-w-[170px]">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider shrink-0">Hasta</span>
-                        <div className="relative flex-1">
-                            <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                            <input
-                                type="date"
-                                value={listDateTo}
-                                onChange={(e) => setListDateTo(e.target.value)}
-                                min={listDateFrom || undefined}
-                                className={`w-full bg-gray-50 border rounded-xl pl-9 pr-3 py-2.5 text-xs font-medium transition-all outline-none focus:ring-1 focus:ring-sanatorio-primary/30 ${listDateTo ? 'border-purple-300 bg-purple-50/50' : 'border-gray-200'}`}
-                                title="Fecha hasta"
-                            />
-                        </div>
-                    </div>
+                        {/* Export Buttons */}
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const statusLabel = (s: string) =>
+                                        s === 'pending' || s === 'analyzed' ? 'Pendiente' :
+                                            s === 'pending_resolution' ? 'En Gestión' :
+                                                s === 'quality_validation' ? 'Validación' :
+                                                    s === 'resolved' ? 'Resuelto' :
+                                                        s === 'discarded' ? 'Descartado' : s;
+                                    const data = filteredReports.map(r => ({
+                                        'ID': r.tracking_id || '',
+                                        'Fecha': r.created_at ? new Date(r.created_at).toLocaleDateString('es-AR') : '',
+                                        'Sector': r.sector || '',
+                                        'Problema': r.ai_summary || r.content?.substring(0, 100) || '',
+                                        'Prioridad': r.ai_urgency || 'Normal',
+                                        'Estado': statusLabel(r.status),
+                                        'Clasificación': r.ai_category || 'Sin clasificar',
+                                        'Anónimo': r.is_anonymous ? 'Sí' : 'No'
+                                    }));
+                                    const ws = XLSX.utils.json_to_sheet(data);
+                                    const wb = XLSX.utils.book_new();
+                                    XLSX.utils.book_append_sheet(wb, ws, 'Reportes');
+                                    XLSX.writeFile(wb, `reportes_calidad_${new Date().toISOString().slice(0, 10)}.xlsx`);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-2 bg-green-50 text-green-700 border border-green-200 rounded-xl text-xs font-bold hover:bg-green-100 transition-colors"
+                            >
+                                <FileSpreadsheet className="w-3.5 h-3.5" />
+                                XLSX
+                            </button>
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                                    // Logo
+                                    try {
+                                        const logoImg = new Image();
+                                        logoImg.crossOrigin = 'Anonymous';
+                                        logoImg.src = '/logosanatorio.png';
+                                        await new Promise<void>((resolve) => {
+                                            logoImg.onload = () => resolve();
+                                            logoImg.onerror = () => resolve();
+                                        });
+                                        const canvas = document.createElement('canvas');
+                                        canvas.width = logoImg.naturalWidth;
+                                        canvas.height = logoImg.naturalHeight;
+                                        const ctx = canvas.getContext('2d');
+                                        ctx?.drawImage(logoImg, 0, 0);
+                                        const logoData = canvas.toDataURL('image/png');
+                                        doc.addImage(logoData, 'PNG', 14, 8, 30, 12);
+                                    } catch { /* skip logo */ }
 
-                    {/* Clear filters */}
-                    {(listSectorFilter.length > 0 || listDateFrom || listDateTo) && (
-                        <button
-                            type="button"
-                            onClick={() => { setListSectorFilter([]); setListDateFrom(''); setListDateTo(''); }}
-                            className="text-[10px] font-bold text-red-500 hover:text-red-700 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors shrink-0"
-                        >
-                            ✕ Limpiar
-                        </button>
-                    )}
+                                    doc.setFontSize(16);
+                                    doc.setFont('helvetica', 'bold');
+                                    doc.setTextColor(0, 43, 77);
+                                    doc.text('Listado de Casos — Gestión de Calidad', 50, 16);
+                                    doc.setFontSize(9);
+                                    doc.setFont('helvetica', 'normal');
+                                    doc.setTextColor(120, 120, 120);
+                                    doc.text(`Generado: ${new Date().toLocaleString('es-AR')} | Total: ${filteredReports.length} casos`, 50, 22);
+                                    doc.setDrawColor(0, 43, 77);
+                                    doc.setLineWidth(0.5);
+                                    doc.line(14, 25, 283, 25);
 
-                    {/* Spacer */}
-                    <div className="flex-1" />
-
-                    {/* Export Buttons */}
-                    <div className="flex items-center gap-2 shrink-0">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                const statusLabel = (s: string) =>
-                                    s === 'pending' || s === 'analyzed' ? 'Pendiente' :
-                                        s === 'pending_resolution' ? 'En Gestión' :
-                                            s === 'quality_validation' ? 'Validación' :
-                                                s === 'resolved' ? 'Resuelto' :
-                                                    s === 'discarded' ? 'Descartado' : s;
-                                const data = filteredReports.map(r => ({
-                                    'ID': r.tracking_id || '',
-                                    'Fecha': r.created_at ? new Date(r.created_at).toLocaleDateString('es-AR') : '',
-                                    'Sector': r.sector || '',
-                                    'Problema': r.ai_summary || r.content?.substring(0, 100) || '',
-                                    'Prioridad': r.ai_urgency || 'Normal',
-                                    'Estado': statusLabel(r.status),
-                                    'Clasificación': r.ai_category || 'Sin clasificar',
-                                    'Anónimo': r.is_anonymous ? 'Sí' : 'No'
-                                }));
-                                const ws = XLSX.utils.json_to_sheet(data);
-                                const wb = XLSX.utils.book_new();
-                                XLSX.utils.book_append_sheet(wb, ws, 'Reportes');
-                                XLSX.writeFile(wb, `reportes_calidad_${new Date().toISOString().slice(0, 10)}.xlsx`);
-                            }}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-green-50 text-green-700 border border-green-200 rounded-xl text-xs font-bold hover:bg-green-100 transition-colors"
-                        >
-                            <FileSpreadsheet className="w-3.5 h-3.5" />
-                            XLSX
-                        </button>
-                        <button
-                            type="button"
-                            onClick={async () => {
-                                const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-                                // Logo
-                                try {
-                                    const logoImg = new Image();
-                                    logoImg.crossOrigin = 'Anonymous';
-                                    logoImg.src = '/logosanatorio.png';
-                                    await new Promise<void>((resolve) => {
-                                        logoImg.onload = () => resolve();
-                                        logoImg.onerror = () => resolve();
+                                    const statusLabel = (s: string) =>
+                                        s === 'pending' || s === 'analyzed' ? 'Pendiente' :
+                                            s === 'pending_resolution' ? 'En Gestión' :
+                                                s === 'quality_validation' ? 'Validación' :
+                                                    s === 'resolved' ? 'Resuelto' :
+                                                        s === 'discarded' ? 'Descartado' : s;
+                                    autoTable(doc, {
+                                        startY: 28,
+                                        head: [['ID', 'Fecha', 'Sector', 'Problema', 'Prioridad', 'Estado', 'Clasificación']],
+                                        body: filteredReports.map(r => [
+                                            r.tracking_id || '',
+                                            r.created_at ? new Date(r.created_at).toLocaleDateString('es-AR') : '',
+                                            r.sector || '',
+                                            (r.ai_summary || r.content?.substring(0, 80) || '').substring(0, 60),
+                                            r.ai_urgency || 'Normal',
+                                            statusLabel(r.status),
+                                            r.ai_category || 'Sin clasificar'
+                                        ]),
+                                        styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+                                        headStyles: { fillColor: [0, 43, 77], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+                                        alternateRowStyles: { fillColor: [245, 247, 250] },
+                                        columnStyles: {
+                                            0: { cellWidth: 28 },
+                                            1: { cellWidth: 24, halign: 'center' as const },
+                                            2: { cellWidth: 35 },
+                                            3: { cellWidth: 75 },
+                                            4: { cellWidth: 22, halign: 'center' as const },
+                                            5: { cellWidth: 25, halign: 'center' as const },
+                                            6: { cellWidth: 35 }
+                                        },
+                                        margin: { left: 14, right: 14, top: 28 },
+                                        didDrawPage: (data: any) => {
+                                            doc.setFontSize(7);
+                                            doc.setTextColor(160, 160, 160);
+                                            doc.text('Sanatorio Argentino — Sistema de Gestión de Calidad', 14, doc.internal.pageSize.height - 8);
+                                            doc.text(`Página ${data.pageNumber}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 8);
+                                        }
                                     });
-                                    const canvas = document.createElement('canvas');
-                                    canvas.width = logoImg.naturalWidth;
-                                    canvas.height = logoImg.naturalHeight;
-                                    const ctx = canvas.getContext('2d');
-                                    ctx?.drawImage(logoImg, 0, 0);
-                                    const logoData = canvas.toDataURL('image/png');
-                                    doc.addImage(logoData, 'PNG', 14, 8, 30, 12);
-                                } catch { /* skip logo */ }
-
-                                doc.setFontSize(16);
-                                doc.setFont('helvetica', 'bold');
-                                doc.setTextColor(0, 43, 77);
-                                doc.text('Listado de Casos — Gestión de Calidad', 50, 16);
-                                doc.setFontSize(9);
-                                doc.setFont('helvetica', 'normal');
-                                doc.setTextColor(120, 120, 120);
-                                doc.text(`Generado: ${new Date().toLocaleString('es-AR')} | Total: ${filteredReports.length} casos`, 50, 22);
-                                doc.setDrawColor(0, 43, 77);
-                                doc.setLineWidth(0.5);
-                                doc.line(14, 25, 283, 25);
-
-                                const statusLabel = (s: string) =>
-                                    s === 'pending' || s === 'analyzed' ? 'Pendiente' :
-                                        s === 'pending_resolution' ? 'En Gestión' :
-                                            s === 'quality_validation' ? 'Validación' :
-                                                s === 'resolved' ? 'Resuelto' :
-                                                    s === 'discarded' ? 'Descartado' : s;
-                                autoTable(doc, {
-                                    startY: 28,
-                                    head: [['ID', 'Fecha', 'Sector', 'Problema', 'Prioridad', 'Estado', 'Clasificación']],
-                                    body: filteredReports.map(r => [
-                                        r.tracking_id || '',
-                                        r.created_at ? new Date(r.created_at).toLocaleDateString('es-AR') : '',
-                                        r.sector || '',
-                                        (r.ai_summary || r.content?.substring(0, 80) || '').substring(0, 60),
-                                        r.ai_urgency || 'Normal',
-                                        statusLabel(r.status),
-                                        r.ai_category || 'Sin clasificar'
-                                    ]),
-                                    styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
-                                    headStyles: { fillColor: [0, 43, 77], textColor: 255, fontStyle: 'bold', fontSize: 8 },
-                                    alternateRowStyles: { fillColor: [245, 247, 250] },
-                                    columnStyles: {
-                                        0: { cellWidth: 28 },
-                                        1: { cellWidth: 24, halign: 'center' as const },
-                                        2: { cellWidth: 35 },
-                                        3: { cellWidth: 75 },
-                                        4: { cellWidth: 22, halign: 'center' as const },
-                                        5: { cellWidth: 25, halign: 'center' as const },
-                                        6: { cellWidth: 35 }
-                                    },
-                                    margin: { left: 14, right: 14, top: 28 },
-                                    didDrawPage: (data: any) => {
-                                        doc.setFontSize(7);
-                                        doc.setTextColor(160, 160, 160);
-                                        doc.text('Sanatorio Argentino — Sistema de Gestión de Calidad', 14, doc.internal.pageSize.height - 8);
-                                        doc.text(`Página ${data.pageNumber}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 8);
-                                    }
-                                });
-                                doc.save(`reportes_calidad_${new Date().toISOString().slice(0, 10)}.pdf`);
-                            }}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors"
-                        >
-                            <Download className="w-3.5 h-3.5" />
-                            PDF
-                        </button>
+                                    doc.save(`reportes_calidad_${new Date().toISOString().slice(0, 10)}.pdf`);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors"
+                            >
+                                <Download className="w-3.5 h-3.5" />
+                                PDF
+                            </button>
+                        </div>
                     </div>
+
+                    {/* Active filter summary */}
+                    {(listSectorFilter.length > 0 || listDateFrom || listDateTo) && (
+                        <div className="mt-3 bg-blue-50/50 border border-blue-100 rounded-lg px-3 py-2 flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-blue-700">📊 {filteredReports.length} reportes filtrados</span>
+                            <span className="text-[10px] text-gray-400">de {reports.length} totales</span>
+                        </div>
+                    )}
                 </div>
-
-                {/* Active filter summary */}
-                {(listSectorFilter.length > 0 || listDateFrom || listDateTo) && (
-                    <div className="mt-3 bg-blue-50/50 border border-blue-100 rounded-lg px-3 py-2 flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-blue-700">📊 {filteredReports.length} reportes filtrados</span>
-                        <span className="text-[10px] text-gray-400">de {reports.length} totales</span>
-                    </div>
-                )}
             </div>
 
             {/* Main Content - List View */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[400px]">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[300px] sm:min-h-[400px]">
                 {loading ? (
                     <div className="flex flex-col items-center justify-center p-12 text-gray-400">
                         <Loader2 className="w-8 h-8 animate-spin mb-2" />
                         <p>Cargando reportes...</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-gray-50/50 border-b border-gray-100 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                                    <th className="px-6 py-4">Estado</th>
-                                    <th className="px-6 py-4">ID</th>
-                                    <th className="px-6 py-4">Fecha</th>
-                                    <th className="px-6 py-4">Sector</th>
-                                    <th className="px-6 py-4">Problema</th>
-                                    <th className="px-6 py-4">Prioridad</th>
-                                    <th className="px-6 py-4 text-center">Notif.</th>
-                                    <th className="px-6 py-4">Clasificación</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {filteredReports.length > 0 ? (
-                                    filteredReports.map((report) => (
-                                        <tr key={report.id} onClick={() => setSelectedReport(report)} className="hover:bg-blue-50/40 cursor-pointer transition-colors group">
-                                            <td className="px-6 py-4">
-                                                {(report.finding_type === 'Felicitación' || report.ai_category === 'Felicitación') ? (
-                                                    <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center" title="Felicitación">⭐</div>
-                                                ) : report.status === 'resolved' ? (
-                                                    <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><CheckCircle className="w-3 h-3" /></div>
-                                                ) : report.status === 'multi_sector_pending' ? (
-                                                    <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center animate-pulse" title="Multi-Sector">
-                                                        <span className="text-[9px] font-black">MS</span>
-                                                    </div>
-                                                ) : report.status === 'pending_resolution' ? (
-                                                    <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center animate-pulse"><Clock className="w-3 h-3" /></div>
-                                                ) : report.status === 'quality_validation' ? (
-                                                    <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-xs">Q</div>
-                                                ) : report.status === 'assignment_rejected' ? (
-                                                    <div className="w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center"><XCircle className="w-3 h-3" /></div>
-                                                ) : report.status === 'discarded' ? (
-                                                    <div className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"><Archive className="w-3 h-3" /></div>
-                                                ) : (
-                                                    <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center"><AlertCircle className="w-3 h-3" /></div>
+                    <div>
+                        {/* === MOBILE CARD VIEW === */}
+                        <div className="lg:hidden divide-y divide-gray-50">
+                            {filteredReports.length > 0 ? (
+                                filteredReports.map((report) => (
+                                    <button
+                                        key={report.id}
+                                        onClick={() => setSelectedReport(report)}
+                                        className="w-full text-left p-3 sm:p-4 hover:bg-blue-50/40 transition-colors flex items-start gap-3 group"
+                                    >
+                                        {/* Status Icon */}
+                                        <div className="pt-0.5 shrink-0">
+                                            {(report.finding_type === 'Felicitaci\u00f3n' || report.ai_category === 'Felicitaci\u00f3n') ? (
+                                                <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center" title="Felicitaci\u00f3n">⭐</div>
+                                            ) : report.status === 'resolved' ? (
+                                                <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><CheckCircle className="w-4 h-4" /></div>
+                                            ) : report.status === 'multi_sector_pending' ? (
+                                                <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center animate-pulse"><span className="text-[10px] font-black">MS</span></div>
+                                            ) : report.status === 'pending_resolution' ? (
+                                                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center animate-pulse"><Clock className="w-4 h-4" /></div>
+                                            ) : report.status === 'quality_validation' ? (
+                                                <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-xs">Q</div>
+                                            ) : report.status === 'assignment_rejected' ? (
+                                                <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center"><XCircle className="w-4 h-4" /></div>
+                                            ) : report.status === 'discarded' ? (
+                                                <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"><Archive className="w-4 h-4" /></div>
+                                            ) : (
+                                                <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center"><AlertCircle className="w-4 h-4" /></div>
+                                            )}
+                                        </div>
+                                        {/* Content */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-2 mb-1">
+                                                <span className="text-sm font-bold text-gray-700 group-hover:text-sanatorio-primary transition-colors">#{report.tracking_id}</span>
+                                                <div className="flex items-center gap-1.5 shrink-0">
+                                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase
+                                                        ${report.ai_urgency === 'Rojo' ? 'bg-red-100 text-red-700' :
+                                                            report.ai_urgency === 'Amarillo' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-700'
+                                                        } `}>
+                                                        {report.ai_urgency || 'Normal'}
+                                                    </span>
+                                                    {report.last_whatsapp_status === 'sent' && (
+                                                        <div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-sm shadow-green-200"></div>
+                                                    )}
+                                                    {report.last_whatsapp_status === 'failed' && (
+                                                        <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shadow-sm shadow-red-200"></div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <p className="text-xs text-gray-600 line-clamp-2 mb-1.5">{report.ai_summary || report.content}</p>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="text-[10px] text-gray-400">{report.created_at ? new Date(report.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' }) : '\u2014'}</span>
+                                                {report.sector && (
+                                                    <span className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{report.sector}</span>
                                                 )}
-                                            </td>
-                                            <td className="px-6 py-4 text-sm font-bold text-gray-700 group-hover:text-sanatorio-primary transition-colors">{report.tracking_id}</td>
-                                            <td className="px-6 py-4 text-xs text-gray-400 whitespace-nowrap">{report.created_at ? new Date(report.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
-                                            <td className="px-6 py-4 text-sm text-gray-600">{report.sector || '-'}</td>
-                                            <td className="px-6 py-4 text-sm text-gray-600 line-clamp-1 max-w-xs">{report.ai_summary || report.content}</td>
-                                            <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase
-                                                    ${report.ai_urgency === 'Rojo' ? 'bg-red-100 text-red-700' :
-                                                        report.ai_urgency === 'Amarillo' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-700'
-                                                    } `}>
-                                                    {report.ai_urgency || 'Normal'}
-                                                </span>
-                                                {/* Expiration Alert */}
                                                 {(report.implementation_date && new Date(report.implementation_date) < new Date() && report.status !== 'resolved') && (
-                                                    <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-red-50 text-red-600 border border-red-100 animate-pulse" title={`Vencido el ${new Date(report.implementation_date).toLocaleDateString()}`}>
-                                                        <Clock className="w-3 h-3 mr-1" /> Vencido
+                                                    <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold bg-red-50 text-red-600 border border-red-100 animate-pulse">
+                                                        <Clock className="w-2.5 h-2.5 mr-0.5" /> Vencido
                                                     </span>
                                                 )}
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                {report.last_whatsapp_status === 'sent' && (
-                                                    <div title={`Enviado: ${new Date(report.last_whatsapp_sent_at).toLocaleString()}`} className="w-3 h-3 rounded-full bg-green-500 mx-auto shadow-sm shadow-green-200"></div>
-                                                )}
-                                                {report.last_whatsapp_status === 'failed' && (
-                                                    <div title="Fallo en envío" className="w-3 h-3 rounded-full bg-red-500 mx-auto animate-pulse shadow-sm shadow-red-200"></div>
-                                                )}
-                                                {!report.last_whatsapp_status && (
-                                                    <div className="w-2 h-2 rounded-full bg-gray-200 mx-auto"></div>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`text-xs font-medium px-2 py-1 rounded-lg ${(!report.ai_category || report.ai_category === 'Sin clasificar') ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-gray-50 text-gray-600 border border-gray-100'}`}>
-                                                    {report.ai_category || 'Sin clasificar'}
-                                                </span>
+                                            </div>
+                                        </div>
+                                        <ChevronDown className="w-4 h-4 text-gray-300 shrink-0 -rotate-90 mt-1" />
+                                    </button>
+                                ))
+                            ) : (
+                                <div className="p-8 text-center text-gray-400 text-sm">
+                                    No se encontraron reportes con los criterios seleccionados.
+                                </div>
+                            )}
+                        </div>
+
+                        {/* === DESKTOP TABLE VIEW === */}
+                        <div className="hidden lg:block overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-gray-50/50 border-b border-gray-100 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                        <th className="px-6 py-4">Estado</th>
+                                        <th className="px-6 py-4">ID</th>
+                                        <th className="px-6 py-4">Fecha</th>
+                                        <th className="px-6 py-4">Sector</th>
+                                        <th className="px-6 py-4">Problema</th>
+                                        <th className="px-6 py-4">Prioridad</th>
+                                        <th className="px-6 py-4 text-center">Notif.</th>
+                                        <th className="px-6 py-4">Clasificación</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {filteredReports.length > 0 ? (
+                                        filteredReports.map((report) => (
+                                            <tr key={report.id} onClick={() => setSelectedReport(report)} className="hover:bg-blue-50/40 cursor-pointer transition-colors group">
+                                                <td className="px-6 py-4">
+                                                    {(report.finding_type === 'Felicitación' || report.ai_category === 'Felicitación') ? (
+                                                        <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center" title="Felicitación">⭐</div>
+                                                    ) : report.status === 'resolved' ? (
+                                                        <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><CheckCircle className="w-3 h-3" /></div>
+                                                    ) : report.status === 'multi_sector_pending' ? (
+                                                        <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center animate-pulse" title="Multi-Sector">
+                                                            <span className="text-[9px] font-black">MS</span>
+                                                        </div>
+                                                    ) : report.status === 'pending_resolution' ? (
+                                                        <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center animate-pulse"><Clock className="w-3 h-3" /></div>
+                                                    ) : report.status === 'quality_validation' ? (
+                                                        <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-xs">Q</div>
+                                                    ) : report.status === 'assignment_rejected' ? (
+                                                        <div className="w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center"><XCircle className="w-3 h-3" /></div>
+                                                    ) : report.status === 'discarded' ? (
+                                                        <div className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"><Archive className="w-3 h-3" /></div>
+                                                    ) : (
+                                                        <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center"><AlertCircle className="w-3 h-3" /></div>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm font-bold text-gray-700 group-hover:text-sanatorio-primary transition-colors">{report.tracking_id}</td>
+                                                <td className="px-6 py-4 text-xs text-gray-400 whitespace-nowrap">{report.created_at ? new Date(report.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-600">{report.sector || '-'}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-600 line-clamp-1 max-w-xs">{report.ai_summary || report.content}</td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase
+                                                    ${report.ai_urgency === 'Rojo' ? 'bg-red-100 text-red-700' :
+                                                            report.ai_urgency === 'Amarillo' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-700'
+                                                        } `}>
+                                                        {report.ai_urgency || 'Normal'}
+                                                    </span>
+                                                    {/* Expiration Alert */}
+                                                    {(report.implementation_date && new Date(report.implementation_date) < new Date() && report.status !== 'resolved') && (
+                                                        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-red-50 text-red-600 border border-red-100 animate-pulse" title={`Vencido el ${new Date(report.implementation_date).toLocaleDateString()}`}>
+                                                            <Clock className="w-3 h-3 mr-1" /> Vencido
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    {report.last_whatsapp_status === 'sent' && (
+                                                        <div title={`Enviado: ${new Date(report.last_whatsapp_sent_at).toLocaleString()}`} className="w-3 h-3 rounded-full bg-green-500 mx-auto shadow-sm shadow-green-200"></div>
+                                                    )}
+                                                    {report.last_whatsapp_status === 'failed' && (
+                                                        <div title="Fallo en envío" className="w-3 h-3 rounded-full bg-red-500 mx-auto animate-pulse shadow-sm shadow-red-200"></div>
+                                                    )}
+                                                    {!report.last_whatsapp_status && (
+                                                        <div className="w-2 h-2 rounded-full bg-gray-200 mx-auto"></div>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`text-xs font-medium px-2 py-1 rounded-lg ${(!report.ai_category || report.ai_category === 'Sin clasificar') ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-gray-50 text-gray-600 border border-gray-100'}`}>
+                                                        {report.ai_category || 'Sin clasificar'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={8} className="px-6 py-12 text-center text-gray-400">
+                                                No se encontraron reportes con los criterios seleccionados.
                                             </td>
                                         </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={8} className="px-6 py-12 text-center text-gray-400">
-                                            No se encontraron reportes con los criterios seleccionados.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
             </div>
 
             {/* Modal de Detalle */}
             {selectedReport && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl w-full max-w-5xl h-[85vh] shadow-2xl flex overflow-hidden">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-5xl h-[95vh] sm:h-[85vh] shadow-2xl flex flex-col lg:flex-row overflow-hidden">
 
                         {/* Columna Izquierda: Información del Reporte */}
-                        <div className="w-1/2 p-8 overflow-y-auto bg-white">
-                            <div className="flex justify-between items-start mb-6">
+                        <div className="flex-1 lg:w-1/2 p-4 sm:p-6 lg:p-8 overflow-y-auto bg-white">
+                            <div className="flex justify-between items-start mb-4 sm:mb-6">
                                 <div>
-                                    <h2 className="text-2xl font-bold text-sanatorio-primary">Ticket #{selectedReport.tracking_id}</h2>
-                                    <p className="text-sm text-gray-400">{new Date(selectedReport.created_at).toLocaleString()}</p>
+                                    <h2 className="text-lg sm:text-2xl font-bold text-sanatorio-primary">Ticket #{selectedReport.tracking_id}</h2>
+                                    <p className="text-xs sm:text-sm text-gray-400">{new Date(selectedReport.created_at).toLocaleString()}</p>
                                 </div>
                                 <div className="flex flex-col items-end gap-1">
                                     <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Prioridad</span>
@@ -2509,9 +2587,9 @@ export const Dashboard = () => {
                         </div>
 
                         {/* Columna Derecha: Gestión y Resolución */}
-                        <div className="w-1/2 bg-gray-50 border-l border-gray-200 p-8 flex flex-col">
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-lg font-bold text-gray-800">{isAdmin ? 'Centro de Gestión' : 'Detalle del Caso'}</h3>
+                        <div className="flex-1 lg:w-1/2 bg-gray-50 border-t lg:border-t-0 lg:border-l border-gray-200 p-4 sm:p-6 lg:p-8 flex flex-col">
+                            <div className="flex justify-between items-center mb-4 sm:mb-6">
+                                <h3 className="text-base sm:text-lg font-bold text-gray-800">{isAdmin ? 'Centro de Gestión' : 'Detalle del Caso'}</h3>
                                 <div className="flex items-center gap-1">
                                     {isAdmin && (
                                         <button
@@ -2983,77 +3061,97 @@ export const Dashboard = () => {
                                                                             </button>
 
                                                                             {/* Expanded Content */}
-                                                                            {isExpanded && hasResponse && (
-                                                                                <div className="px-4 pb-4 space-y-3 border-t border-gray-50 pt-3 animate-in fade-in duration-200">
-                                                                                    {/* Acción Inmediata */}
-                                                                                    {assignment.immediate_action && (
-                                                                                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                                                                            <h6 className="text-[10px] font-bold text-blue-600 uppercase mb-1 flex items-center gap-1">
-                                                                                                <span className="w-1 h-1 rounded-full bg-blue-500"></span>
-                                                                                                Acción Inmediata
-                                                                                            </h6>
-                                                                                            <p className="text-xs text-gray-700 leading-relaxed">{assignment.immediate_action}</p>
-                                                                                        </div>
-                                                                                    )}
+                                                                            {isExpanded && hasResponse && (() => {
+                                                                                // Fallback: if assignment doesn't have resolution data,
+                                                                                // use selectedReport data (happens after quality_return re-submission)
+                                                                                const effectiveAction = assignment.immediate_action || selectedReport.resolution_notes;
+                                                                                const effectiveRootCause = assignment.root_cause || selectedReport.root_cause;
+                                                                                const effectivePlan = assignment.corrective_plan || selectedReport.corrective_plan;
+                                                                                const effectiveImplDate = assignment.implementation_date || selectedReport.implementation_date;
+                                                                                const effectiveEvidence = (assignment.resolution_evidence_urls && assignment.resolution_evidence_urls.length > 0)
+                                                                                    ? assignment.resolution_evidence_urls
+                                                                                    : selectedReport.resolution_evidence_urls;
+                                                                                const effectiveNotes = assignment.resolution_notes;
 
-                                                                                    {/* Causa Raíz */}
-                                                                                    {assignment.root_cause && (
-                                                                                        <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
-                                                                                            <h6 className="text-[10px] font-bold text-amber-700 uppercase mb-1 flex items-center gap-1">
-                                                                                                <BrainCircuit className="w-3 h-3" />
-                                                                                                Causa Raíz
-                                                                                            </h6>
-                                                                                            <p className="text-xs text-gray-700 leading-relaxed">{assignment.root_cause}</p>
-                                                                                        </div>
-                                                                                    )}
-
-                                                                                    {/* Plan de Acción */}
-                                                                                    {assignment.corrective_plan && (
-                                                                                        <div className="bg-green-50 p-3 rounded-lg border border-green-100">
-                                                                                            <h6 className="text-[10px] font-bold text-green-700 uppercase mb-1 flex items-center gap-1">
-                                                                                                <CheckCircle className="w-3 h-3" />
-                                                                                                Plan de Acción
-                                                                                            </h6>
-                                                                                            <p className="text-xs text-gray-700 leading-relaxed">{assignment.corrective_plan}</p>
-                                                                                            {assignment.implementation_date && (
-                                                                                                <div className="flex items-center gap-1 text-[10px] font-bold text-green-600 mt-2">
-                                                                                                    <Clock className="w-3 h-3" />
-                                                                                                    Implementación: {new Date(assignment.implementation_date).toLocaleDateString()}
-                                                                                                </div>
-                                                                                            )}
-                                                                                        </div>
-                                                                                    )}
-
-                                                                                    {/* Evidencia */}
-                                                                                    {assignment.resolution_evidence_urls && assignment.resolution_evidence_urls.length > 0 && (
-                                                                                        <div>
-                                                                                            <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-2 flex items-center gap-1">
-                                                                                                <Camera className="w-3 h-3" />
-                                                                                                Evidencia ({assignment.resolution_evidence_urls.length})
-                                                                                            </h6>
-                                                                                            <div className="flex gap-2 overflow-x-auto pb-1">
-                                                                                                {assignment.resolution_evidence_urls.map((url: string, i: number) => (
-                                                                                                    <a
-                                                                                                        key={i}
-                                                                                                        href={url}
-                                                                                                        target="_blank"
-                                                                                                        className="w-14 h-14 rounded-lg bg-gray-100 bg-cover bg-center border border-gray-200 flex-shrink-0 hover:ring-2 ring-purple-500 transition-all cursor-zoom-in"
-                                                                                                        style={{ backgroundImage: `url(${url})` }}
-                                                                                                    />
-                                                                                                ))}
+                                                                                return (
+                                                                                    <div className="px-4 pb-4 space-y-3 border-t border-gray-50 pt-3 animate-in fade-in duration-200">
+                                                                                        {/* Acción Inmediata */}
+                                                                                        {effectiveAction && (
+                                                                                            <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                                                                                <h6 className="text-[10px] font-bold text-blue-600 uppercase mb-1 flex items-center gap-1">
+                                                                                                    <span className="w-1 h-1 rounded-full bg-blue-500"></span>
+                                                                                                    Acción Inmediata
+                                                                                                </h6>
+                                                                                                <p className="text-xs text-gray-700 leading-relaxed">{effectiveAction}</p>
                                                                                             </div>
-                                                                                        </div>
-                                                                                    )}
+                                                                                        )}
 
-                                                                                    {/* Notas adicionales */}
-                                                                                    {assignment.resolution_notes && (
-                                                                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                                                                            <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-1">Notas</h6>
-                                                                                            <p className="text-xs text-gray-600">{assignment.resolution_notes}</p>
-                                                                                        </div>
-                                                                                    )}
-                                                                                </div>
-                                                                            )}
+                                                                                        {/* Causa Raíz */}
+                                                                                        {effectiveRootCause && (
+                                                                                            <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
+                                                                                                <h6 className="text-[10px] font-bold text-amber-700 uppercase mb-1 flex items-center gap-1">
+                                                                                                    <BrainCircuit className="w-3 h-3" />
+                                                                                                    Causa Raíz
+                                                                                                </h6>
+                                                                                                <p className="text-xs text-gray-700 leading-relaxed">{effectiveRootCause}</p>
+                                                                                            </div>
+                                                                                        )}
+
+                                                                                        {/* Plan de Acción */}
+                                                                                        {effectivePlan && (
+                                                                                            <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                                                                                                <h6 className="text-[10px] font-bold text-green-700 uppercase mb-1 flex items-center gap-1">
+                                                                                                    <CheckCircle className="w-3 h-3" />
+                                                                                                    Plan de Acción
+                                                                                                </h6>
+                                                                                                <p className="text-xs text-gray-700 leading-relaxed">{effectivePlan}</p>
+                                                                                                {effectiveImplDate && (
+                                                                                                    <div className="flex items-center gap-1 text-[10px] font-bold text-green-600 mt-2">
+                                                                                                        <Clock className="w-3 h-3" />
+                                                                                                        Implementación: {new Date(effectiveImplDate).toLocaleDateString()}
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        )}
+
+                                                                                        {/* Evidencia */}
+                                                                                        {effectiveEvidence && effectiveEvidence.length > 0 && (
+                                                                                            <div>
+                                                                                                <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-2 flex items-center gap-1">
+                                                                                                    <Camera className="w-3 h-3" />
+                                                                                                    Evidencia ({effectiveEvidence.length})
+                                                                                                </h6>
+                                                                                                <div className="flex gap-2 overflow-x-auto pb-1">
+                                                                                                    {effectiveEvidence.map((url: string, i: number) => (
+                                                                                                        <a
+                                                                                                            key={i}
+                                                                                                            href={url}
+                                                                                                            target="_blank"
+                                                                                                            className="w-14 h-14 rounded-lg bg-gray-100 bg-cover bg-center border border-gray-200 flex-shrink-0 hover:ring-2 ring-purple-500 transition-all cursor-zoom-in"
+                                                                                                            style={{ backgroundImage: `url(${url})` }}
+                                                                                                        />
+                                                                                                    ))}
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        )}
+
+                                                                                        {/* Notas adicionales */}
+                                                                                        {effectiveNotes && (
+                                                                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                                                                <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-1">Notas</h6>
+                                                                                                <p className="text-xs text-gray-600">{effectiveNotes}</p>
+                                                                                            </div>
+                                                                                        )}
+
+                                                                                        {/* No data fallback */}
+                                                                                        {!effectiveAction && !effectiveRootCause && !effectivePlan && (
+                                                                                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-center">
+                                                                                                <p className="text-xs text-gray-400 italic">Sin datos de resolución registrados.</p>
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                );
+                                                                            })()}
 
                                                                             {/* Expanded: Rejected/Partial */}
                                                                             {isExpanded && assignment.status === 'rejected' && assignment.notes && (
