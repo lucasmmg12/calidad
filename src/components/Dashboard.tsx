@@ -965,8 +965,8 @@ export const Dashboard = () => {
             setExpandedSector(null);
             return;
         }
-        // Only fetch if the report could have sector assignments
-        const fetchableStatuses = ['multi_sector_pending', 'quality_validation', 'pending_resolution', 'assignment_rejected'];
+        // Fetch sector assignments for any status that could have them
+        const fetchableStatuses = ['multi_sector_pending', 'quality_validation', 'pending_resolution', 'assignment_rejected', 'resolved'];
         if (fetchableStatuses.includes(selectedReport.status)) {
             const fetchAssignments = async () => {
                 setLoadingAssignments(true);
@@ -978,17 +978,10 @@ export const Dashboard = () => {
                     .order('created_at', { ascending: true });
 
                 if (!error && data) {
-                    // Deduplicate: keep only the LATEST assignment per sector
-                    // This prevents historical rejected assignments from showing as separate "sectors"
-                    const latestBySector = new Map<string, typeof data[0]>();
-                    for (const assignment of data) {
-                        const sectorKey = assignment.sector || assignment.id;
-                        const existing = latestBySector.get(sectorKey);
-                        if (!existing || new Date(assignment.created_at) > new Date(existing.created_at)) {
-                            latestBySector.set(sectorKey, assignment);
-                        }
-                    }
-                    setSectorAssignmentsData(Array.from(latestBySector.values()));
+                    // Show ALL assignments (no deduplication)
+                    // Each assignment represents a "round" of resolution
+                    // Rejected rounds are historical records visible to Calidad
+                    setSectorAssignmentsData(data);
                 } else {
                     setSectorAssignmentsData([]);
                 }
@@ -1025,44 +1018,64 @@ export const Dashboard = () => {
         if (!selectedReport) return;
         setIsProcessingQuality(true);
 
-        const timestamp = new Date().toLocaleString();
+        const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
         const logEntry = `[${timestamp}] ⚠️ RECHAZADO POR CALIDAD: ${reason}`;
         const currentNotes = selectedReport.notes || '';
         const updatedNotes = currentNotes ? `${currentNotes}\n\n${logEntry}` : logEntry;
 
-        const historyEntry = {
-            rejected_at: new Date().toISOString(),
-            rejected_by: "Calidad",
-            reject_reason: reason,
-            previous_data: {
-                immediate_action: selectedReport.immediate_action,
-                root_cause: selectedReport.root_cause,
-                corrective_plan: selectedReport.corrective_plan,
-                implementation_date: selectedReport.implementation_date,
-                resolution_evidence_urls: selectedReport.resolution_evidence_urls
+        try {
+            // Find the current resolved/quality_validation assignment to reject
+            const currentAssignment = sectorAssignmentsData.find(
+                a => a.status === 'resolved' || a.status === 'quality_validation'
+            );
+
+            let newAssignmentId: string | null = null;
+
+            if (currentAssignment) {
+                // 1. Mark the current assignment as 'rejected' (preserving its data as a historical record)
+                await supabase
+                    .from('sector_assignments')
+                    .update({
+                        status: 'rejected',
+                        notes: `⚠️ RECHAZADO POR CALIDAD: ${reason}`,
+                    })
+                    .eq('id', currentAssignment.id);
+
+                // 2. Create a NEW sector_assignment (new round) with same sector/type
+                const { data: newAssignment, error: insertError } = await supabase
+                    .from('sector_assignments')
+                    .insert({
+                        report_id: selectedReport.id,
+                        sector: currentAssignment.sector,
+                        assigned_phone: phoneTarget || currentAssignment.assigned_phone,
+                        management_type: currentAssignment.management_type,
+                        status: 'pending'
+                    })
+                    .select('id')
+                    .single();
+
+                if (insertError) throw insertError;
+                newAssignmentId = newAssignment.id;
             }
-        };
 
-        const currentHistory = selectedReport.resolution_history || [];
-        const updatedHistory = [...currentHistory, historyEntry];
+            // 3. Update report status
+            const { error } = await supabase
+                .from('reports')
+                .update({
+                    status: 'pending_resolution',
+                    notes: updatedNotes,
+                    resolution_step: null,
+                })
+                .eq('id', selectedReport.id);
 
-        const { error } = await supabase
-            .from('reports')
-            .update({
-                status: 'pending_resolution',
-                notes: updatedNotes,
-                resolution_history: updatedHistory,
-                immediate_action: null,
-                root_cause: null,
-                corrective_plan: null,
-                implementation_date: null
-            })
-            .eq('id', selectedReport.id);
+            if (error) throw error;
 
-        if (!error) {
+            // 4. Send WhatsApp with the NEW assignment link
             if (phoneTarget && phoneTarget.length > 5) {
                 const botNumber = `549${phoneTarget.replace(/\D/g, '').replace(/^549/, '')}`;
-                const resolutionLink = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}`;
+                const resolutionLink = newAssignmentId
+                    ? `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}/${newAssignmentId}`
+                    : `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}`;
 
                 await supabase.functions.invoke('send-whatsapp', {
                     body: {
@@ -1076,9 +1089,10 @@ export const Dashboard = () => {
             setReports(reports.map(r => r.id === selectedReport.id ? { ...r, status: 'pending_resolution', notes: updatedNotes } : r));
             setSelectedReport(null);
             setShowQualityReturnModal(false);
-            setFeedbackModal({ isOpen: true, type: 'success', title: 'Ticket Devuelto', message: 'El caso ha vuelto a estado pendiente y se ha notificado al responsable.' });
-        } else {
-            setFeedbackModal({ isOpen: true, type: 'error', title: 'Error', message: 'No se pudo devolver el caso: ' + error.message });
+            setFeedbackModal({ isOpen: true, type: 'success', title: 'Ticket Devuelto', message: 'El caso ha vuelto a estado pendiente y se ha notificado al responsable con un nuevo enlace de gestión.' });
+        } catch (err: any) {
+            console.error('[QualityReturn] Error:', err);
+            setFeedbackModal({ isOpen: true, type: 'error', title: 'Error', message: 'No se pudo devolver el caso: ' + (err?.message || 'Error desconocido') });
         }
         setIsProcessingQuality(false);
     };
@@ -2770,74 +2784,113 @@ export const Dashboard = () => {
                                                 </div>
                                             ) : (
                                                 <div className="space-y-2.5">
-                                                    {sectorAssignmentsData.map((assignment) => {
-                                                        const config = statusConfig[assignment.status] || statusConfig.pending;
-                                                        const sectorLabel = SECTOR_OPTIONS.find(s => s.value === assignment.sector)?.label || assignment.sector;
+                                                    {(() => {
+                                                        // Calculate round numbers for each sector
+                                                        const srm = new Map<string, number>();
+                                                        const roundNums = sectorAssignmentsData.map((a: any) => {
+                                                            const key = a.sector || a.id;
+                                                            const r = (srm.get(key) || 0) + 1;
+                                                            srm.set(key, r);
+                                                            return r;
+                                                        });
+                                                        const sectorTotals = new Map<string, number>();
+                                                        sectorAssignmentsData.forEach((a: any) => {
+                                                            const key = a.sector || a.id;
+                                                            sectorTotals.set(key, (sectorTotals.get(key) || 0) + 1);
+                                                        });
 
-                                                        return (
-                                                            <div key={assignment.id} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow">
-                                                                <div className="flex items-center justify-between mb-2">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className={`text-sm px-2 py-0.5 rounded-lg ${config.bg} ${config.color} font-bold`}>
-                                                                            {config.icon} {sectorLabel}
+                                                        return sectorAssignmentsData.map((assignment: any, idx: number) => {
+                                                            const config = statusConfig[assignment.status] || statusConfig.pending;
+                                                            const sectorLabel = SECTOR_OPTIONS.find(s => s.value === assignment.sector)?.label || assignment.sector;
+                                                            const roundNum = roundNums[idx];
+                                                            const totalRounds = sectorTotals.get(assignment.sector || assignment.id) || 1;
+                                                            const showRound = totalRounds > 1;
+                                                            const isRejectedRound = assignment.status === 'rejected';
+
+                                                            return (
+                                                                <div key={assignment.id} className={`bg-white rounded-xl border p-4 shadow-sm transition-shadow ${isRejectedRound ? 'border-red-100 opacity-70' : 'border-gray-100 hover:shadow-md'
+                                                                    }`}>
+                                                                    {/* Rejected round indicator */}
+                                                                    {isRejectedRound && (
+                                                                        <div className="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-2">
+                                                                            ❌ Ronda {roundNum} — Rechazado por Calidad
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="flex items-center justify-between mb-2">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className={`text-sm px-2 py-0.5 rounded-lg ${config.bg} ${config.color} font-bold`}>
+                                                                                {config.icon} {sectorLabel}
+                                                                                {showRound && !isRejectedRound && <span className="ml-1 text-[10px] opacity-70">(Ronda {roundNum})</span>}
+                                                                            </span>
+                                                                        </div>
+                                                                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${config.bg} ${config.color}`}>
+                                                                            {config.label}
                                                                         </span>
                                                                     </div>
-                                                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${config.bg} ${config.color}`}>
-                                                                        {config.label}
-                                                                    </span>
+
+                                                                    <div className="text-xs text-gray-500 space-y-1">
+                                                                        <p className="flex items-center gap-1.5">
+                                                                            <Phone className="w-3 h-3" />
+                                                                            {assignment.assigned_phone || 'Sin teléfono'}
+                                                                        </p>
+                                                                        <p className="flex items-center gap-1.5">
+                                                                            <Clock className="w-3 h-3" />
+                                                                            Asignado: {new Date(assignment.created_at).toLocaleString('es-AR')}
+                                                                        </p>
+                                                                    </div>
+
+                                                                    {/* Show resolution data if available */}
+                                                                    {(assignment.status === 'resolved' || assignment.status === 'quality_validation') && assignment.immediate_action && (
+                                                                        <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-100 text-xs text-gray-700">
+                                                                            <p className="font-bold text-green-700 mb-1">● Acción Inmediata:</p>
+                                                                            <p>{assignment.immediate_action}</p>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {assignment.status === 'partial' && assignment.notes && (
+                                                                        <div className="mt-3 p-3 bg-orange-50 rounded-lg border border-orange-100 text-xs text-gray-700">
+                                                                            <p className="font-bold text-orange-700 mb-1">Motivo (Parcial):</p>
+                                                                            <p>{assignment.notes}</p>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Rejected round: show rejection reason AND preserved resolution data */}
+                                                                    {isRejectedRound && (
+                                                                        <div className="mt-3 space-y-2">
+                                                                            {assignment.notes && (
+                                                                                <div className="p-3 bg-red-50 rounded-lg border border-red-100 text-xs text-gray-700">
+                                                                                    <p className="font-bold text-red-700 mb-1">Motivo del Rechazo:</p>
+                                                                                    <p className="text-red-600">{assignment.notes}</p>
+                                                                                </div>
+                                                                            )}
+                                                                            {assignment.immediate_action && (
+                                                                                <div className="p-2.5 bg-gray-50 rounded-lg border border-gray-100 text-xs text-gray-500">
+                                                                                    <p className="font-bold text-gray-600 mb-0.5">Acción que fue rechazada:</p>
+                                                                                    <p className="line-through">{assignment.immediate_action}</p>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Reminder Button — only for pending assignments, visible to admins */}
+                                                                    {isAdmin && assignment.status === 'pending' && assignment.assigned_phone && (
+                                                                        <button
+                                                                            onClick={() => handleSendReminder(assignment)}
+                                                                            disabled={sendingReminderId === assignment.id}
+                                                                            className="mt-3 w-full py-2 px-3 bg-amber-50 border border-amber-200 text-amber-700 font-bold text-xs rounded-lg hover:bg-amber-100 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                                                        >
+                                                                            {sendingReminderId === assignment.id ? (
+                                                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                                            ) : (
+                                                                                <Bell className="w-3.5 h-3.5" />
+                                                                            )}
+                                                                            Enviar Recordatorio
+                                                                        </button>
+                                                                    )}
                                                                 </div>
-
-                                                                <div className="text-xs text-gray-500 space-y-1">
-                                                                    <p className="flex items-center gap-1.5">
-                                                                        <Phone className="w-3 h-3" />
-                                                                        {assignment.assigned_phone || 'Sin teléfono'}
-                                                                    </p>
-                                                                    <p className="flex items-center gap-1.5">
-                                                                        <Clock className="w-3 h-3" />
-                                                                        Asignado: {new Date(assignment.created_at).toLocaleString('es-AR')}
-                                                                    </p>
-                                                                </div>
-
-                                                                {/* Show resolution data if available */}
-                                                                {(assignment.status === 'resolved' || assignment.status === 'quality_validation') && assignment.immediate_action && (
-                                                                    <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-100 text-xs text-gray-700">
-                                                                        <p className="font-bold text-green-700 mb-1">Acción Inmediata:</p>
-                                                                        <p>{assignment.immediate_action}</p>
-                                                                    </div>
-                                                                )}
-
-                                                                {assignment.status === 'partial' && assignment.notes && (
-                                                                    <div className="mt-3 p-3 bg-orange-50 rounded-lg border border-orange-100 text-xs text-gray-700">
-                                                                        <p className="font-bold text-orange-700 mb-1">Motivo (Parcial):</p>
-                                                                        <p>{assignment.notes}</p>
-                                                                    </div>
-                                                                )}
-
-                                                                {assignment.status === 'rejected' && assignment.notes && (
-                                                                    <div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-100 text-xs text-gray-700">
-                                                                        <p className="font-bold text-red-700 mb-1">Motivo Rechazo:</p>
-                                                                        <p>{assignment.notes}</p>
-                                                                    </div>
-                                                                )}
-
-                                                                {/* Reminder Button — only for pending assignments, visible to admins */}
-                                                                {isAdmin && assignment.status === 'pending' && assignment.assigned_phone && (
-                                                                    <button
-                                                                        onClick={() => handleSendReminder(assignment)}
-                                                                        disabled={sendingReminderId === assignment.id}
-                                                                        className="mt-3 w-full py-2 px-3 bg-amber-50 border border-amber-200 text-amber-700 font-bold text-xs rounded-lg hover:bg-amber-100 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
-                                                                    >
-                                                                        {sendingReminderId === assignment.id ? (
-                                                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                                        ) : (
-                                                                            <Bell className="w-3.5 h-3.5" />
-                                                                        )}
-                                                                        Enviar Recordatorio
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })}
+                                                            );
+                                                        });
+                                                    })()}
                                                 </div>
                                             )}
 
@@ -3021,182 +3074,219 @@ export const Dashboard = () => {
                                                             <div className="flex items-center justify-center p-6 text-gray-400">
                                                                 <Loader2 className="w-5 h-5 animate-spin mr-2" /> Cargando...
                                                             </div>
-                                                        ) : isMultiSectorReport ? (
-                                                            /* ========== MULTI-SECTOR VIEW ========== */
-                                                            <div className="space-y-3">
-                                                                {sectorAssignmentsData.map((assignment: any) => {
-                                                                    const config = statusConfig[assignment.status] || statusConfig.pending;
-                                                                    const sectorLabel = SECTOR_OPTIONS.find(s => s.value === assignment.sector)?.label || assignment.sector;
-                                                                    const isExpanded = expandedSector === assignment.id;
-                                                                    const hasResponse = assignment.status === 'resolved' || assignment.status === 'quality_validation';
+                                                        ) : isMultiSectorReport ? (() => {
+                                                            /* ========== MULTI-SECTOR VIEW WITH ROUNDS ========== */
+                                                            // Calculate round numbers: group by sector, sorted by created_at
+                                                            const sectorRoundMap = new Map<string, number>();
+                                                            const assignmentRoundNumbers = sectorAssignmentsData.map((a: any) => {
+                                                                const key = a.sector || a.id;
+                                                                const currentRound = (sectorRoundMap.get(key) || 0) + 1;
+                                                                sectorRoundMap.set(key, currentRound);
+                                                                return currentRound;
+                                                            });
+                                                            // Total rounds per sector
+                                                            const sectorTotalRounds = new Map<string, number>();
+                                                            sectorAssignmentsData.forEach((a: any) => {
+                                                                const key = a.sector || a.id;
+                                                                sectorTotalRounds.set(key, (sectorTotalRounds.get(key) || 0) + 1);
+                                                            });
 
-                                                                    return (
-                                                                        <div
-                                                                            key={assignment.id}
-                                                                            className={`bg-white rounded-xl border shadow-sm transition-all ${hasResponse ? 'border-green-200 hover:shadow-md' : 'border-gray-100 opacity-75'}`}
-                                                                        >
-                                                                            {/* Sector Header — clickable */}
-                                                                            <button
-                                                                                onClick={() => setExpandedSector(isExpanded ? null : assignment.id)}
-                                                                                className="w-full flex items-center justify-between p-4 text-left cursor-pointer"
+                                                            return (
+                                                                <div className="space-y-3">
+                                                                    {sectorAssignmentsData.map((assignment: any, idx: number) => {
+                                                                        const config = statusConfig[assignment.status] || statusConfig.pending;
+                                                                        const sectorLabel = SECTOR_OPTIONS.find(s => s.value === assignment.sector)?.label || assignment.sector;
+                                                                        const isExpanded = expandedSector === assignment.id;
+                                                                        const hasResponse = assignment.status === 'resolved' || assignment.status === 'quality_validation';
+                                                                        const isRejectedRound = assignment.status === 'rejected';
+                                                                        const roundNumber = assignmentRoundNumbers[idx];
+                                                                        const totalRounds = sectorTotalRounds.get(assignment.sector || assignment.id) || 1;
+                                                                        const showRoundBadge = totalRounds > 1;
+
+                                                                        return (
+                                                                            <div
+                                                                                key={assignment.id}
+                                                                                className={`bg-white rounded-xl border shadow-sm transition-all ${isRejectedRound
+                                                                                    ? 'border-red-200 opacity-80'
+                                                                                    : hasResponse
+                                                                                        ? 'border-green-200 hover:shadow-md'
+                                                                                        : 'border-gray-100 opacity-75'
+                                                                                    }`}
                                                                             >
-                                                                                <div className="flex items-center gap-2.5 min-w-0">
-                                                                                    <span className={`text-sm px-2.5 py-1 rounded-lg ${config.bg} ${config.color} font-bold shrink-0`}>
-                                                                                        {config.icon}
-                                                                                    </span>
-                                                                                    <div className="min-w-0">
-                                                                                        <p className="text-sm font-bold text-gray-800 truncate">{sectorLabel}</p>
-                                                                                        <p className="text-[10px] text-gray-400 font-medium">
-                                                                                            {assignment.assigned_phone || 'Sin teléfono'}
-                                                                                            {assignment.resolved_at && ` · ${new Date(assignment.resolved_at).toLocaleString('es-AR')}`}
-                                                                                        </p>
+                                                                                {/* Round indicator bar for rejected rounds */}
+                                                                                {isRejectedRound && (
+                                                                                    <div className="bg-red-50 px-4 py-1.5 rounded-t-xl border-b border-red-100 flex items-center justify-between">
+                                                                                        <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider">
+                                                                                            ❌ Ronda {roundNumber} — Rechazado por Calidad
+                                                                                        </span>
                                                                                     </div>
-                                                                                </div>
-                                                                                <div className="flex items-center gap-2 shrink-0">
-                                                                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${config.bg} ${config.color}`}>
-                                                                                        {config.label}
-                                                                                    </span>
-                                                                                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                                                                                </div>
-                                                                            </button>
+                                                                                )}
+                                                                                {/* Sector Header — clickable */}
+                                                                                <button
+                                                                                    onClick={() => setExpandedSector(isExpanded ? null : assignment.id)}
+                                                                                    className="w-full flex items-center justify-between p-4 text-left cursor-pointer"
+                                                                                >
+                                                                                    <div className="flex items-center gap-2.5 min-w-0">
+                                                                                        <span className={`text-sm px-2.5 py-1 rounded-lg ${config.bg} ${config.color} font-bold shrink-0`}>
+                                                                                            {config.icon}
+                                                                                        </span>
+                                                                                        <div className="min-w-0">
+                                                                                            <p className={`text-sm font-bold truncate ${isRejectedRound ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
+                                                                                                {sectorLabel}
+                                                                                                {showRoundBadge && <span className="ml-1.5 text-[10px] font-bold text-gray-400 no-underline">(Ronda {roundNumber})</span>}
+                                                                                            </p>
+                                                                                            <p className="text-[10px] text-gray-400 font-medium">
+                                                                                                {assignment.assigned_phone || 'Sin teléfono'}
+                                                                                                {assignment.resolved_at && ` · ${new Date(assignment.resolved_at).toLocaleString('es-AR')}`}
+                                                                                            </p>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div className="flex items-center gap-2 shrink-0">
+                                                                                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${config.bg} ${config.color}`}>
+                                                                                            {config.label}
+                                                                                        </span>
+                                                                                        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                                                                    </div>
+                                                                                </button>
 
-                                                                            {/* Expanded Content */}
-                                                                            {isExpanded && hasResponse && (() => {
-                                                                                // Fallback: if assignment doesn't have resolution data,
-                                                                                // use selectedReport data (happens after quality_return re-submission)
-                                                                                const effectiveAction = assignment.immediate_action || selectedReport.resolution_notes;
-                                                                                const effectiveRootCause = assignment.root_cause || selectedReport.root_cause;
-                                                                                const effectivePlan = assignment.corrective_plan || selectedReport.corrective_plan;
-                                                                                const effectiveImplDate = assignment.implementation_date || selectedReport.implementation_date;
-                                                                                const effectiveEvidence = (assignment.resolution_evidence_urls && assignment.resolution_evidence_urls.length > 0)
-                                                                                    ? assignment.resolution_evidence_urls
-                                                                                    : selectedReport.resolution_evidence_urls;
-                                                                                const effectiveNotes = assignment.resolution_notes;
+                                                                                {/* Expanded Content */}
+                                                                                {isExpanded && hasResponse && (() => {
+                                                                                    // Fallback: if assignment doesn't have resolution data,
+                                                                                    // use selectedReport data (happens after quality_return re-submission)
+                                                                                    const effectiveAction = assignment.immediate_action || selectedReport.resolution_notes;
+                                                                                    const effectiveRootCause = assignment.root_cause || selectedReport.root_cause;
+                                                                                    const effectivePlan = assignment.corrective_plan || selectedReport.corrective_plan;
+                                                                                    const effectiveImplDate = assignment.implementation_date || selectedReport.implementation_date;
+                                                                                    const effectiveEvidence = (assignment.resolution_evidence_urls && assignment.resolution_evidence_urls.length > 0)
+                                                                                        ? assignment.resolution_evidence_urls
+                                                                                        : selectedReport.resolution_evidence_urls;
+                                                                                    const effectiveNotes = assignment.resolution_notes;
 
-                                                                                return (
-                                                                                    <div className="px-4 pb-4 space-y-3 border-t border-gray-50 pt-3 animate-in fade-in duration-200">
-                                                                                        {/* Acción Inmediata */}
-                                                                                        {effectiveAction && (
-                                                                                            <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                                                                                <h6 className="text-[10px] font-bold text-blue-600 uppercase mb-1 flex items-center gap-1">
-                                                                                                    <span className="w-1 h-1 rounded-full bg-blue-500"></span>
-                                                                                                    Acción Inmediata
-                                                                                                </h6>
-                                                                                                <p className="text-xs text-gray-700 leading-relaxed">{effectiveAction}</p>
-                                                                                            </div>
-                                                                                        )}
-
-                                                                                        {/* Causa Raíz */}
-                                                                                        {effectiveRootCause && (
-                                                                                            <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
-                                                                                                <h6 className="text-[10px] font-bold text-amber-700 uppercase mb-1 flex items-center gap-1">
-                                                                                                    <BrainCircuit className="w-3 h-3" />
-                                                                                                    Causa Raíz
-                                                                                                </h6>
-                                                                                                <p className="text-xs text-gray-700 leading-relaxed">{effectiveRootCause}</p>
-                                                                                            </div>
-                                                                                        )}
-
-                                                                                        {/* Plan de Acción */}
-                                                                                        {effectivePlan && (
-                                                                                            <div className="bg-green-50 p-3 rounded-lg border border-green-100">
-                                                                                                <h6 className="text-[10px] font-bold text-green-700 uppercase mb-1 flex items-center gap-1">
-                                                                                                    <CheckCircle className="w-3 h-3" />
-                                                                                                    Plan de Acción
-                                                                                                </h6>
-                                                                                                <p className="text-xs text-gray-700 leading-relaxed">{effectivePlan}</p>
-                                                                                                {effectiveImplDate && (
-                                                                                                    <div className="flex items-center gap-1 text-[10px] font-bold text-green-600 mt-2">
-                                                                                                        <Clock className="w-3 h-3" />
-                                                                                                        Implementación: {new Date(effectiveImplDate).toLocaleDateString()}
-                                                                                                    </div>
-                                                                                                )}
-                                                                                            </div>
-                                                                                        )}
-
-                                                                                        {/* Evidencia */}
-                                                                                        {effectiveEvidence && effectiveEvidence.length > 0 && (
-                                                                                            <div>
-                                                                                                <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-2 flex items-center gap-1">
-                                                                                                    <Camera className="w-3 h-3" />
-                                                                                                    Evidencia ({effectiveEvidence.length})
-                                                                                                </h6>
-                                                                                                <div className="flex gap-2 overflow-x-auto pb-1">
-                                                                                                    {effectiveEvidence.map((url: string, i: number) => (
-                                                                                                        <a
-                                                                                                            key={i}
-                                                                                                            href={url}
-                                                                                                            target="_blank"
-                                                                                                            className="w-14 h-14 rounded-lg bg-gray-100 bg-cover bg-center border border-gray-200 flex-shrink-0 hover:ring-2 ring-purple-500 transition-all cursor-zoom-in"
-                                                                                                            style={{ backgroundImage: `url(${url})` }}
-                                                                                                        />
-                                                                                                    ))}
+                                                                                    return (
+                                                                                        <div className="px-4 pb-4 space-y-3 border-t border-gray-50 pt-3 animate-in fade-in duration-200">
+                                                                                            {/* Acción Inmediata */}
+                                                                                            {effectiveAction && (
+                                                                                                <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                                                                                    <h6 className="text-[10px] font-bold text-blue-600 uppercase mb-1 flex items-center gap-1">
+                                                                                                        <span className="w-1 h-1 rounded-full bg-blue-500"></span>
+                                                                                                        Acción Inmediata
+                                                                                                    </h6>
+                                                                                                    <p className="text-xs text-gray-700 leading-relaxed">{effectiveAction}</p>
                                                                                                 </div>
-                                                                                            </div>
-                                                                                        )}
+                                                                                            )}
 
-                                                                                        {/* Notas adicionales */}
-                                                                                        {effectiveNotes && (
-                                                                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                                                                                <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-1">Notas</h6>
-                                                                                                <p className="text-xs text-gray-600">{effectiveNotes}</p>
-                                                                                            </div>
-                                                                                        )}
+                                                                                            {/* Causa Raíz */}
+                                                                                            {effectiveRootCause && (
+                                                                                                <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
+                                                                                                    <h6 className="text-[10px] font-bold text-amber-700 uppercase mb-1 flex items-center gap-1">
+                                                                                                        <BrainCircuit className="w-3 h-3" />
+                                                                                                        Causa Raíz
+                                                                                                    </h6>
+                                                                                                    <p className="text-xs text-gray-700 leading-relaxed">{effectiveRootCause}</p>
+                                                                                                </div>
+                                                                                            )}
 
-                                                                                        {/* No data fallback */}
-                                                                                        {!effectiveAction && !effectiveRootCause && !effectivePlan && (
-                                                                                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-center">
-                                                                                                <p className="text-xs text-gray-400 italic">Sin datos de resolución registrados.</p>
-                                                                                            </div>
-                                                                                        )}
+                                                                                            {/* Plan de Acción */}
+                                                                                            {effectivePlan && (
+                                                                                                <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                                                                                                    <h6 className="text-[10px] font-bold text-green-700 uppercase mb-1 flex items-center gap-1">
+                                                                                                        <CheckCircle className="w-3 h-3" />
+                                                                                                        Plan de Acción
+                                                                                                    </h6>
+                                                                                                    <p className="text-xs text-gray-700 leading-relaxed">{effectivePlan}</p>
+                                                                                                    {effectiveImplDate && (
+                                                                                                        <div className="flex items-center gap-1 text-[10px] font-bold text-green-600 mt-2">
+                                                                                                            <Clock className="w-3 h-3" />
+                                                                                                            Implementación: {new Date(effectiveImplDate).toLocaleDateString()}
+                                                                                                        </div>
+                                                                                                    )}
+                                                                                                </div>
+                                                                                            )}
+
+                                                                                            {/* Evidencia */}
+                                                                                            {effectiveEvidence && effectiveEvidence.length > 0 && (
+                                                                                                <div>
+                                                                                                    <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-2 flex items-center gap-1">
+                                                                                                        <Camera className="w-3 h-3" />
+                                                                                                        Evidencia ({effectiveEvidence.length})
+                                                                                                    </h6>
+                                                                                                    <div className="flex gap-2 overflow-x-auto pb-1">
+                                                                                                        {effectiveEvidence.map((url: string, i: number) => (
+                                                                                                            <a
+                                                                                                                key={i}
+                                                                                                                href={url}
+                                                                                                                target="_blank"
+                                                                                                                className="w-14 h-14 rounded-lg bg-gray-100 bg-cover bg-center border border-gray-200 flex-shrink-0 hover:ring-2 ring-purple-500 transition-all cursor-zoom-in"
+                                                                                                                style={{ backgroundImage: `url(${url})` }}
+                                                                                                            />
+                                                                                                        ))}
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            )}
+
+                                                                                            {/* Notas adicionales */}
+                                                                                            {effectiveNotes && (
+                                                                                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                                                                    <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-1">Notas</h6>
+                                                                                                    <p className="text-xs text-gray-600">{effectiveNotes}</p>
+                                                                                                </div>
+                                                                                            )}
+
+                                                                                            {/* No data fallback */}
+                                                                                            {!effectiveAction && !effectiveRootCause && !effectivePlan && (
+                                                                                                <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-center">
+                                                                                                    <p className="text-xs text-gray-400 italic">Sin datos de resolución registrados.</p>
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    );
+                                                                                })()}
+
+                                                                                {/* Expanded: Rejected/Partial */}
+                                                                                {isExpanded && assignment.status === 'rejected' && assignment.notes && (
+                                                                                    <div className="px-4 pb-4 border-t border-gray-50 pt-3">
+                                                                                        <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+                                                                                            <h6 className="text-[10px] font-bold text-red-700 uppercase mb-1">Motivo del Rechazo</h6>
+                                                                                            <p className="text-xs text-red-600">{assignment.notes}</p>
+                                                                                        </div>
                                                                                     </div>
-                                                                                );
-                                                                            })()}
+                                                                                )}
 
-                                                                            {/* Expanded: Rejected/Partial */}
-                                                                            {isExpanded && assignment.status === 'rejected' && assignment.notes && (
-                                                                                <div className="px-4 pb-4 border-t border-gray-50 pt-3">
-                                                                                    <div className="bg-red-50 p-3 rounded-lg border border-red-100">
-                                                                                        <h6 className="text-[10px] font-bold text-red-700 uppercase mb-1">Motivo del Rechazo</h6>
-                                                                                        <p className="text-xs text-red-600">{assignment.notes}</p>
+                                                                                {isExpanded && assignment.status === 'partial' && assignment.notes && (
+                                                                                    <div className="px-4 pb-4 border-t border-gray-50 pt-3">
+                                                                                        <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
+                                                                                            <h6 className="text-[10px] font-bold text-orange-700 uppercase mb-1">Nota (Parcial)</h6>
+                                                                                            <p className="text-xs text-orange-600">{assignment.notes}</p>
+                                                                                        </div>
                                                                                     </div>
-                                                                                </div>
-                                                                            )}
+                                                                                )}
 
-                                                                            {isExpanded && assignment.status === 'partial' && assignment.notes && (
-                                                                                <div className="px-4 pb-4 border-t border-gray-50 pt-3">
-                                                                                    <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
-                                                                                        <h6 className="text-[10px] font-bold text-orange-700 uppercase mb-1">Nota (Parcial)</h6>
-                                                                                        <p className="text-xs text-orange-600">{assignment.notes}</p>
+                                                                                {isExpanded && assignment.status === 'pending' && (
+                                                                                    <div className="px-4 pb-4 border-t border-gray-50 pt-3">
+                                                                                        <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-center space-y-2">
+                                                                                            <p className="text-xs text-yellow-700 font-medium">⏳ Este sector aún no ha enviado su respuesta</p>
+                                                                                            {isAdmin && (
+                                                                                                <button
+                                                                                                    onClick={(e) => { e.stopPropagation(); handleSendReminder(assignment); }}
+                                                                                                    disabled={sendingReminderId === assignment.id}
+                                                                                                    className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-green-500 hover:bg-green-600 active:scale-95 text-white text-xs font-bold rounded-lg transition-all shadow-sm shadow-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                                                >
+                                                                                                    {sendingReminderId === assignment.id ? (
+                                                                                                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Enviando...</>
+                                                                                                    ) : (
+                                                                                                        <><MessageSquare className="w-3.5 h-3.5" /> Reenviar mensaje</>
+                                                                                                    )}
+                                                                                                </button>
+                                                                                            )}
+                                                                                        </div>
                                                                                     </div>
-                                                                                </div>
-                                                                            )}
-
-                                                                            {isExpanded && assignment.status === 'pending' && (
-                                                                                <div className="px-4 pb-4 border-t border-gray-50 pt-3">
-                                                                                    <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-center space-y-2">
-                                                                                        <p className="text-xs text-yellow-700 font-medium">⏳ Este sector aún no ha enviado su respuesta</p>
-                                                                                        {isAdmin && (
-                                                                                            <button
-                                                                                                onClick={(e) => { e.stopPropagation(); handleSendReminder(assignment); }}
-                                                                                                disabled={sendingReminderId === assignment.id}
-                                                                                                className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-green-500 hover:bg-green-600 active:scale-95 text-white text-xs font-bold rounded-lg transition-all shadow-sm shadow-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                                                            >
-                                                                                                {sendingReminderId === assignment.id ? (
-                                                                                                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Enviando...</>
-                                                                                                ) : (
-                                                                                                    <><MessageSquare className="w-3.5 h-3.5" /> Reenviar mensaje</>
-                                                                                                )}
-                                                                                            </button>
-                                                                                        )}
-                                                                                    </div>
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        ) : (
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            );
+                                                        })() : (
                                                             /* ========== SINGLE-SECTOR VIEW (original) ========== */
                                                             <>
                                                                 {/* 1. Acción Inmediata */}
