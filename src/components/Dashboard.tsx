@@ -2542,15 +2542,30 @@ export const Dashboard = () => {
                                                 });
                                             }
 
-                                            // 3. Resolved event (if applicable and not already in notes)
-                                            if (selectedReport.resolved_at && !events.some(e => e.type === 'approved')) {
+                                            // 3. Status-based events
+                                            // Only show 'Resolución Finalizada' when Calidad actually approved (status === 'resolved')
+                                            if (selectedReport.status === 'resolved' && !events.some(e => e.type === 'approved')) {
+                                                events.push({
+                                                    date: selectedReport.resolved_at
+                                                        ? new Date(selectedReport.resolved_at).toLocaleString('es-AR', {
+                                                            timeZone: 'America/Argentina/Buenos_Aires',
+                                                            day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+                                                        })
+                                                        : '',
+                                                    message: 'Resolución Finalizada',
+                                                    type: 'resolved'
+                                                });
+                                            }
+
+                                            // Show 'Pendiente de Validación' for quality_validation status
+                                            if (selectedReport.status === 'quality_validation' && selectedReport.resolved_at) {
                                                 events.push({
                                                     date: new Date(selectedReport.resolved_at).toLocaleString('es-AR', {
                                                         timeZone: 'America/Argentina/Buenos_Aires',
                                                         day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
                                                     }),
-                                                    message: 'Resolución Finalizada',
-                                                    type: 'resolved'
+                                                    message: '🔍 Respuesta enviada — Pendiente de validación de Calidad',
+                                                    type: 'info'
                                                 });
                                             }
 
@@ -2730,7 +2745,9 @@ export const Dashboard = () => {
                                     const partialCount = sectorAssignmentsData.filter(a => a.status === 'partial').length;
                                     const pendingCount = sectorAssignmentsData.filter(a => a.status === 'pending').length;
                                     const rejectedCount = sectorAssignmentsData.filter(a => a.status === 'rejected').length;
-                                    const progressPercent = totalAssignments > 0 ? Math.round(((resolvedCount + partialCount) / totalAssignments) * 100) : 0;
+                                    // Active assignments = total minus rejected (rejected are historical rounds, not active)
+                                    const activeAssignments = totalAssignments - rejectedCount;
+                                    const progressPercent = activeAssignments > 0 ? Math.round(((resolvedCount + partialCount) / activeAssignments) * 100) : 0;
 
                                     const statusConfig: Record<string, { label: string; color: string; bg: string; icon: string }> = {
                                         pending: { label: 'Pendiente', color: 'text-yellow-700', bg: 'bg-yellow-100', icon: '⏳' },
@@ -3015,9 +3032,19 @@ export const Dashboard = () => {
                                         : selectedReport.status === 'quality_validation' ? (() => {
                                             // VISTA VALIDACIÓN CALIDAD — con soporte multi-sector (hooks are at top-level)
                                             const isMultiSectorReport = sectorAssignmentsData.length > 0;
+                                            // Filter out rejected (historical) assignments for progress counting
+                                            const activeAssignments = sectorAssignmentsData.filter(a => a.status !== 'rejected');
                                             const resolvedAssignments = sectorAssignmentsData.filter(a => a.status === 'resolved' || a.status === 'quality_validation');
+                                            // Count pending assignments that have legacy response data (submitted to reports table)
+                                            const legacyRespondedCount = sectorAssignmentsData.filter(a =>
+                                                a.status === 'pending'
+                                                && selectedReport.status === 'quality_validation'
+                                                && !!(selectedReport.resolution_notes || selectedReport.immediate_action)
+                                            ).length;
+                                            const effectiveRespondedCount = resolvedAssignments.length + legacyRespondedCount;
                                             const pendingAssignments = sectorAssignmentsData.filter(a => a.status === 'pending');
-                                            const allSectorsComplete = sectorAssignmentsData.length > 0 && pendingAssignments.length === 0;
+                                            const truePendingCount = pendingAssignments.length - legacyRespondedCount;
+                                            const allSectorsComplete = activeAssignments.length > 0 && truePendingCount <= 0;
 
                                             const statusConfig: Record<string, { label: string; color: string; bg: string; icon: string }> = {
                                                 pending: { label: 'Pendiente', color: 'text-yellow-700', bg: 'bg-yellow-100', icon: '⏳' },
@@ -3037,7 +3064,7 @@ export const Dashboard = () => {
                                                             <h4 className="font-bold text-gray-900">Validación de Calidad</h4>
                                                             <p className="text-xs text-purple-600">
                                                                 {isMultiSectorReport
-                                                                    ? `${resolvedAssignments.length}/${sectorAssignmentsData.length} sectores respondieron`
+                                                                    ? `${effectiveRespondedCount}/${activeAssignments.length} sectores respondieron`
                                                                     : 'Revisión requerida para cierre'}
                                                             </p>
                                                         </div>
@@ -3049,20 +3076,20 @@ export const Dashboard = () => {
                                                             <div className="flex justify-between items-center mb-1.5">
                                                                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Progreso de Sectores</span>
                                                                 <span className="text-[10px] font-bold text-purple-700">
-                                                                    {resolvedAssignments.length}/{sectorAssignmentsData.length}
+                                                                    {effectiveRespondedCount}/{activeAssignments.length}
                                                                 </span>
                                                             </div>
                                                             <div className="w-full h-2 bg-white rounded-full overflow-hidden border border-gray-100">
                                                                 <div
                                                                     className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-500"
-                                                                    style={{ width: `${sectorAssignmentsData.length > 0 ? Math.round((resolvedAssignments.length / sectorAssignmentsData.length) * 100) : 0}%` }}
+                                                                    style={{ width: `${activeAssignments.length > 0 ? Math.round((effectiveRespondedCount / activeAssignments.length) * 100) : 0}%` }}
                                                                 />
                                                             </div>
-                                                            {!allSectorsComplete && (
+                                                            {!allSectorsComplete && truePendingCount > 0 && (
                                                                 <div className="mt-2 p-2 bg-amber-50 rounded-lg border border-amber-100">
                                                                     <p className="text-[10px] text-amber-700 font-bold flex items-center gap-1">
                                                                         <AlertTriangle className="w-3 h-3" />
-                                                                        {pendingAssignments.length} sector{pendingAssignments.length !== 1 ? 'es' : ''} aún no respondió
+                                                                        {truePendingCount} sector{truePendingCount !== 1 ? 'es' : ''} aún no respondió
                                                                     </p>
                                                                 </div>
                                                             )}
@@ -3097,7 +3124,11 @@ export const Dashboard = () => {
                                                                         const config = statusConfig[assignment.status] || statusConfig.pending;
                                                                         const sectorLabel = SECTOR_OPTIONS.find(s => s.value === assignment.sector)?.label || assignment.sector;
                                                                         const isExpanded = expandedSector === assignment.id;
-                                                                        const hasResponse = assignment.status === 'resolved' || assignment.status === 'quality_validation';
+                                                                        // Check if this PENDING assignment has a response stored at report level (legacy flow)
+                                                                        const hasLegacyResponse = assignment.status === 'pending'
+                                                                            && selectedReport.status === 'quality_validation'
+                                                                            && !!(selectedReport.resolution_notes || selectedReport.immediate_action);
+                                                                        const hasResponse = assignment.status === 'resolved' || assignment.status === 'quality_validation' || hasLegacyResponse;
                                                                         const isRejectedRound = assignment.status === 'rejected';
                                                                         const roundNumber = assignmentRoundNumbers[idx];
                                                                         const totalRounds = sectorTotalRounds.get(assignment.sector || assignment.id) || 1;
@@ -3261,26 +3292,93 @@ export const Dashboard = () => {
                                                                                     </div>
                                                                                 )}
 
-                                                                                {isExpanded && assignment.status === 'pending' && (
-                                                                                    <div className="px-4 pb-4 border-t border-gray-50 pt-3">
-                                                                                        <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-center space-y-2">
-                                                                                            <p className="text-xs text-yellow-700 font-medium">⏳ Este sector aún no ha enviado su respuesta</p>
-                                                                                            {isAdmin && (
-                                                                                                <button
-                                                                                                    onClick={(e) => { e.stopPropagation(); handleSendReminder(assignment); }}
-                                                                                                    disabled={sendingReminderId === assignment.id}
-                                                                                                    className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-green-500 hover:bg-green-600 active:scale-95 text-white text-xs font-bold rounded-lg transition-all shadow-sm shadow-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                                                                >
-                                                                                                    {sendingReminderId === assignment.id ? (
-                                                                                                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Enviando...</>
-                                                                                                    ) : (
-                                                                                                        <><MessageSquare className="w-3.5 h-3.5" /> Reenviar mensaje</>
-                                                                                                    )}
-                                                                                                </button>
-                                                                                            )}
+                                                                                {isExpanded && assignment.status === 'pending' && (() => {
+                                                                                    // Check for legacy response data in the reports table
+                                                                                    if (hasLegacyResponse) {
+                                                                                        return (
+                                                                                            <div className="px-4 pb-4 border-t border-gray-50 pt-3 space-y-3 animate-in fade-in duration-200">
+                                                                                                <div className="bg-blue-50 p-2 rounded-lg border border-blue-100">
+                                                                                                    <p className="text-[10px] text-blue-600 font-bold flex items-center gap-1">
+                                                                                                        ℹ️ Respuesta recibida (registrada a nivel reporte)
+                                                                                                    </p>
+                                                                                                </div>
+                                                                                                {selectedReport.resolution_notes && (
+                                                                                                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                                                                                        <h6 className="text-[10px] font-bold text-blue-600 uppercase mb-1 flex items-center gap-1">
+                                                                                                            <span className="w-1 h-1 rounded-full bg-blue-500"></span>
+                                                                                                            Acción Inmediata
+                                                                                                        </h6>
+                                                                                                        <p className="text-xs text-gray-700 leading-relaxed">{selectedReport.resolution_notes}</p>
+                                                                                                    </div>
+                                                                                                )}
+                                                                                                {selectedReport.root_cause && (
+                                                                                                    <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
+                                                                                                        <h6 className="text-[10px] font-bold text-amber-700 uppercase mb-1 flex items-center gap-1">
+                                                                                                            <BrainCircuit className="w-3 h-3" />
+                                                                                                            Causa Raíz
+                                                                                                        </h6>
+                                                                                                        <p className="text-xs text-gray-700 leading-relaxed">{selectedReport.root_cause}</p>
+                                                                                                    </div>
+                                                                                                )}
+                                                                                                {selectedReport.corrective_plan && (
+                                                                                                    <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                                                                                                        <h6 className="text-[10px] font-bold text-green-700 uppercase mb-1 flex items-center gap-1">
+                                                                                                            <CheckCircle className="w-3 h-3" />
+                                                                                                            Plan de Acción
+                                                                                                        </h6>
+                                                                                                        <p className="text-xs text-gray-700 leading-relaxed">{selectedReport.corrective_plan}</p>
+                                                                                                        {selectedReport.implementation_date && (
+                                                                                                            <div className="flex items-center gap-1 text-[10px] font-bold text-green-600 mt-2">
+                                                                                                                <Clock className="w-3 h-3" />
+                                                                                                                Implementación: {new Date(selectedReport.implementation_date).toLocaleDateString()}
+                                                                                                            </div>
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                )}
+                                                                                                {selectedReport.resolution_evidence_urls && selectedReport.resolution_evidence_urls.length > 0 && (
+                                                                                                    <div>
+                                                                                                        <h6 className="text-[10px] font-bold text-gray-500 uppercase mb-2 flex items-center gap-1">
+                                                                                                            <Camera className="w-3 h-3" />
+                                                                                                            Evidencia ({selectedReport.resolution_evidence_urls.length})
+                                                                                                        </h6>
+                                                                                                        <div className="flex gap-2 overflow-x-auto pb-1">
+                                                                                                            {selectedReport.resolution_evidence_urls.map((url: string, i: number) => (
+                                                                                                                <a
+                                                                                                                    key={i}
+                                                                                                                    href={url}
+                                                                                                                    target="_blank"
+                                                                                                                    className="w-14 h-14 rounded-lg bg-gray-100 bg-cover bg-center border border-gray-200 flex-shrink-0 hover:ring-2 ring-purple-500 transition-all cursor-zoom-in"
+                                                                                                                    style={{ backgroundImage: `url(${url})` }}
+                                                                                                                />
+                                                                                                            ))}
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        );
+                                                                                    }
+
+                                                                                    return (
+                                                                                        <div className="px-4 pb-4 border-t border-gray-50 pt-3">
+                                                                                            <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-center space-y-2">
+                                                                                                <p className="text-xs text-yellow-700 font-medium">⏳ Este sector aún no ha enviado su respuesta</p>
+                                                                                                {isAdmin && (
+                                                                                                    <button
+                                                                                                        onClick={(e) => { e.stopPropagation(); handleSendReminder(assignment); }}
+                                                                                                        disabled={sendingReminderId === assignment.id}
+                                                                                                        className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-green-500 hover:bg-green-600 active:scale-95 text-white text-xs font-bold rounded-lg transition-all shadow-sm shadow-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                                                    >
+                                                                                                        {sendingReminderId === assignment.id ? (
+                                                                                                            <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Enviando...</>
+                                                                                                        ) : (
+                                                                                                            <><MessageSquare className="w-3.5 h-3.5" /> Reenviar mensaje</>
+                                                                                                        )}
+                                                                                                    </button>
+                                                                                                )}
+                                                                                            </div>
                                                                                         </div>
-                                                                                    </div>
-                                                                                )}
+                                                                                    );
+                                                                                })()}
                                                                             </div>
                                                                         );
                                                                     })}

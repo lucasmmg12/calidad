@@ -230,14 +230,29 @@ export const TrackingPage = () => {
                                         }
 
                                         // 3. Status Based Events
+                                        // Only show 'Resolución Finalizada' when Calidad actually approved
                                         if (report.status === 'resolved' && !events.some(e => e.type === 'approved')) {
                                             events.push({
-                                                date: new Date(report.resolved_at || new Date()).toLocaleString('es-AR', {
+                                                date: report.resolved_at
+                                                    ? new Date(report.resolved_at).toLocaleString('es-AR', {
+                                                        timeZone: 'America/Argentina/Buenos_Aires',
+                                                        day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                                                    })
+                                                    : '',
+                                                message: "Resolución Finalizada",
+                                                type: 'resolved'
+                                            });
+                                        }
+
+                                        // Show 'Pendiente de Validación' for quality_validation status
+                                        if (report.status === 'quality_validation' && report.resolved_at) {
+                                            events.push({
+                                                date: new Date(report.resolved_at).toLocaleString('es-AR', {
                                                     timeZone: 'America/Argentina/Buenos_Aires',
                                                     day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
                                                 }),
-                                                message: "Resolución Finalizada",
-                                                type: 'resolved'
+                                                message: "🔍 Respuesta enviada — Pendiente de validación",
+                                                type: 'info'
                                             });
                                         }
 
