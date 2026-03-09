@@ -617,124 +617,122 @@ export const UserManagement = () => {
 
             {/* Create User Modal */}
             {isCreating && (
-                <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in" onClick={() => setIsCreating(false)}>
-                    <div className="flex items-center justify-center min-h-full p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
-                            <div className="flex justify-between items-center mb-6">
-                                <div>
-                                    <h2 className="text-xl font-bold text-slate-800">Crear Nuevo Usuario</h2>
-                                    <p className="text-xs text-slate-400 mt-1">Complete los datos del nuevo usuario</p>
-                                </div>
-                                <button onClick={() => setIsCreating(false)} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"><X className="w-5 h-5" /></button>
+                <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm animate-in fade-in flex items-center justify-center p-4" onClick={() => setIsCreating(false)}>
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h2 className="text-xl font-bold text-slate-800">Crear Nuevo Usuario</h2>
+                                <p className="text-xs text-slate-400 mt-1">Complete los datos del nuevo usuario</p>
                             </div>
+                            <button onClick={() => setIsCreating(false)} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"><X className="w-5 h-5" /></button>
+                        </div>
 
-                            <form onSubmit={handleCreateUser} className="space-y-4">
-                                {/* Name Row */}
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Nombre <span className="text-red-500">*</span></label>
-                                        <input
-                                            type="text"
-                                            required
-                                            placeholder="Ej: María"
-                                            value={newUserName}
-                                            onChange={e => setNewUserName(e.target.value)}
-                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Apellido <span className="text-red-500">*</span></label>
-                                        <input
-                                            type="text"
-                                            required
-                                            placeholder="Ej: González"
-                                            value={newUserLastName}
-                                            onChange={e => setNewUserLastName(e.target.value)}
-                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all"
-                                        />
-                                    </div>
-                                </div>
-
+                        <form onSubmit={handleCreateUser} className="space-y-4">
+                            {/* Name Row */}
+                            <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Email <span className="text-red-500">*</span></label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Nombre <span className="text-red-500">*</span></label>
                                     <input
-                                        type="email"
+                                        type="text"
                                         required
-                                        placeholder="usuario@sanatorioargentino.com"
-                                        value={newUserEmail}
-                                        onChange={e => setNewUserEmail(e.target.value)}
+                                        placeholder="Ej: María"
+                                        value={newUserName}
+                                        onChange={e => setNewUserName(e.target.value)}
                                         className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all"
                                     />
                                 </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
-                                        <input
-                                            type="text"
-                                            minLength={6}
-                                            value={newUserPassword}
-                                            onChange={e => setNewUserPassword(e.target.value)}
-                                            placeholder="123456"
-                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all font-mono text-sm"
-                                        />
-                                        <p className="text-[10px] text-slate-400 mt-1">Contraseña por defecto: 123456</p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
-                                        <div className="relative">
-                                            <Phone className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-                                            <input
-                                                type="tel"
-                                                placeholder="2645438114"
-                                                value={newUserPhone}
-                                                onChange={e => setNewUserPhone(e.target.value)}
-                                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all font-mono text-sm"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Rol Inicial</label>
-                                    <select
-                                        value={newUserRole}
-                                        onChange={(e: any) => setNewUserRole(e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none bg-white transition-all"
-                                    >
-                                        <option value="responsable">🛠️ Responsable</option>
-                                        <option value="admin">👑 Administrador</option>
-                                        <option value="directivo">🏥 Directivo</option>
-                                    </select>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Apellido <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="Ej: González"
+                                        value={newUserLastName}
+                                        onChange={e => setNewUserLastName(e.target.value)}
+                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all"
+                                    />
                                 </div>
+                            </div>
 
-                                <div className="flex gap-3 mt-6 pt-4 border-t border-slate-100">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsCreating(false)}
-                                        className="flex-1 py-2.5 px-4 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-medium transition-colors"
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={creatingLoading}
-                                        className="flex-1 btn-primary flex justify-center items-center gap-2"
-                                    >
-                                        {creatingLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserPlus className="w-5 h-5" />}
-                                        Crear Usuario
-                                    </button>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Email <span className="text-red-500">*</span></label>
+                                <input
+                                    type="email"
+                                    required
+                                    placeholder="usuario@sanatorioargentino.com"
+                                    value={newUserEmail}
+                                    onChange={e => setNewUserEmail(e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
+                                    <input
+                                        type="text"
+                                        minLength={6}
+                                        value={newUserPassword}
+                                        onChange={e => setNewUserPassword(e.target.value)}
+                                        placeholder="123456"
+                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all font-mono text-sm"
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-1">Contraseña por defecto: 123456</p>
                                 </div>
-                            </form>
-                        </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
+                                    <div className="relative">
+                                        <Phone className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                                        <input
+                                            type="tel"
+                                            placeholder="2645438114"
+                                            value={newUserPhone}
+                                            onChange={e => setNewUserPhone(e.target.value)}
+                                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none transition-all font-mono text-sm"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Rol Inicial</label>
+                                <select
+                                    value={newUserRole}
+                                    onChange={(e: any) => setNewUserRole(e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary outline-none bg-white transition-all"
+                                >
+                                    <option value="responsable">🛠️ Responsable</option>
+                                    <option value="admin">👑 Administrador</option>
+                                    <option value="directivo">🏥 Directivo</option>
+                                </select>
+                            </div>
+
+                            <div className="flex gap-3 mt-6 pt-4 border-t border-slate-100">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCreating(false)}
+                                    className="flex-1 py-2.5 px-4 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-medium transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={creatingLoading}
+                                    className="flex-1 btn-primary flex justify-center items-center gap-2"
+                                >
+                                    {creatingLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserPlus className="w-5 h-5" />}
+                                    Crear Usuario
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
 
             {/* Edit User Modal */}
-            {editingUser && (
-                <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in" onClick={() => { setEditingUser(null); setSectorSearchTerm(''); }}>
-                    <div className="flex items-center justify-center min-h-full p-4">
+            {
+                editingUser && (
+                    <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm animate-in fade-in flex items-center justify-center p-4" onClick={() => { setEditingUser(null); setSectorSearchTerm(''); }}>
                         <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
                             <div className="flex justify-between items-center mb-6">
                                 <div>
@@ -869,67 +867,69 @@ export const UserManagement = () => {
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Delete Confirmation Modal */}
-            {deletingUser && (
-                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm animate-in fade-in" onClick={() => setDeletingUser(null)}>
-                    <div className="flex items-center justify-center min-h-full p-4">
-                        <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
-                            <div className="p-8 text-center">
-                                <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center mx-auto mb-5">
-                                    <Trash2 className="w-8 h-8 text-red-500" />
+            {
+                deletingUser && (
+                    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm animate-in fade-in" onClick={() => setDeletingUser(null)}>
+                        <div className="flex items-center justify-center min-h-full p-4">
+                            <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                                <div className="p-8 text-center">
+                                    <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center mx-auto mb-5">
+                                        <Trash2 className="w-8 h-8 text-red-500" />
+                                    </div>
+
+                                    <h3 className="text-2xl font-display font-black text-slate-800 mb-3">
+                                        ¿Eliminar usuario?
+                                    </h3>
+
+                                    <p className="text-slate-500 font-medium leading-relaxed mb-2">
+                                        Estás a punto de eliminar a:
+                                    </p>
+                                    <p className="text-slate-800 font-bold text-lg mb-1">
+                                        {deletingUser.display_name || 'Sin Nombre'}
+                                    </p>
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${deletingUser.role === 'directivo' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                        'bg-green-50 text-green-700 border-green-200'
+                                        }`}>
+                                        {deletingUser.role === 'directivo' ? '🏥 Directivo' : '🛠️ Responsable'}
+                                    </span>
+
+                                    <p className="text-red-500 text-sm font-medium mt-4 mb-6">
+                                        ⚠️ Esta acción no se puede deshacer.
+                                    </p>
+
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={() => setDeletingUser(null)}
+                                            disabled={deletingLoading}
+                                            className="flex-1 py-3 px-4 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-bold transition-colors"
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            onClick={confirmDeleteUser}
+                                            disabled={deletingLoading}
+                                            className="flex-1 py-3 px-4 bg-red-500 hover:bg-red-600 active:scale-95 text-white rounded-xl font-bold transition-all shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                                        >
+                                            {deletingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                            Eliminar
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <h3 className="text-2xl font-display font-black text-slate-800 mb-3">
-                                    ¿Eliminar usuario?
-                                </h3>
-
-                                <p className="text-slate-500 font-medium leading-relaxed mb-2">
-                                    Estás a punto de eliminar a:
-                                </p>
-                                <p className="text-slate-800 font-bold text-lg mb-1">
-                                    {deletingUser.display_name || 'Sin Nombre'}
-                                </p>
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${deletingUser.role === 'directivo' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                    'bg-green-50 text-green-700 border-green-200'
-                                    }`}>
-                                    {deletingUser.role === 'directivo' ? '🏥 Directivo' : '🛠️ Responsable'}
-                                </span>
-
-                                <p className="text-red-500 text-sm font-medium mt-4 mb-6">
-                                    ⚠️ Esta acción no se puede deshacer.
-                                </p>
-
-                                <div className="flex gap-3">
-                                    <button
-                                        onClick={() => setDeletingUser(null)}
-                                        disabled={deletingLoading}
-                                        className="flex-1 py-3 px-4 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-bold transition-colors"
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        onClick={confirmDeleteUser}
-                                        disabled={deletingLoading}
-                                        className="flex-1 py-3 px-4 bg-red-500 hover:bg-red-600 active:scale-95 text-white rounded-xl font-bold transition-all shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
-                                    >
-                                        {deletingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                                        Eliminar
-                                    </button>
+                                <div className="bg-slate-50 p-3 text-center border-t border-slate-100">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                        Sanatorio Argentino
+                                    </p>
                                 </div>
-                            </div>
-
-                            <div className="bg-slate-50 p-3 text-center border-t border-slate-100">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                    Sanatorio Argentino
-                                </p>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Notification Modal */}
             <NotificationModal
@@ -939,6 +939,6 @@ export const UserManagement = () => {
                 title={notification.title}
                 message={notification.message}
             />
-        </div>
+        </div >
     );
 };
