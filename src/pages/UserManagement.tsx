@@ -617,7 +617,7 @@ export const UserManagement = () => {
 
             {/* Create User Modal */}
             {isCreating && (
-                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in" onClick={() => setIsCreating(false)}>
+                <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in" onClick={() => setIsCreating(false)}>
                     <div className="flex items-center justify-center min-h-full p-4">
                         <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
                             <div className="flex justify-between items-center mb-6">
@@ -733,7 +733,7 @@ export const UserManagement = () => {
 
             {/* Edit User Modal */}
             {editingUser && (
-                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in" onClick={() => { setEditingUser(null); setSectorSearchTerm(''); }}>
+                <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in" onClick={() => { setEditingUser(null); setSectorSearchTerm(''); }}>
                     <div className="flex items-center justify-center min-h-full p-4">
                         <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
                             <div className="flex justify-between items-center mb-6">

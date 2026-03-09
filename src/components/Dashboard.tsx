@@ -900,6 +900,7 @@ export const Dashboard = () => {
     const [sectorAssignmentsData, setSectorAssignmentsData] = useState<any[]>([]);
     const [loadingAssignments, setLoadingAssignments] = useState(true);
     const [expandedSector, setExpandedSector] = useState<string | null>(null);
+    const [expandedLogEntry, setExpandedLogEntry] = useState<number | null>(null);
     const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
 
     // Chat state
@@ -2507,7 +2508,7 @@ export const Dashboard = () => {
 
                                         {(() => {
                                             // Build events array from all sources
-                                            const events: { date: string; message: string; type: string }[] = [];
+                                            const events: { date: string; message: string; type: string; detail?: any }[] = [];
 
                                             // 1. Ticket Created
                                             events.push({
@@ -2516,7 +2517,13 @@ export const Dashboard = () => {
                                                     day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
                                                 }),
                                                 message: 'Ticket Creado',
-                                                type: 'start'
+                                                type: 'start',
+                                                detail: {
+                                                    content: selectedReport.content,
+                                                    ai_summary: selectedReport.ai_summary,
+                                                    evidence_urls: selectedReport.evidence_urls,
+                                                    reporter: selectedReport.reporter_name || selectedReport.reporter_email,
+                                                }
                                             });
 
                                             // 2. Parse Notes (each entry separated by \n\n)
@@ -2527,14 +2534,69 @@ export const Dashboard = () => {
                                                     if (match) {
                                                         const msg = match[2];
                                                         let type = 'info';
-                                                        if (msg.includes('📤 DERIVADO') || msg.includes('Derivado')) type = 'derivation';
-                                                        else if (msg.includes('🔴 RECHAZO DE ASIGNACIÓN')) type = 'rejection';
-                                                        else if (msg.includes('⚠️ RECHAZADO POR CALIDAD')) type = 'quality_return';
-                                                        else if (msg.includes('🔄 APELADO') || msg.includes('REABIERTO')) type = 'reopen';
-                                                        else if (msg.includes('✅ APROBADO POR CALIDAD')) type = 'approved';
+                                                        let detail: any = { rawNote: entry };
+                                                        if (msg.includes('📤 DERIVADO') || msg.includes('Derivado')) {
+                                                            type = 'derivation';
+                                                            // Try to find matching sector assignment
+                                                            const sectorMatch = msg.match(/→\s*(.+?)$/);
+                                                            if (sectorMatch) {
+                                                                const sectorName = sectorMatch[1].trim();
+                                                                const matchingAssignment = sectorAssignmentsData.find((a: any) => {
+                                                                    const label = SECTOR_OPTIONS.find(s => s.value === a.sector)?.label || a.sector;
+                                                                    return label === sectorName || a.sector === sectorName;
+                                                                });
+                                                                if (matchingAssignment) {
+                                                                    detail = { ...detail, assignment: matchingAssignment };
+                                                                }
+                                                            }
+                                                        }
+                                                        else if (msg.includes('⚠️ RECHAZADO POR CALIDAD')) {
+                                                            type = 'quality_return';
+                                                            // Find the matching resolution_history entry by proximity
+                                                            const rejectionTimestamp = match[1];
+                                                            const reasonMatch = msg.match(/RECHAZADO POR CALIDAD:\s*(.+)/);
+                                                            if (reasonMatch) {
+                                                                detail = { ...detail, rejectReason: reasonMatch[1].trim() };
+                                                            }
+                                                            // Try to find the matching history entry
+                                                            if (selectedReport.resolution_history) {
+                                                                const historyEntry = selectedReport.resolution_history.find((h: any) => {
+                                                                    const rejDate = new Date(h.rejected_at);
+                                                                    const noteDate = new Date(rejectionTimestamp);
+                                                                    return Math.abs(rejDate.getTime() - noteDate.getTime()) < 60000; // within 1 min
+                                                                });
+                                                                if (historyEntry) {
+                                                                    detail = { ...detail, historyEntry };
+                                                                }
+                                                            }
+                                                        }
+                                                        else if (msg.includes('🔴 RECHAZO DE ASIGNACIÓN')) {
+                                                            type = 'rejection';
+                                                            const reasonMatch = msg.match(/RECHAZO DE ASIGNACIÓN:\s*(.+)/);
+                                                            if (reasonMatch) {
+                                                                detail = { ...detail, rejectReason: reasonMatch[1].trim() };
+                                                            }
+                                                        }
+                                                        else if (msg.includes('🔄 APELADO') || msg.includes('REABIERTO')) {
+                                                            type = 'reopen';
+                                                            const reasonMatch = msg.match(/(?:APELADO\/REABIERTO|REABIERTO):\s*(.+)/);
+                                                            if (reasonMatch) {
+                                                                detail = { ...detail, reopenReason: reasonMatch[1].trim() };
+                                                            }
+                                                        }
+                                                        else if (msg.includes('✅ APROBADO POR CALIDAD')) {
+                                                            type = 'approved';
+                                                            detail = {
+                                                                ...detail,
+                                                                resolution_notes: selectedReport.resolution_notes,
+                                                                root_cause: selectedReport.root_cause,
+                                                                corrective_plan: selectedReport.corrective_plan,
+                                                                resolution_evidence_urls: selectedReport.resolution_evidence_urls,
+                                                            };
+                                                        }
                                                         else if (msg.includes('❌ ERROR')) type = 'error';
 
-                                                        events.push({ date: match[1], message: msg, type });
+                                                        events.push({ date: match[1], message: msg, type, detail });
                                                     } else {
                                                         // Legacy plain notes (no timestamp format)
                                                         events.push({ date: '', message: entry, type: 'note' });
@@ -2553,7 +2615,14 @@ export const Dashboard = () => {
                                                         })
                                                         : '',
                                                     message: 'Resolución Finalizada',
-                                                    type: 'resolved'
+                                                    type: 'resolved',
+                                                    detail: {
+                                                        resolution_notes: selectedReport.resolution_notes,
+                                                        root_cause: selectedReport.root_cause,
+                                                        corrective_plan: selectedReport.corrective_plan,
+                                                        resolution_evidence_urls: selectedReport.resolution_evidence_urls,
+                                                        assigned_to: selectedReport.assigned_to,
+                                                    }
                                                 });
                                             }
 
@@ -2565,7 +2634,13 @@ export const Dashboard = () => {
                                                         day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
                                                     }),
                                                     message: '🔍 Respuesta enviada — Pendiente de validación de Calidad',
-                                                    type: 'info'
+                                                    type: 'info',
+                                                    detail: {
+                                                        resolution_notes: selectedReport.resolution_notes,
+                                                        root_cause: selectedReport.root_cause,
+                                                        corrective_plan: selectedReport.corrective_plan,
+                                                        resolution_evidence_urls: selectedReport.resolution_evidence_urls,
+                                                    }
                                                 });
                                             }
 
@@ -2596,19 +2671,221 @@ export const Dashboard = () => {
                                                 note: 'text-gray-600 italic'
                                             };
 
-                                            return events.map((event, idx) => (
-                                                <div key={idx} className="flex gap-3 relative pb-4 pl-4 last:pb-0">
-                                                    <div className={`absolute left-0 top-1 w-2.5 h-2.5 rounded-full ${dotColor[event.type] || 'bg-gray-300'} ring-4 ring-white z-10`}></div>
-                                                    <div className="min-w-0">
-                                                        {event.date && (
-                                                            <p className="text-xs text-gray-400 font-mono mb-0.5 truncate">{event.date}</p>
-                                                        )}
-                                                        <p className={`text-sm ${textColor[event.type] || 'text-gray-600'}`}>
-                                                            {event.message}
-                                                        </p>
+                                            // Determine which events have expandable detail
+                                            const expandableTypes = ['start', 'derivation', 'quality_return', 'rejection', 'reopen', 'approved', 'resolved', 'info'];
+
+                                            return events.map((event, idx) => {
+                                                const hasDetail = expandableTypes.includes(event.type) && event.detail;
+                                                const isExpanded = expandedLogEntry === idx;
+
+                                                return (
+                                                    <div key={idx} className="relative pb-4 pl-4 last:pb-0">
+                                                        <div className={`absolute left-0 top-1 w-2.5 h-2.5 rounded-full ${dotColor[event.type] || 'bg-gray-300'} ring-4 ring-white z-10`}></div>
+                                                        <div
+                                                            className={`min-w-0 ml-3 ${hasDetail ? 'cursor-pointer group' : ''}`}
+                                                            onClick={() => {
+                                                                if (hasDetail) {
+                                                                    setExpandedLogEntry(isExpanded ? null : idx);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="flex-1 min-w-0">
+                                                                    {event.date && (
+                                                                        <p className="text-xs text-gray-400 font-mono mb-0.5 truncate">{event.date}</p>
+                                                                    )}
+                                                                    <p className={`text-sm ${textColor[event.type] || 'text-gray-600'}`}>
+                                                                        {event.message}
+                                                                    </p>
+                                                                </div>
+                                                                {hasDetail && (
+                                                                    <ChevronDown className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''} group-hover:text-gray-600`} />
+                                                                )}
+                                                            </div>
+
+                                                            {/* Expanded Detail Panel */}
+                                                            {isExpanded && event.detail && (
+                                                                <div className="mt-2 p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-2 text-xs animate-in fade-in slide-in-from-top-2 duration-200" onClick={e => e.stopPropagation()}>
+
+                                                                    {/* For START: show original report content & evidence */}
+                                                                    {event.type === 'start' && (
+                                                                        <>
+                                                                            {event.detail.reporter && (
+                                                                                <div className="flex items-center gap-1.5 text-gray-500">
+                                                                                    <UserCog className="w-3 h-3" />
+                                                                                    <span className="font-bold">Reportante:</span> {event.detail.reporter}
+                                                                                </div>
+                                                                            )}
+                                                                            {event.detail.ai_summary && (
+                                                                                <div>
+                                                                                    <span className="font-bold text-purple-600">Resumen IA:</span>
+                                                                                    <p className="text-gray-600 mt-0.5">{event.detail.ai_summary}</p>
+                                                                                </div>
+                                                                            )}
+                                                                            {event.detail.content && (
+                                                                                <div>
+                                                                                    <span className="font-bold text-gray-700">Contenido Original:</span>
+                                                                                    <p className="text-gray-500 mt-0.5 line-clamp-4">{event.detail.content}</p>
+                                                                                </div>
+                                                                            )}
+                                                                            {event.detail.evidence_urls && event.detail.evidence_urls.length > 0 && (
+                                                                                <div>
+                                                                                    <span className="font-bold text-gray-600">Evidencia ({event.detail.evidence_urls.length}):</span>
+                                                                                    <div className="flex gap-1.5 mt-1 overflow-x-auto pb-1">
+                                                                                        {event.detail.evidence_urls.map((url: string, i: number) => (
+                                                                                            <a key={i} href={url} target="_blank" className="w-12 h-12 rounded-lg bg-gray-200 bg-cover bg-center border border-gray-300 flex-shrink-0 hover:ring-2 ring-blue-400 transition-all cursor-zoom-in" style={{ backgroundImage: `url(${url})` }} />
+                                                                                        ))}
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        </>
+                                                                    )}
+
+                                                                    {/* For DERIVATION: show assignment details */}
+                                                                    {event.type === 'derivation' && event.detail.assignment && (() => {
+                                                                        const a = event.detail.assignment;
+                                                                        const sLabel = SECTOR_OPTIONS.find(s => s.value === a.sector)?.label || a.sector;
+                                                                        return (
+                                                                            <>
+                                                                                <div className="flex items-center gap-1.5 text-blue-700">
+                                                                                    <Send className="w-3 h-3" />
+                                                                                    <span className="font-bold">Sector:</span> {sLabel}
+                                                                                </div>
+                                                                                <div className="flex items-center gap-1.5 text-gray-500">
+                                                                                    <Phone className="w-3 h-3" />
+                                                                                    <span className="font-bold">Teléfono:</span> {a.assigned_phone || 'N/A'}
+                                                                                </div>
+                                                                                <div className="flex items-center gap-1.5 text-gray-500">
+                                                                                    <span className="font-bold">Estado Actual:</span>
+                                                                                    <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${a.status === 'resolved' ? 'bg-green-100 text-green-700' :
+                                                                                            a.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                                                                                a.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                                                                                    'bg-gray-100 text-gray-600'
+                                                                                        }`}>{a.status}</span>
+                                                                                </div>
+                                                                                {a.immediate_action && (
+                                                                                    <div className="bg-green-50 p-2 rounded-lg border border-green-100">
+                                                                                        <span className="font-bold text-green-700">Acción Inmediata:</span>
+                                                                                        <p className="text-gray-600 mt-0.5">{a.immediate_action}</p>
+                                                                                    </div>
+                                                                                )}
+                                                                                {a.resolution_evidence_urls && a.resolution_evidence_urls.length > 0 && (
+                                                                                    <div>
+                                                                                        <span className="font-bold text-gray-600">Evidencia de Resolución:</span>
+                                                                                        <div className="flex gap-1.5 mt-1 overflow-x-auto pb-1">
+                                                                                            {a.resolution_evidence_urls.map((url: string, i: number) => (
+                                                                                                <a key={i} href={url} target="_blank" className="w-12 h-12 rounded-lg bg-gray-200 bg-cover bg-center border border-gray-300 flex-shrink-0 hover:ring-2 ring-blue-400 transition-all cursor-zoom-in" style={{ backgroundImage: `url(${url})` }} />
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+                                                                            </>
+                                                                        );
+                                                                    })()}
+
+                                                                    {/* For QUALITY_RETURN: show what was rejected and why */}
+                                                                    {event.type === 'quality_return' && (
+                                                                        <>
+                                                                            {event.detail.rejectReason && (
+                                                                                <div className="bg-orange-50 p-2 rounded-lg border border-orange-100">
+                                                                                    <span className="font-bold text-orange-700">Motivo del Rechazo:</span>
+                                                                                    <p className="text-orange-600 mt-0.5">{event.detail.rejectReason}</p>
+                                                                                </div>
+                                                                            )}
+                                                                            {event.detail.historyEntry && (
+                                                                                <div className="space-y-1.5 bg-white p-2 rounded-lg border border-gray-100">
+                                                                                    <span className="font-bold text-gray-600">Solución Rechazada:</span>
+                                                                                    {event.detail.historyEntry.previous_data?.immediate_action && (
+                                                                                        <p className="text-gray-400 line-through">
+                                                                                            <span className="font-bold text-gray-500 no-underline">Acción:</span> {event.detail.historyEntry.previous_data.immediate_action}
+                                                                                        </p>
+                                                                                    )}
+                                                                                    {event.detail.historyEntry.previous_data?.root_cause && (
+                                                                                        <p className="text-gray-400 line-through">
+                                                                                            <span className="font-bold text-gray-500 no-underline">RCA:</span> {event.detail.historyEntry.previous_data.root_cause}
+                                                                                        </p>
+                                                                                    )}
+                                                                                    {event.detail.historyEntry.previous_data?.corrective_plan && (
+                                                                                        <p className="text-gray-400 line-through">
+                                                                                            <span className="font-bold text-gray-500 no-underline">Plan:</span> {event.detail.historyEntry.previous_data.corrective_plan}
+                                                                                        </p>
+                                                                                    )}
+                                                                                    {event.detail.historyEntry.previous_data?.resolution_evidence_urls && event.detail.historyEntry.previous_data.resolution_evidence_urls.length > 0 && (
+                                                                                        <div>
+                                                                                            <span className="font-bold text-gray-500">Evidencia:</span>
+                                                                                            <div className="flex gap-1.5 mt-1 overflow-x-auto pb-1">
+                                                                                                {event.detail.historyEntry.previous_data.resolution_evidence_urls.map((url: string, i: number) => (
+                                                                                                    <a key={i} href={url} target="_blank" className="w-12 h-12 rounded-lg bg-gray-200 bg-cover bg-center border border-gray-300 flex-shrink-0 hover:ring-2 ring-orange-400 transition-all cursor-zoom-in opacity-60" style={{ backgroundImage: `url(${url})` }} />
+                                                                                                ))}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
+                                                                        </>
+                                                                    )}
+
+                                                                    {/* For REJECTION: show reason */}
+                                                                    {event.type === 'rejection' && event.detail.rejectReason && (
+                                                                        <div className="bg-red-50 p-2 rounded-lg border border-red-100">
+                                                                            <span className="font-bold text-red-700">Motivo:</span>
+                                                                            <p className="text-red-600 mt-0.5">{event.detail.rejectReason}</p>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* For REOPEN: show reason */}
+                                                                    {event.type === 'reopen' && event.detail.reopenReason && (
+                                                                        <div className="bg-amber-50 p-2 rounded-lg border border-amber-100">
+                                                                            <span className="font-bold text-amber-700">Motivo de Reapertura:</span>
+                                                                            <p className="text-amber-600 mt-0.5">{event.detail.reopenReason}</p>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* For APPROVED / RESOLVED / INFO with resolution data: show full resolution */}
+                                                                    {(event.type === 'approved' || event.type === 'resolved' || event.type === 'info') && (event.detail.resolution_notes || event.detail.root_cause || event.detail.corrective_plan) && (
+                                                                        <div className="space-y-1.5">
+                                                                            {event.detail.assigned_to && (
+                                                                                <div className="flex items-center gap-1.5 text-gray-500">
+                                                                                    <UserCog className="w-3 h-3" />
+                                                                                    <span className="font-bold">Resuelto por:</span> {event.detail.assigned_to}
+                                                                                </div>
+                                                                            )}
+                                                                            {event.detail.resolution_notes && (
+                                                                                <div className="bg-blue-50 p-2 rounded-lg border border-blue-100">
+                                                                                    <span className="font-bold text-blue-700">Acción Inmediata:</span>
+                                                                                    <p className="text-gray-600 mt-0.5">{event.detail.resolution_notes}</p>
+                                                                                </div>
+                                                                            )}
+                                                                            {event.detail.root_cause && (
+                                                                                <div className="bg-amber-50 p-2 rounded-lg border border-amber-100">
+                                                                                    <span className="font-bold text-amber-700">Causa Raíz:</span>
+                                                                                    <p className="text-gray-600 mt-0.5">{event.detail.root_cause}</p>
+                                                                                </div>
+                                                                            )}
+                                                                            {event.detail.corrective_plan && (
+                                                                                <div className="bg-green-50 p-2 rounded-lg border border-green-100">
+                                                                                    <span className="font-bold text-green-700">Plan de Acción:</span>
+                                                                                    <p className="text-gray-600 mt-0.5">{event.detail.corrective_plan}</p>
+                                                                                </div>
+                                                                            )}
+                                                                            {event.detail.resolution_evidence_urls && event.detail.resolution_evidence_urls.length > 0 && (
+                                                                                <div>
+                                                                                    <span className="font-bold text-gray-600">Evidencia:</span>
+                                                                                    <div className="flex gap-1.5 mt-1 overflow-x-auto pb-1">
+                                                                                        {event.detail.resolution_evidence_urls.map((url: string, i: number) => (
+                                                                                            <a key={i} href={url} target="_blank" className="w-12 h-12 rounded-lg bg-gray-200 bg-cover bg-center border border-gray-300 flex-shrink-0 hover:ring-2 ring-green-400 transition-all cursor-zoom-in" style={{ backgroundImage: `url(${url})` }} />
+                                                                                        ))}
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ));
+                                                );
+                                            });
                                         })()}
                                     </div>
                                 </div>
@@ -3010,21 +3287,138 @@ export const Dashboard = () => {
                                         }
 
                                         return (
-                                            // VISTA ESPERANDO RESPUESTA
-                                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 text-center">
-                                                <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-3" />
-                                                <h4 className="font-bold text-blue-900">Esperando Resolución</h4>
-                                                <p className="text-sm text-blue-700 mt-1 mb-4">
-                                                    La solicitud ha sido enviada al responsable. <br />
-                                                    El sistema te notificará cuando haya respuesta.
-                                                </p>
-                                                {isAdmin && (
-                                                    <button
-                                                        onClick={() => setShowReferralModal(true)}
-                                                        className="text-xs font-bold text-blue-600 hover:underline"
-                                                    >
-                                                        Reenviar Solicitud
-                                                    </button>
+                                            // VISTA ESPERANDO RESPUESTA — con historial de soluciones rechazadas
+                                            <div className="space-y-4">
+                                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 text-center">
+                                                    <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-3" />
+                                                    <h4 className="font-bold text-blue-900">Esperando Resolución</h4>
+                                                    <p className="text-sm text-blue-700 mt-1 mb-4">
+                                                        La solicitud ha sido enviada al responsable. <br />
+                                                        El sistema te notificará cuando haya respuesta.
+                                                    </p>
+                                                    {isAdmin && (
+                                                        <button
+                                                            onClick={() => setShowReferralModal(true)}
+                                                            className="text-xs font-bold text-blue-600 hover:underline"
+                                                        >
+                                                            Reenviar Solicitud
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                {/* Historial de Soluciones Rechazadas (resolution_history) */}
+                                                {selectedReport.resolution_history && selectedReport.resolution_history.length > 0 && (
+                                                    <div className="bg-red-50 rounded-2xl p-5 border border-red-100">
+                                                        <h4 className="text-sm font-bold text-red-800 flex items-center gap-2 mb-3">
+                                                            <AlertTriangle className="w-4 h-4" />
+                                                            Historial de Soluciones Rechazadas ({selectedReport.resolution_history.length})
+                                                        </h4>
+                                                        <div className="space-y-3">
+                                                            {selectedReport.resolution_history.map((entry: any, index: number) => (
+                                                                <div key={index} className="bg-white rounded-xl p-4 border border-red-100 shadow-sm relative overflow-hidden">
+                                                                    <div className="absolute top-0 left-0 w-1 h-full bg-red-200"></div>
+
+                                                                    <div className="flex justify-between items-start mb-2">
+                                                                        <div>
+                                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                                                                Rechazado el {new Date(entry.rejected_at).toLocaleString('es-AR')}
+                                                                            </span>
+                                                                            <p className="text-xs font-bold text-red-600 mt-1">
+                                                                                Motivo: "{entry.reject_reason}"
+                                                                            </p>
+                                                                        </div>
+                                                                        <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-bold rounded-full shrink-0">
+                                                                            Intento #{index + 1}
+                                                                        </span>
+                                                                    </div>
+
+                                                                    <div className="space-y-2 text-xs text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                                        {entry.previous_data?.immediate_action && (
+                                                                            <div>
+                                                                                <span className="font-bold text-blue-700 block mb-0.5">Acción Inmediata Propuesta:</span>
+                                                                                <span className="line-through text-gray-400">{entry.previous_data.immediate_action}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {entry.previous_data?.resolution_notes && (
+                                                                            <div>
+                                                                                <span className="font-bold text-gray-700 block mb-0.5">Notas de Resolución:</span>
+                                                                                <span className="line-through text-gray-400">{entry.previous_data.resolution_notes}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {entry.previous_data?.root_cause && (
+                                                                            <div>
+                                                                                <span className="font-bold text-amber-700 block mb-0.5">Causa Raíz (RCA):</span>
+                                                                                <span className="line-through text-gray-400">{entry.previous_data.root_cause}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {entry.previous_data?.corrective_plan && (
+                                                                            <div>
+                                                                                <span className="font-bold text-green-700 block mb-0.5">Plan de Acción:</span>
+                                                                                <span className="line-through text-gray-400">{entry.previous_data.corrective_plan}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {entry.previous_data?.resolution_evidence_urls && entry.previous_data.resolution_evidence_urls.length > 0 && (
+                                                                            <div>
+                                                                                <span className="font-bold text-gray-600 block mb-1">Evidencia Adjunta:</span>
+                                                                                <div className="flex gap-2 overflow-x-auto pb-1">
+                                                                                    {entry.previous_data.resolution_evidence_urls.map((url: string, i: number) => (
+                                                                                        <a
+                                                                                            key={i}
+                                                                                            href={url}
+                                                                                            target="_blank"
+                                                                                            className="w-12 h-12 rounded-lg bg-gray-100 bg-cover bg-center border border-gray-200 flex-shrink-0 hover:ring-2 ring-red-400 transition-all cursor-zoom-in opacity-60"
+                                                                                            style={{ backgroundImage: `url(${url})` }}
+                                                                                        />
+                                                                                    ))}
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Sector Assignments that were rejected */}
+                                                {sectorAssignmentsData.filter(a => a.status === 'rejected').length > 0 && (
+                                                    <div className="bg-orange-50 rounded-2xl p-5 border border-orange-100">
+                                                        <h4 className="text-sm font-bold text-orange-800 flex items-center gap-2 mb-3">
+                                                            <XCircle className="w-4 h-4" />
+                                                            Rondas Rechazadas por Calidad
+                                                        </h4>
+                                                        <div className="space-y-2">
+                                                            {sectorAssignmentsData
+                                                                .filter(a => a.status === 'rejected')
+                                                                .map((assignment: any, idx: number) => {
+                                                                    const sectorLabel = SECTOR_OPTIONS.find(s => s.value === assignment.sector)?.label || assignment.sector;
+                                                                    return (
+                                                                        <div key={assignment.id} className="bg-white rounded-xl p-3 border border-orange-100 shadow-sm">
+                                                                            <div className="flex items-center justify-between mb-1.5">
+                                                                                <span className="text-xs font-bold text-orange-700">
+                                                                                    ❌ {sectorLabel} — Ronda {idx + 1}
+                                                                                </span>
+                                                                                {assignment.resolved_at && (
+                                                                                    <span className="text-[10px] text-gray-400 font-mono">
+                                                                                        {new Date(assignment.resolved_at).toLocaleString('es-AR')}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                            {assignment.notes && (
+                                                                                <p className="text-xs text-red-600 bg-red-50 p-2 rounded-lg border border-red-100">
+                                                                                    <span className="font-bold">Motivo:</span> {assignment.notes}
+                                                                                </p>
+                                                                            )}
+                                                                            {assignment.immediate_action && (
+                                                                                <p className="text-xs text-gray-400 line-through mt-1">
+                                                                                    Acción rechazada: {assignment.immediate_action}
+                                                                                </p>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                        </div>
+                                                    </div>
                                                 )}
                                             </div>
                                         );

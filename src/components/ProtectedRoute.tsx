@@ -1,13 +1,13 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Loader2, ShieldAlert } from 'lucide-react';
+import { Loader2, ShieldAlert, MapPin } from 'lucide-react';
 
 interface ProtectedRouteProps {
     allowedRoles?: string[];
 }
 
 export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
-    const { session, role, loading, needsOnboarding, isApproved } = useAuth();
+    const { session, role, loading, needsOnboarding, isApproved, sectors } = useAuth();
 
     // Wait for auth to fully resolve (session + profile)
     if (loading) {
@@ -41,6 +41,35 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
     // User is pending approval or rejected
     if (!isApproved && role !== 'admin') {
         return <Navigate to="/pendiente" replace />;
+    }
+
+    // No sectors assigned = cannot access protected routes (admins exempt)
+    if (role !== 'admin' && (!sectors || sectors.length === 0)) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center animate-in fade-in">
+                <div className="bg-amber-50 p-8 rounded-2xl border border-amber-200 max-w-md shadow-lg">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-5">
+                        <MapPin className="w-8 h-8 text-amber-500" />
+                    </div>
+                    <h2 className="text-xl font-display font-bold text-amber-800 mb-3">Sin Sectores Asignados</h2>
+                    <p className="text-sm text-amber-700 leading-relaxed mb-4">
+                        Tu cuenta no tiene ningún sector asignado. Para acceder al sistema, primero debes
+                        configurar los sectores bajo tu responsabilidad.
+                    </p>
+                    <div className="space-y-3">
+                        <a
+                            href="/perfil"
+                            className="block w-full py-3 px-4 bg-sanatorio-primary text-white font-bold rounded-xl hover:bg-sanatorio-primary/90 transition-all shadow-lg shadow-sanatorio-primary/20 text-sm"
+                        >
+                            Configurar Mis Sectores
+                        </a>
+                        <p className="text-xs text-amber-600 font-medium">
+                            Si necesitas ayuda, contactá al Departamento de Calidad.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     // Role-based access check
