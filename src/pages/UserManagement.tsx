@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../utils/supabase';
 import { useAuth, type UserProfile } from '../contexts/AuthContext';
 import { SECTOR_OPTIONS } from '../constants/sectors';
@@ -616,7 +617,7 @@ export const UserManagement = () => {
             )}
 
             {/* Create User Modal */}
-            {isCreating && (
+            {isCreating && createPortal(
                 <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm animate-in fade-in flex items-center justify-center p-4" onClick={() => setIsCreating(false)}>
                     <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-6">
@@ -727,11 +728,11 @@ export const UserManagement = () => {
                         </form>
                     </div>
                 </div>
-            )}
+                , document.body)}
 
             {/* Edit User Modal */}
             {
-                editingUser && (
+                editingUser && createPortal(
                     <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm animate-in fade-in flex items-center justify-center p-4" onClick={() => { setEditingUser(null); setSectorSearchTerm(''); }}>
                         <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
                             <div className="flex justify-between items-center mb-6">
@@ -867,7 +868,7 @@ export const UserManagement = () => {
                             </div>
                         </div>
                     </div>
-                )
+                    , document.body)
             }
 
             {/* Delete Confirmation Modal */}
