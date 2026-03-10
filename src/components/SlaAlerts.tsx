@@ -22,27 +22,27 @@ interface Props {
 
 interface SlaAlert {
     report: Report;
-    hoursElapsed: number;
+    daysElapsed: number;
     level: 'critical' | 'warning' | 'ok';
     message: string;
 }
 
 const SLA_THRESHOLDS = {
-    critical_case: 24,   // Rojo -> 24hs max
-    normal_case: 48,     // Verde/Amarillo -> 48hs max
-    warning_buffer: 12,  // Alert 12hs before deadline
+    critical_case: 1,    // Rojo -> 1 día max
+    normal_case: 2,      // Verde/Amarillo -> 2 días max
+    warning_buffer: 0.5, // Alert 0.5 días before deadline
 };
 
-export const getSlaLevel = (report: Report): { level: 'critical' | 'warning' | 'ok'; hoursElapsed: number } => {
+export const getSlaLevel = (report: Report): { level: 'critical' | 'warning' | 'ok'; daysElapsed: number } => {
     if (report.status === 'resolved' || report.status === 'cancelled') {
-        return { level: 'ok', hoursElapsed: 0 };
+        return { level: 'ok', daysElapsed: 0 };
     }
-    const hoursElapsed = (Date.now() - new Date(report.created_at).getTime()) / (1000 * 60 * 60);
+    const daysElapsed = (Date.now() - new Date(report.created_at).getTime()) / (1000 * 60 * 60 * 24);
     const threshold = report.ai_urgency === 'Rojo' ? SLA_THRESHOLDS.critical_case : SLA_THRESHOLDS.normal_case;
 
-    if (hoursElapsed > threshold) return { level: 'critical', hoursElapsed };
-    if (hoursElapsed > threshold - SLA_THRESHOLDS.warning_buffer) return { level: 'warning', hoursElapsed };
-    return { level: 'ok', hoursElapsed };
+    if (daysElapsed > threshold) return { level: 'critical', daysElapsed };
+    if (daysElapsed > threshold - SLA_THRESHOLDS.warning_buffer) return { level: 'warning', daysElapsed };
+    return { level: 'ok', daysElapsed };
 };
 
 export const SlaAlertBanner = ({ reports, onResendWhatsApp }: Props) => {
@@ -54,22 +54,24 @@ export const SlaAlertBanner = ({ reports, onResendWhatsApp }: Props) => {
         const result: SlaAlert[] = [];
         reports.forEach(report => {
             if (report.status === 'resolved' || report.status === 'cancelled') return;
-            const { level, hoursElapsed } = getSlaLevel(report);
+            const { level, daysElapsed } = getSlaLevel(report);
             if (level === 'ok') return;
             const threshold = report.ai_urgency === 'Rojo' ? SLA_THRESHOLDS.critical_case : SLA_THRESHOLDS.normal_case;
+            const diffDays = Math.abs(daysElapsed - threshold);
+            const displayValue = diffDays < 1 ? `${Math.round(diffDays * 24)}hs` : `${Math.round(diffDays)} día${Math.round(diffDays) !== 1 ? 's' : ''}`;
             result.push({
                 report,
-                hoursElapsed,
+                daysElapsed,
                 level,
                 message: level === 'critical'
-                    ? `${Math.round(hoursElapsed - threshold)}hs fuera de plazo`
-                    : `${Math.round(threshold - hoursElapsed)}hs para vencer plazo`
+                    ? `${displayValue} fuera de plazo`
+                    : `${displayValue} para vencer plazo`
             });
         });
         return result.sort((a, b) => {
             if (a.level === 'critical' && b.level !== 'critical') return -1;
             if (a.level !== 'critical' && b.level === 'critical') return 1;
-            return b.hoursElapsed - a.hoursElapsed;
+            return b.daysElapsed - a.daysElapsed;
         });
     }, [reports]);
 
@@ -142,18 +144,18 @@ export const SlaAlertBanner = ({ reports, onResendWhatsApp }: Props) => {
                     <div className="grid grid-cols-3 gap-2 mt-2">
                         <div className="bg-red-50 p-2 rounded-lg text-center">
                             <p className="font-black text-red-600">🔴 Crítico</p>
-                            <p className="text-red-700 font-bold">24 horas máx.</p>
+                            <p className="text-red-700 font-bold">1 día máx.</p>
                         </div>
                         <div className="bg-amber-50 p-2 rounded-lg text-center">
                             <p className="font-black text-amber-600">🟡 Medio</p>
-                            <p className="text-amber-700 font-bold">48 horas máx.</p>
+                            <p className="text-amber-700 font-bold">2 días máx.</p>
                         </div>
                         <div className="bg-green-50 p-2 rounded-lg text-center">
                             <p className="font-black text-green-600">🟢 Leve</p>
-                            <p className="text-green-700 font-bold">48 horas máx.</p>
+                            <p className="text-green-700 font-bold">2 días máx.</p>
                         </div>
                     </div>
-                    <p className="mt-2"><strong>"Xhs fuera de plazo"</strong> = horas que pasaron desde que venció el tiempo límite. <strong>"Xhs para vencer plazo"</strong> = horas que quedan antes de que venza el tiempo de respuesta.</p>
+                    <p className="mt-2"><strong>"X días fuera de plazo"</strong> = días que pasaron desde que venció el tiempo límite. <strong>"X días para vencer plazo"</strong> = días que quedan antes de que venza el tiempo de respuesta.</p>
                 </div>
             )}
 
@@ -203,7 +205,7 @@ export const SlaAlertBanner = ({ reports, onResendWhatsApp }: Props) => {
 
 // Small badge for table rows
 export const SlaBadge = ({ report }: { report: Report }) => {
-    const { level, hoursElapsed } = getSlaLevel(report);
+    const { level, daysElapsed } = getSlaLevel(report);
 
     if (report.status === 'resolved' || report.status === 'cancelled') {
         return <CheckCircle2 className="w-4 h-4 text-green-400" />;
@@ -215,9 +217,11 @@ export const SlaBadge = ({ report }: { report: Report }) => {
         critical: 'bg-red-100 text-red-700 animate-pulse',
     };
 
+    const displayValue = daysElapsed < 1 ? `${Math.round(daysElapsed * 24)}h` : `${Math.round(daysElapsed)}d`;
+
     return (
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${colors[level]}`}>
-            {level === 'ok' ? '✓ OK' : `${Math.round(hoursElapsed)}h`}
+            {level === 'ok' ? '✓ OK' : displayValue}
         </span>
     );
 };

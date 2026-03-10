@@ -16,9 +16,12 @@ export default defineConfig({
         'Samsung >= 9.2',    // Samsung Internet on older Galaxy devices
         'ChromeAndroid >= 64',
       ],
-      // Generate legacy chunks with polyfills
-      renderLegacyChunks: true,
-      // Polyfills for older browsers
+      // IMPORTANT: renderLegacyChunks must be false.
+      // When true, the plugin injects SystemJS detection scripts in <head>
+      // that reference elements in <body> before they exist, causing:
+      // "NotFoundError: Failed to execute 'insertBefore' on 'Node'"
+      renderLegacyChunks: false,
+      // Keep modern polyfills for feature-filling (Promise.allSettled, etc.)
       modernPolyfills: true,
     }),
   ],

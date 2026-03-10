@@ -37,7 +37,7 @@ export const MetricsDashboard = () => {
         resolved: 0,
         pending: 0,
         urgentCount: 0,
-        avgResolutionTimeHours: 0,
+        avgResolutionTimeDays: 0,
         bySector: [] as { sector: string; count: number; percentage: number }[],
         byUrgency: { Verdes: 0, Amarillos: 0, Rojos: 0 },
         byStatus: { resolved: 0, pending: 0, waiting: 0, cancelled: 0 },
@@ -162,8 +162,8 @@ export const MetricsDashboard = () => {
                 resolvedCountWithDates++;
             }
         });
-        const avgHours = resolvedCountWithDates > 0
-            ? (totalTimeMs / resolvedCountWithDates / (1000 * 60 * 60)).toFixed(1)
+        const avgDays = resolvedCountWithDates > 0
+            ? (totalTimeMs / resolvedCountWithDates / (1000 * 60 * 60 * 24)).toFixed(1)
             : 0;
 
         // By Sector
@@ -211,7 +211,7 @@ export const MetricsDashboard = () => {
             resolved: resolved.length,
             pending: pending.length,
             urgentCount: urgent.length,
-            avgResolutionTimeHours: Number(avgHours),
+            avgResolutionTimeDays: Number(avgDays),
             bySector,
             byUrgency,
             byStatus,
@@ -451,7 +451,7 @@ export const MetricsDashboard = () => {
                         ['Casos Resueltos', stats.resolved.toString(), '✅'],
                         ['Tasa de Resolución', `${stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}%`, stats.total > 0 && (stats.resolved / stats.total) >= 0.7 ? '🟢' : '🟡'],
                         ['Alertas Críticas (Rojo)', stats.urgentCount.toString(), stats.urgentCount > 0 ? '🔴' : '🟢'],
-                        ['Tiempo Promedio Resolución', `${stats.avgResolutionTimeHours} hs`, Number(stats.avgResolutionTimeHours) <= 48 ? '🟢' : '🟡'],
+                        ['Tiempo Promedio Resolución', `${stats.avgResolutionTimeDays} días`, Number(stats.avgResolutionTimeDays) <= 2 ? '🟢' : '🟡'],
                         ['Casos Pendientes', stats.pending.toString(), stats.pending > 5 ? '🟡' : '🟢'],
                     ],
                     theme: 'striped',
@@ -556,7 +556,7 @@ export const MetricsDashboard = () => {
                         ['Tasa de Resolución', `${stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}%`],
                         ['Casos Pendientes de Resolución', stats.pending.toString()],
                         ['Alertas Críticas', stats.urgentCount.toString()],
-                        ['Tiempo Promedio de Respuesta', `${stats.avgResolutionTimeHours} hs`],
+                        ['Tiempo Promedio de Respuesta', `${stats.avgResolutionTimeDays} días`],
                         ['Sectores Asignados', userSectors.join(', ') || 'Ninguno'],
                     ],
                     theme: 'striped',
@@ -623,7 +623,7 @@ export const MetricsDashboard = () => {
                     { label: 'TOTAL HALLAZGOS', value: stats.total.toString(), color: primaryColor },
                     { label: 'TASA DE RESOLUCIÓN', value: `${stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}%`, color: secondaryColor },
                     { label: 'ALERTAS CRÍTICAS', value: stats.urgentCount.toString(), color: [239, 68, 68] as [number, number, number] },
-                    { label: 'TIEMPO PROMEDIO', value: `${stats.avgResolutionTimeHours}h`, color: [99, 102, 241] as [number, number, number] },
+                    { label: 'TIEMPO PROMEDIO', value: `${stats.avgResolutionTimeDays}d`, color: [99, 102, 241] as [number, number, number] },
                 ];
 
                 kpis.forEach((kpi, i) => {
@@ -819,7 +819,7 @@ export const MetricsDashboard = () => {
                         <Clock className="w-24 h-24 text-purple-600" />
                     </div>
                     <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Tiempo Promedio</p>
-                    <p className="text-4xl font-black text-gray-800 mt-2">{stats.avgResolutionTimeHours}h</p>
+                    <p className="text-4xl font-black text-gray-800 mt-2">{stats.avgResolutionTimeDays}d</p>
                     <p className="text-xs text-gray-400 mt-2">Desde reporte hasta cierre</p>
                 </div>
 
@@ -1510,8 +1510,8 @@ export const MetricsDashboard = () => {
                     <div className="bg-white/10 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
                         <p className="text-[#00D1FF] text-xs font-bold uppercase mb-1 tracking-widest">Eficiencia de Respuesta</p>
                         <p className="font-medium text-sm text-gray-100">
-                            El tiempo promedio de resolución es de {stats.avgResolutionTimeHours} horas.
-                            {stats.avgResolutionTimeHours > 24
+                            El tiempo promedio de resolución es de {stats.avgResolutionTimeDays} días.
+                            {stats.avgResolutionTimeDays > 2
                                 ? ' Se recomienda mejorar los tiempos para casos urgentes.'
                                 : ' El equipo está respondiendo dentro de los parámetros esperados.'}
                         </p>
