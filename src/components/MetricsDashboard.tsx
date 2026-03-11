@@ -26,6 +26,7 @@ import { Chart, registerables } from 'chart.js';
 import { AdvancedAnalytics } from './AdvancedAnalytics';
 import { SlaAlertBanner } from './SlaAlerts';
 import { PdcaPanel } from './PdcaPanel';
+import { SectorFlowMetrics } from './SectorFlowMetrics';
 import { MetricsFilters, type MetricsFilterState } from './MetricsFilters';
 
 Chart.register(...registerables);
@@ -1453,6 +1454,13 @@ export const MetricsDashboard = () => {
                     </div>
                 )}
             </div>
+
+            {/* ── Flujo de Reportes por Sector (Emisor → Destino) ── */}
+            <SectorFlowMetrics
+                reports={rawReports}
+                userSectors={sectors}
+                canViewAll={canViewAll}
+            />
 
             {/* ── Alertas de Tiempo de Respuesta ── */}
             <SlaAlertBanner
