@@ -1455,12 +1455,8 @@ export const MetricsDashboard = () => {
                 )}
             </div>
 
-            {/* ── Flujo de Reportes por Sector (Emisor → Destino) ── */}
-            <SectorFlowMetrics
-                reports={rawReports}
-                userSectors={sectors}
-                canViewAll={canViewAll}
-            />
+            {/* ── Reportes Emitidos por Sector ── */}
+            <SectorFlowMetrics reports={rawReports} />
 
             {/* ── Alertas de Tiempo de Respuesta ── */}
             <SlaAlertBanner
