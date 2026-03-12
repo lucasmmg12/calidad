@@ -130,7 +130,8 @@ export const MetricsDashboard = () => {
 
         if (role === 'responsable') {
             roleFiltered = reports.filter(r =>
-                r.sector && sectors.includes(r.sector)
+                (r.sector && sectors.includes(r.sector)) ||
+                (r.reporter_sector && sectors.includes(r.reporter_sector))
             );
         }
 
