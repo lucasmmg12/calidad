@@ -1,4 +1,4 @@
-﻿
+
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../utils/supabase';
@@ -31,7 +31,10 @@ import {
     Building2,
     Filter,
     Search,
-    Check
+    Check,
+    Link2,
+    ExternalLink,
+    Copy
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { CLASSIFICATION_CATEGORIES } from '../constants/classification_categories';
@@ -894,6 +897,7 @@ export const Dashboard = () => {
     const [showQualityApproveModal, setShowQualityApproveModal] = useState(false);
     const [isProcessingQuality, setIsProcessingQuality] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [linkCopied, setLinkCopied] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
     // Sector assignments state (shared by multi_sector_pending & quality_validation views)
@@ -2144,6 +2148,47 @@ export const Dashboard = () => {
                                 <div>
                                     <h2 className="text-lg sm:text-2xl font-bold text-sanatorio-primary">Ticket #{selectedReport.tracking_id}</h2>
                                     <p className="text-xs sm:text-sm text-gray-400">{new Date(selectedReport.created_at).toLocaleString()}</p>
+                                    {/* Link de gestión rápido */}
+                                    {isAdmin && selectedReport.tracking_id && (
+                                        <div className="flex items-center gap-1.5 mt-2">
+                                            <button
+                                                onClick={async () => {
+                                                    const url = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}`;
+                                                    try {
+                                                        await navigator.clipboard.writeText(url);
+                                                        setLinkCopied(true);
+                                                        setTimeout(() => setLinkCopied(false), 2500);
+                                                    } catch {
+                                                        const input = document.createElement('input');
+                                                        input.value = url;
+                                                        document.body.appendChild(input);
+                                                        input.select();
+                                                        document.execCommand('copy');
+                                                        document.body.removeChild(input);
+                                                        setLinkCopied(true);
+                                                        setTimeout(() => setLinkCopied(false), 2500);
+                                                    }
+                                                }}
+                                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all duration-300 ${
+                                                    linkCopied
+                                                        ? 'bg-green-100 text-green-700 border border-green-200'
+                                                        : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-sanatorio-primary/10 hover:text-sanatorio-primary hover:border-sanatorio-primary/20'
+                                                }`}
+                                                title="Copiar enlace de gestión"
+                                            >
+                                                {linkCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                                {linkCopied ? '¡Copiado!' : 'Copiar Link'}
+                                            </button>
+                                            <button
+                                                onClick={() => window.open(`/resolver-caso/${selectedReport.tracking_id}`, '_blank')}
+                                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-gray-100 text-gray-500 border border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all"
+                                                title="Abrir formulario de gestión en nueva pestaña"
+                                            >
+                                                <ExternalLink className="w-3 h-3" />
+                                                Abrir
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="flex flex-col items-end gap-1">
                                     <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Prioridad</span>
@@ -4020,6 +4065,64 @@ export const Dashboard = () => {
                                             <div className="space-y-4">
                                                 {isAdmin ? (
                                                     <>
+                                                        {/* Link de Gestión Directo (para legacy / envío manual) */}
+                                                        <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-4 rounded-xl border border-indigo-100 shadow-sm">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center">
+                                                                    <Link2 className="w-3.5 h-3.5 text-indigo-600" />
+                                                                </div>
+                                                                <h4 className="font-bold text-indigo-800 text-sm">Enlace de Gestión</h4>
+                                                            </div>
+                                                            <p className="text-[10px] text-indigo-600 mb-3">
+                                                                Comparta este enlace para que el responsable gestione el caso directamente.
+                                                            </p>
+                                                            <div className="bg-white rounded-lg p-2 border border-indigo-100 flex items-center gap-2 mb-2">
+                                                                <code className="flex-1 text-[10px] text-gray-500 truncate font-mono">
+                                                                    {window.location.origin}/resolver-caso/{selectedReport.tracking_id}
+                                                                </code>
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        const url = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}`;
+                                                                        try {
+                                                                            await navigator.clipboard.writeText(url);
+                                                                            setLinkCopied(true);
+                                                                            setTimeout(() => setLinkCopied(false), 2500);
+                                                                        } catch {
+                                                                            const input = document.createElement('input');
+                                                                            input.value = url;
+                                                                            document.body.appendChild(input);
+                                                                            input.select();
+                                                                            document.execCommand('copy');
+                                                                            document.body.removeChild(input);
+                                                                            setLinkCopied(true);
+                                                                            setTimeout(() => setLinkCopied(false), 2500);
+                                                                        }
+                                                                    }}
+                                                                    className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-300 flex items-center gap-1 ${
+                                                                        linkCopied
+                                                                            ? 'bg-green-100 text-green-700 border border-green-200'
+                                                                            : 'bg-indigo-100 text-indigo-700 border border-indigo-200 hover:bg-indigo-200'
+                                                                    }`}
+                                                                >
+                                                                    {linkCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                                                    {linkCopied ? '¡Copiado!' : 'Copiar'}
+                                                                </button>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => window.open(`/resolver-caso/${selectedReport.tracking_id}`, '_blank')}
+                                                                className="w-full py-2 bg-white text-indigo-700 border border-indigo-200 rounded-lg font-bold text-xs hover:bg-indigo-50 transition-all flex items-center justify-center gap-1.5"
+                                                            >
+                                                                <ExternalLink className="w-3 h-3" />
+                                                                Abrir Formulario de Gestión
+                                                            </button>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-3 my-1">
+                                                            <div className="flex-1 h-px bg-gray-200"></div>
+                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">o derivar via WhatsApp</span>
+                                                            <div className="flex-1 h-px bg-gray-200"></div>
+                                                        </div>
+
                                                         <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
                                                             <h4 className="font-bold text-gray-800 mb-2">Derivar a Responsable</h4>
                                                             <p className="text-xs text-gray-500 mb-4">
