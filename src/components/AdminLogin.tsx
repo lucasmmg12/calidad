@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../utils/supabase';
+import { trackLogin } from '../utils/hubTracker';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Loader2, AlertCircle, ArrowLeft, UserPlus } from 'lucide-react';
 
@@ -27,6 +28,9 @@ export const AdminLogin = () => {
                 }
                 throw authError;
             }
+
+            // Track login in Hub Monitor (non-blocking)
+            trackLogin(supabase, authData.user.id);
 
             // Fetch user profile to determine role-based redirect
             const { data: profile } = await supabase
