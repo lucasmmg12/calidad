@@ -243,7 +243,7 @@ export const TrackingPage = () => {
                                                     }
                                                     else if (msg.includes('⚠️ RECHAZADO POR CALIDAD')) {
                                                         type = 'quality_return';
-                                                        const reasonMatch = msg.match(/RECHAZADO POR CALIDAD:\s*(.+)/);
+                                                        const reasonMatch = msg.match(/RECHAZADO POR CALIDAD:\s*([\s\S]+?)$/);
                                                         if (reasonMatch) detail = { ...detail, rejectReason: reasonMatch[1].trim() };
                                                         if (report.resolution_history) {
                                                             const historyEntry = report.resolution_history.find((h: any) => {
@@ -256,7 +256,7 @@ export const TrackingPage = () => {
                                                     }
                                                     else if (msg.includes('🔴 RECHAZO DE ASIGNACIÓN')) {
                                                         type = 'rejection';
-                                                        const reasonMatch = msg.match(/RECHAZO DE ASIGNACIÓN:\s*(.+)/);
+                                                        const reasonMatch = msg.match(/RECHAZO DE ASIGNACIÓN:\s*([\s\S]+?)$/);
                                                         if (reasonMatch) detail = { ...detail, rejectReason: reasonMatch[1].trim() };
                                                     }
                                                     else if (msg.includes('🔄 APELADO') || msg.includes('REABIERTO')) {

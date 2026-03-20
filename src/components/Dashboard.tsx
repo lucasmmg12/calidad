@@ -2599,7 +2599,7 @@ export const Dashboard = () => {
                                                             type = 'quality_return';
                                                             // Find the matching resolution_history entry by proximity
                                                             const rejectionTimestamp = match[1];
-                                                            const reasonMatch = msg.match(/RECHAZADO POR CALIDAD:\s*(.+)/);
+                                                            const reasonMatch = msg.match(/RECHAZADO POR CALIDAD:\s*([\s\S]+?)$/);
                                                             if (reasonMatch) {
                                                                 detail = { ...detail, rejectReason: reasonMatch[1].trim() };
                                                             }
@@ -2617,7 +2617,7 @@ export const Dashboard = () => {
                                                         }
                                                         else if (msg.includes('🔴 RECHAZO DE ASIGNACIÓN')) {
                                                             type = 'rejection';
-                                                            const reasonMatch = msg.match(/RECHAZO DE ASIGNACIÓN:\s*(.+)/);
+                                                            const reasonMatch = msg.match(/RECHAZO DE ASIGNACIÓN:\s*([\s\S]+?)$/);
                                                             if (reasonMatch) {
                                                                 detail = { ...detail, rejectReason: reasonMatch[1].trim() };
                                                             }
@@ -3272,11 +3272,11 @@ export const Dashboard = () => {
                                             </p>
                                             {/* Show rejection reason from notes */}
                                             {selectedReport.notes && (() => {
-                                                const rejectionMatch = selectedReport.notes.match(/RECHAZO DE ASIGNACIÓN:\s*(.+)/);
+                                                const rejectionMatch = selectedReport.notes.match(/RECHAZO DE ASIGNACIÓN:\s*([\s\S]+?)(?=\n\n\[|$)/);
                                                 return rejectionMatch ? (
                                                     <div className="bg-white rounded-lg p-3 border border-orange-100 mb-4 text-left">
                                                         <p className="text-xs font-bold text-orange-800 uppercase tracking-wider mb-1">Motivo:</p>
-                                                        <p className="text-sm text-gray-700">{rejectionMatch[1].trim()}</p>
+                                                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{rejectionMatch[1].trim()}</p>
                                                     </div>
                                                 ) : null;
                                             })()}
