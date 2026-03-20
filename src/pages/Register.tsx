@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../utils/supabase';
+import { trackLogin } from '../utils/hubTracker';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Loader2, AlertCircle, UserPlus, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
@@ -42,6 +43,7 @@ const Register = () => {
 
             // If signUp returned a session, we're good — user is logged in
             if (data.session) {
+                trackLogin(supabase, data.session.user.id);
                 navigate('/onboarding');
                 return;
             }
@@ -66,6 +68,7 @@ const Register = () => {
                 return;
             }
 
+            trackLogin(supabase, data.user!.id);
             navigate('/onboarding');
         } catch (err: any) {
             if (err.message?.includes('already registered') || err.message?.includes('User already registered')) {
