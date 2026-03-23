@@ -24,28 +24,36 @@ function getHubClient(): SupabaseClient | null {
   return hubClient
 }
 
-interface GeoResult {
-  lat: number
-  lng: number
+interface IpGeoResult {
+  ip: string | null
+  lat: number | null
+  lng: number | null
 }
 
-async function getPublicIP(): Promise<string | null> {
+/**
+ * Obtiene IP pública + geolocalización basada en IP en un solo request.
+ * No requiere permiso del navegador (a diferencia de navigator.geolocation).
+ * Usa ipapi.co que devuelve IP + lat/lng en una sola llamada.
+ */
+async function getIpAndGeo(): Promise<IpGeoResult> {
   try {
-    const res = await fetch('https://api.ipify.org?format=json')
+    const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(5000) })
     const data = await res.json()
-    return data.ip || null
-  } catch { return null }
-}
-
-function getGeoLocation(): Promise<GeoResult | null> {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) { resolve(null); return }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => resolve(null),
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
-    )
-  })
+    return {
+      ip: data.ip || null,
+      lat: data.latitude || null,
+      lng: data.longitude || null,
+    }
+  } catch {
+    // Fallback: intentar al menos obtener la IP
+    try {
+      const res = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(3000) })
+      const data = await res.json()
+      return { ip: data.ip || null, lat: null, lng: null }
+    } catch {
+      return { ip: null, lat: null, lng: null }
+    }
+  }
 }
 
 export async function trackLogin(_supabase: SupabaseClient, userId: string): Promise<void> {
@@ -53,15 +61,15 @@ export async function trackLogin(_supabase: SupabaseClient, userId: string): Pro
     const hub = getHubClient()
     if (!hub) return
 
-    const [ip, geo] = await Promise.all([getPublicIP(), getGeoLocation()])
+    const { ip, lat, lng } = await getIpAndGeo()
     await hub.from('hub_logs_sesion').insert({
       user_id: userId,
       evento: 'login',
       sistema_id: CALIDAD_SISTEMA_ID,
       ip_address: ip,
       user_agent: navigator.userAgent,
-      latitud: geo?.lat || null,
-      longitud: geo?.lng || null,
+      latitud: lat,
+      longitud: lng,
       metadata: { source: 'calidad' },
     })
   } catch (e) { console.warn('[HubTracker] Error:', e) }
