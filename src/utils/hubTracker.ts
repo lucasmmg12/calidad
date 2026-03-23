@@ -1,9 +1,28 @@
 /**
- * Hub Session Tracker — Sanatorio Argentino
- * Registra login/logout en hub_logs_sesion para el Monitor centralizado.
+ * Hub Session Tracker — Sanatorio Argentino (Calidad)
+ * 
+ * Usa un cliente Supabase dedicado al Hub (NO el de Calidad)
+ * porque hub_logs_sesion vive en el proyecto Supabase del Hub.
  */
+import { createClient } from '@supabase/supabase-js'
 
 const CALIDAD_SISTEMA_ID = '646c05c8-edbb-4201-8aa9-fb8bae8449f1'
+
+// Cliente dedicado al Hub
+const HUB_SUPABASE_URL = import.meta.env.VITE_HUB_SUPABASE_URL
+const HUB_SUPABASE_ANON_KEY = import.meta.env.VITE_HUB_SUPABASE_ANON_KEY
+
+let hubClient = null
+function getHubClient() {
+  if (!HUB_SUPABASE_URL || !HUB_SUPABASE_ANON_KEY) {
+    console.warn('[HubTracker] Missing VITE_HUB_SUPABASE_URL or VITE_HUB_SUPABASE_ANON_KEY')
+    return null
+  }
+  if (!hubClient) {
+    hubClient = createClient(HUB_SUPABASE_URL, HUB_SUPABASE_ANON_KEY)
+  }
+  return hubClient
+}
 
 async function getPublicIP() {
   try {
@@ -26,8 +45,11 @@ function getGeoLocation() {
 
 export async function trackLogin(supabase, userId) {
   try {
+    const hub = getHubClient()
+    if (!hub) return
+
     const [ip, geo] = await Promise.all([getPublicIP(), getGeoLocation()])
-    await supabase.from('hub_logs_sesion').insert({
+    await hub.from('hub_logs_sesion').insert({
       user_id: userId,
       evento: 'login',
       sistema_id: CALIDAD_SISTEMA_ID,
@@ -42,7 +64,10 @@ export async function trackLogin(supabase, userId) {
 
 export async function trackLogout(supabase, userId) {
   try {
-    await supabase.from('hub_logs_sesion').insert({
+    const hub = getHubClient()
+    if (!hub) return
+
+    await hub.from('hub_logs_sesion').insert({
       user_id: userId,
       evento: 'logout',
       sistema_id: CALIDAD_SISTEMA_ID,

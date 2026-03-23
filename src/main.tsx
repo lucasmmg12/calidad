@@ -1,8 +1,47 @@
-import { StrictMode, Component } from 'react'
+import { StrictMode, Component, useCallback } from 'react'
 import type { ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+
+/**
+ * SafeHydrationWrapper
+ * 
+ * Prevents "Failed to execute 'removeChild' on 'Node'" crashes caused by
+ * browser extensions (Google Translate, Grammarly, ad blockers, etc.) or
+ * third-party scripts that inject/move DOM nodes inside React's managed tree.
+ * 
+ * When React tries to reconcile and remove a node that was externally moved,
+ * the native removeChild throws. This wrapper monkey-patches removeChild and
+ * insertBefore on its container element to gracefully handle the mismatch.
+ */
+function SafeHydrationWrapper({ children }: { children: ReactNode }) {
+  const ref = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+
+    // Patch removeChild to not throw if the node isn't a child
+    const originalRemoveChild = node.removeChild.bind(node);
+    node.removeChild = function <T extends Node>(child: T): T {
+      if (child.parentNode !== node) {
+        console.warn('[SafeHydration] Prevented removeChild crash — node was moved by external script');
+        return child;
+      }
+      return originalRemoveChild(child);
+    };
+
+    // Patch insertBefore to handle missing reference nodes
+    const originalInsertBefore = node.insertBefore.bind(node);
+    node.insertBefore = function <T extends Node>(newNode: T, refNode: Node | null): T {
+      if (refNode && refNode.parentNode !== node) {
+        console.warn('[SafeHydration] Prevented insertBefore crash — reference node was moved by external script');
+        return newNode;
+      }
+      return originalInsertBefore(newNode, refNode);
+    };
+  }, []);
+
+  return <div ref={ref}>{children}</div>;
+}
 
 // Basic Error Boundary for Production Debugging
 class GlobalErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean, error: any }> {
@@ -52,7 +91,9 @@ if (!container) {
   createRoot(container).render(
     <StrictMode>
       <GlobalErrorBoundary>
-        <App />
+        <SafeHydrationWrapper>
+          <App />
+        </SafeHydrationWrapper>
       </GlobalErrorBoundary>
     </StrictMode>,
   );
