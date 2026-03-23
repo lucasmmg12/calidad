@@ -1,19 +1,19 @@
 /**
- * Hub Session Tracker — Sanatorio Argentino (Calidad)
+ * Hub Session Tracker — Calidad (Dora)
  * 
- * Usa un cliente Supabase dedicado al Hub (NO el de Calidad)
- * porque hub_logs_sesion vive en el proyecto Supabase del Hub.
+ * Usa RPC hub_log_external_event vía el cliente del Hub.
+ * Todos los sistemas externos usan RPC porque no tienen
+ * sesión autenticada en el Supabase del Hub (RLS bloquea inserts).
  */
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 
 const CALIDAD_SISTEMA_ID = '646c05c8-edbb-4201-8aa9-fb8bae8449f1'
 
-// Cliente dedicado al Hub
-const HUB_SUPABASE_URL = import.meta.env.VITE_HUB_SUPABASE_URL as string | undefined
-const HUB_SUPABASE_ANON_KEY = import.meta.env.VITE_HUB_SUPABASE_ANON_KEY as string | undefined
+const HUB_SUPABASE_URL = import.meta.env.VITE_HUB_SUPABASE_URL
+const HUB_SUPABASE_ANON_KEY = import.meta.env.VITE_HUB_SUPABASE_ANON_KEY
 
-let hubClient: SupabaseClient | null = null
-function getHubClient(): SupabaseClient | null {
+let hubClient = null
+function getHubClient() {
   if (!HUB_SUPABASE_URL || !HUB_SUPABASE_ANON_KEY) {
     console.warn('[HubTracker] Missing VITE_HUB_SUPABASE_URL or VITE_HUB_SUPABASE_ANON_KEY')
     return null
@@ -24,68 +24,58 @@ function getHubClient(): SupabaseClient | null {
   return hubClient
 }
 
-interface IpGeoResult {
-  ip: string | null
-  lat: number | null
-  lng: number | null
-}
-
-/**
- * Obtiene IP pública + geolocalización basada en IP en un solo request.
- * No requiere permiso del navegador (a diferencia de navigator.geolocation).
- * Usa ipapi.co que devuelve IP + lat/lng en una sola llamada.
- */
-async function getIpAndGeo(): Promise<IpGeoResult> {
+async function getPublicIP() {
   try {
-    const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(5000) })
+    const res = await fetch('https://api.ipify.org?format=json')
     const data = await res.json()
-    return {
-      ip: data.ip || null,
-      lat: data.latitude || null,
-      lng: data.longitude || null,
-    }
-  } catch {
-    // Fallback: intentar al menos obtener la IP
-    try {
-      const res = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(3000) })
-      const data = await res.json()
-      return { ip: data.ip || null, lat: null, lng: null }
-    } catch {
-      return { ip: null, lat: null, lng: null }
-    }
-  }
+    return data.ip || null
+  } catch { return null }
 }
 
-export async function trackLogin(_supabase: SupabaseClient, userId: string): Promise<void> {
+function getGeoLocation() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) { resolve(null); return }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+    )
+  })
+}
+
+export async function trackLogin(supabase, userId) {
   try {
     const hub = getHubClient()
     if (!hub) return
 
-    const { ip, lat, lng } = await getIpAndGeo()
-    await hub.from('hub_logs_sesion').insert({
-      user_id: userId,
-      evento: 'login',
-      sistema_id: CALIDAD_SISTEMA_ID,
-      ip_address: ip,
-      user_agent: navigator.userAgent,
-      latitud: lat,
-      longitud: lng,
-      metadata: { source: 'calidad' },
+    const [ip, geo] = await Promise.all([getPublicIP(), getGeoLocation()])
+    await hub.rpc('hub_log_external_event', {
+      p_user_identifier: userId,
+      p_evento: 'login',
+      p_sistema_id: CALIDAD_SISTEMA_ID,
+      p_ip: ip,
+      p_user_agent: navigator.userAgent,
+      p_latitud: geo?.lat || null,
+      p_longitud: geo?.lng || null,
+      p_metadata: { source: 'calidad' },
     })
   } catch (e) { console.warn('[HubTracker] Error:', e) }
 }
 
-export async function trackLogout(_supabase: SupabaseClient, userId: string): Promise<void> {
+export async function trackLogout(supabase, userId) {
   try {
     const hub = getHubClient()
     if (!hub) return
 
-    await hub.from('hub_logs_sesion').insert({
-      user_id: userId,
-      evento: 'logout',
-      sistema_id: CALIDAD_SISTEMA_ID,
-      user_agent: navigator.userAgent,
-      metadata: { source: 'calidad' },
+    await hub.rpc('hub_log_external_event', {
+      p_user_identifier: userId,
+      p_evento: 'logout',
+      p_sistema_id: CALIDAD_SISTEMA_ID,
+      p_ip: null,
+      p_user_agent: navigator.userAgent,
+      p_latitud: null,
+      p_longitud: null,
+      p_metadata: { source: 'calidad' },
     })
   } catch (e) { console.warn('[HubTracker] Error:', e) }
 }
