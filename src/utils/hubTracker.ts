@@ -4,16 +4,16 @@
  * Usa un cliente Supabase dedicado al Hub (NO el de Calidad)
  * porque hub_logs_sesion vive en el proyecto Supabase del Hub.
  */
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 const CALIDAD_SISTEMA_ID = '646c05c8-edbb-4201-8aa9-fb8bae8449f1'
 
 // Cliente dedicado al Hub
-const HUB_SUPABASE_URL = import.meta.env.VITE_HUB_SUPABASE_URL
-const HUB_SUPABASE_ANON_KEY = import.meta.env.VITE_HUB_SUPABASE_ANON_KEY
+const HUB_SUPABASE_URL = import.meta.env.VITE_HUB_SUPABASE_URL as string | undefined
+const HUB_SUPABASE_ANON_KEY = import.meta.env.VITE_HUB_SUPABASE_ANON_KEY as string | undefined
 
-let hubClient = null
-function getHubClient() {
+let hubClient: SupabaseClient | null = null
+function getHubClient(): SupabaseClient | null {
   if (!HUB_SUPABASE_URL || !HUB_SUPABASE_ANON_KEY) {
     console.warn('[HubTracker] Missing VITE_HUB_SUPABASE_URL or VITE_HUB_SUPABASE_ANON_KEY')
     return null
@@ -24,7 +24,12 @@ function getHubClient() {
   return hubClient
 }
 
-async function getPublicIP() {
+interface GeoResult {
+  lat: number
+  lng: number
+}
+
+async function getPublicIP(): Promise<string | null> {
   try {
     const res = await fetch('https://api.ipify.org?format=json')
     const data = await res.json()
@@ -32,7 +37,7 @@ async function getPublicIP() {
   } catch { return null }
 }
 
-function getGeoLocation() {
+function getGeoLocation(): Promise<GeoResult | null> {
   return new Promise((resolve) => {
     if (!navigator.geolocation) { resolve(null); return }
     navigator.geolocation.getCurrentPosition(
@@ -43,7 +48,7 @@ function getGeoLocation() {
   })
 }
 
-export async function trackLogin(supabase, userId) {
+export async function trackLogin(_supabase: SupabaseClient, userId: string): Promise<void> {
   try {
     const hub = getHubClient()
     if (!hub) return
@@ -62,7 +67,7 @@ export async function trackLogin(supabase, userId) {
   } catch (e) { console.warn('[HubTracker] Error:', e) }
 }
 
-export async function trackLogout(supabase, userId) {
+export async function trackLogout(_supabase: SupabaseClient, userId: string): Promise<void> {
   try {
     const hub = getHubClient()
     if (!hub) return
