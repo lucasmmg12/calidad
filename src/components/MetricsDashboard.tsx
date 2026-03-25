@@ -988,9 +988,9 @@ export const MetricsDashboard = () => {
                                             <div>
                                                 <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Casos Activos ({sectorActive.length})</h4>
                                                 {sectorActive.length > 0 ? (
-                                                    <div className="rounded-xl border border-gray-100 overflow-x-auto">
+                                                    <div className="rounded-xl border border-gray-100 overflow-x-auto max-h-[400px] overflow-y-auto">
                                                         <table className="w-full text-xs min-w-[600px]">
-                                                            <thead>
+                                                            <thead className="sticky top-0 z-10">
                                                                 <tr className="bg-gray-50 text-gray-400 font-bold uppercase tracking-wider">
                                                                     <th className="px-3 py-2 text-left">ID</th>
                                                                     <th className="px-3 py-2 text-left">Fecha</th>
@@ -1000,7 +1000,7 @@ export const MetricsDashboard = () => {
                                                                 </tr>
                                                             </thead>
                                                             <tbody className="divide-y divide-gray-50">
-                                                                {sectorActive.slice(0, 10).map((r: any) => (
+                                                                {sectorActive.map((r: any) => (
                                                                     <tr key={r.id} className="hover:bg-blue-50/40 transition-colors">
                                                                         <td className="px-3 py-2 font-bold text-sanatorio-primary">{r.tracking_id}</td>
                                                                         <td className="px-3 py-2 text-gray-500">{new Date(r.created_at).toLocaleDateString()}</td>
@@ -1027,9 +1027,6 @@ export const MetricsDashboard = () => {
                                                                 ))}
                                                             </tbody>
                                                         </table>
-                                                        {sectorActive.length > 10 && (
-                                                            <p className="text-center text-[10px] text-gray-400 py-2">Mostrando 10 de {sectorActive.length} casos</p>
-                                                        )}
                                                     </div>
                                                 ) : (
                                                     <div className="bg-green-50/50 border border-green-100 rounded-xl p-4 text-center">

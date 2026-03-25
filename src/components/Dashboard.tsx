@@ -34,7 +34,9 @@ import {
     Check,
     Link2,
     ExternalLink,
-    Copy
+    Copy,
+    ImagePlus,
+    Reply
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { CLASSIFICATION_CATEGORIES } from '../constants/classification_categories';
@@ -907,6 +909,14 @@ export const Dashboard = () => {
     const [expandedLogEntry, setExpandedLogEntry] = useState<number | null>(null);
     const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
 
+    // Rejection reply state
+    const [showReplyModal, setShowReplyModal] = useState(false);
+    const [replyMessage, setReplyMessage] = useState('');
+    const [replyImages, setReplyImages] = useState<File[]>([]);
+    const [replyImagePreviews, setReplyImagePreviews] = useState<string[]>([]);
+    const [sendingReply, setSendingReply] = useState(false);
+    const replyFileInputRef = useRef<HTMLInputElement>(null);
+
     // Chat state
     const [chatPhone, setChatPhone] = useState<string | null>(null);
     const [chatContactName, setChatContactName] = useState<string>('');
@@ -923,6 +933,156 @@ export const Dashboard = () => {
         } else {
             setChatPhone(normalizedPhone);
             setChatContactName(name);
+        }
+    };
+
+    // Handle adding images to the reply modal
+    const handleReplyImageAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+        const newFiles = [...replyImages, ...files].slice(0, 5); // max 5 images
+        setReplyImages(newFiles);
+        // Generate previews
+        const previews = newFiles.map(f => URL.createObjectURL(f));
+        // Revoke old previews
+        replyImagePreviews.forEach(p => URL.revokeObjectURL(p));
+        setReplyImagePreviews(previews);
+        // Reset input so same file can be re-selected
+        if (replyFileInputRef.current) replyFileInputRef.current.value = '';
+    };
+
+    const handleRemoveReplyImage = (index: number) => {
+        URL.revokeObjectURL(replyImagePreviews[index]);
+        setReplyImages(prev => prev.filter((_, i) => i !== index));
+        setReplyImagePreviews(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // Send reply to the sector that rejected — message + images via WhatsApp
+    const handleReplyToRejection = async () => {
+        if (!selectedReport || (!replyMessage.trim() && replyImages.length === 0)) return;
+        setSendingReply(true);
+
+        try {
+            // 1. Find the phone number of the sector that rejected
+            const rejectedAssignment = sectorAssignmentsData.find(a => a.status === 'rejected');
+            // For assignment_rejected status, also check report-level data
+            let targetPhone = rejectedAssignment?.assigned_phone || '';
+
+            // Fallback: try to get phone from report's sector assignment data
+            if (!targetPhone && sectorAssignmentsData.length > 0) {
+                const lastAssignment = sectorAssignmentsData[sectorAssignmentsData.length - 1];
+                targetPhone = lastAssignment?.assigned_phone || '';
+            }
+
+            if (!targetPhone) {
+                setFeedbackModal({ isOpen: true, type: 'error', title: 'Sin teléfono', message: 'No se encontró un número de teléfono para responder al sector.' });
+                setSendingReply(false);
+                return;
+            }
+
+            const normalizedPhone = targetPhone.replace(/\D/g, '').replace(/^549/, '');
+            const botNumber = `549${normalizedPhone}`;
+
+            if (normalizedPhone.length < 10) {
+                setFeedbackModal({ isOpen: true, type: 'error', title: 'Teléfono inválido', message: 'El número de teléfono del sector no es válido.' });
+                setSendingReply(false);
+                return;
+            }
+
+            // 2. Upload images to Supabase Storage and collect URLs
+            const uploadedUrls: string[] = [];
+            for (const file of replyImages) {
+                const ext = file.name.split('.').pop() || 'png';
+                const fileName = `reply_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+                const { error: uploadErr } = await supabase.storage
+                    .from('whatsapp-media')
+                    .upload(fileName, file);
+                if (uploadErr) {
+                    console.error('[Reply] Upload error:', uploadErr);
+                    throw new Error(`Error al subir imagen: ${uploadErr.message}`);
+                }
+                const { data: urlData } = supabase.storage
+                    .from('whatsapp-media')
+                    .getPublicUrl(fileName);
+                uploadedUrls.push(urlData.publicUrl);
+            }
+
+            // 3. Send message via WhatsApp (send-whatsapp Edge Function)
+            const messageText = replyMessage.trim() || '';
+            const trackingId = selectedReport.tracking_id;
+
+            // If there are images, send them (one message per image with text on first)
+            if (uploadedUrls.length > 0) {
+                for (let i = 0; i < uploadedUrls.length; i++) {
+                    const msgText = i === 0
+                        ? `📋 *Respuesta de Calidad - Caso ${trackingId}*\n\n${messageText}`
+                        : '';
+                    await supabase.functions.invoke('send-whatsapp', {
+                        body: {
+                            number: botNumber,
+                            message: msgText,
+                            mediaUrl: uploadedUrls[i],
+                        },
+                    });
+                }
+            } else {
+                // Text only
+                await supabase.functions.invoke('send-whatsapp', {
+                    body: {
+                        number: botNumber,
+                        message: `📋 *Respuesta de Calidad - Caso ${trackingId}*\n\n${messageText}`,
+                        mediaUrl: '',
+                    },
+                });
+            }
+
+            // 4. Log the reply in the report notes timeline
+            const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+            const imgNote = uploadedUrls.length > 0 ? ` (con ${uploadedUrls.length} imagen${uploadedUrls.length > 1 ? 'es' : ''})` : '';
+            const logEntry = `[${timestamp}] 💬 RESPUESTA A SECTOR: ${messageText}${imgNote}`;
+            const currentNotes = selectedReport.notes || '';
+            const updatedNotes = currentNotes ? `${currentNotes}\n\n${logEntry}` : logEntry;
+
+            await supabase
+                .from('reports')
+                .update({ notes: updatedNotes })
+                .eq('id', selectedReport.id);
+
+            // 5. Clean up and close
+            replyImagePreviews.forEach(p => URL.revokeObjectURL(p));
+            setReplyMessage('');
+            setReplyImages([]);
+            setReplyImagePreviews([]);
+            setShowReplyModal(false);
+
+            setFeedbackModal({
+                isOpen: true,
+                type: 'success',
+                title: 'Respuesta Enviada',
+                message: `Se envió la respuesta al sector por WhatsApp${imgNote}.`,
+            });
+
+            // Refresh report data
+            if (selectedReport.id) {
+                const { data: updatedReport } = await supabase
+                    .from('reports')
+                    .select('*')
+                    .eq('id', selectedReport.id)
+                    .single();
+                if (updatedReport) {
+                    setSelectedReport(updatedReport);
+                }
+            }
+        } catch (err: any) {
+            console.error('[Reply] Error:', err);
+            setFeedbackModal({
+                isOpen: true,
+                type: 'error',
+                title: 'Error al Enviar',
+                message: err.message || 'No se pudo enviar la respuesta.',
+            });
+        } finally {
+            setSendingReply(false);
         }
     };
 
@@ -3289,6 +3449,13 @@ export const Dashboard = () => {
                                                         <Send className="w-4 h-4" />
                                                         Reenviar a otro sector
                                                     </button>
+                                                    <button
+                                                        onClick={() => setShowReplyModal(true)}
+                                                        className="w-full py-2.5 px-4 bg-orange-500 text-white font-bold text-sm rounded-xl hover:bg-orange-600 transition-all flex items-center justify-center gap-2"
+                                                    >
+                                                        <Reply className="w-4 h-4" />
+                                                        Responder al Sector
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>
@@ -3319,13 +3486,22 @@ export const Dashboard = () => {
                                                         </div>
                                                     )}
                                                     {isAdmin && (
-                                                        <button
-                                                            onClick={() => setShowReferralModal(true)}
-                                                            className="w-full py-2.5 px-4 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
-                                                        >
-                                                            <Send className="w-4 h-4" />
-                                                            Reenviar a otro sector
-                                                        </button>
+                                                        <div className="space-y-2">
+                                                            <button
+                                                                onClick={() => setShowReferralModal(true)}
+                                                                className="w-full py-2.5 px-4 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+                                                            >
+                                                                <Send className="w-4 h-4" />
+                                                                Reenviar a otro sector
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setShowReplyModal(true)}
+                                                                className="w-full py-2.5 px-4 bg-orange-500 text-white font-bold text-sm rounded-xl hover:bg-orange-600 transition-all flex items-center justify-center gap-2"
+                                                            >
+                                                                <Reply className="w-4 h-4" />
+                                                                Responder al Sector
+                                                            </button>
+                                                        </div>
                                                     )}
                                                 </div>
                                             );
@@ -4034,15 +4210,24 @@ export const Dashboard = () => {
                                                             <p className="text-xs text-gray-500 mb-4">
                                                                 Asigná este caso a otro responsable o al sector correcto enviando una nueva solicitud por WhatsApp.
                                                             </p>
-                                                            <button
-                                                                onClick={() => setShowReferralModal(true)}
-                                                                className="w-full py-3 bg-sanatorio-primary text-white rounded-xl font-bold text-sm hover:opacity-90 shadow-lg shadow-blue-900/10 flex items-center justify-center gap-2"
-                                                            >
-                                                                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                                                                    <Send className="w-3 h-3" />
-                                                                </div>
-                                                                Rederivación (WhatsApp)
-                                                            </button>
+                                                            <div className="space-y-2">
+                                                                <button
+                                                                    onClick={() => setShowReferralModal(true)}
+                                                                    className="w-full py-3 bg-sanatorio-primary text-white rounded-xl font-bold text-sm hover:opacity-90 shadow-lg shadow-blue-900/10 flex items-center justify-center gap-2"
+                                                                >
+                                                                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+                                                                        <Send className="w-3 h-3" />
+                                                                    </div>
+                                                                    Rederivación (WhatsApp)
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setShowReplyModal(true)}
+                                                                    className="w-full py-3 bg-orange-500 text-white rounded-xl font-bold text-sm hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2"
+                                                                >
+                                                                    <Reply className="w-4 h-4" />
+                                                                    Responder al Sector
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                         <div className="text-center py-4 border-t border-gray-100">
                                                             <p className="text-xs text-gray-400 mb-2">Otras acciones</p>
@@ -4361,6 +4546,148 @@ export const Dashboard = () => {
                             >
                                 <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" /></svg>
                                 Entendido, continuar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ─── Reply to Rejected Sector Modal ─── */}
+            {showReplyModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl transform transition-all scale-100 animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
+                        {/* Header */}
+                        <div className="p-6 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center">
+                                    <Reply className="w-6 h-6 text-orange-600" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-800">Responder al Sector</h3>
+                                    <p className="text-xs text-gray-400">Se enviará por WhatsApp al responsable que rechazó</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setShowReplyModal(false);
+                                    setReplyMessage('');
+                                    setReplyImages([]);
+                                    replyImagePreviews.forEach(p => URL.revokeObjectURL(p));
+                                    setReplyImagePreviews([]);
+                                }}
+                                className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                            >
+                                <X className="w-5 h-5 text-gray-400" />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+                            {/* Info banner */}
+                            <div className="bg-orange-50 rounded-xl p-3 border border-orange-100 flex items-start gap-2">
+                                <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                                <p className="text-xs text-orange-700">
+                                    Este mensaje le llegará al responsable del sector como un mensaje de <strong>Dora</strong> (WhatsApp institucional).
+                                    Puede adjuntar capturas de pantalla como evidencia.
+                                </p>
+                            </div>
+
+                            {/* Message textarea */}
+                            <div className="space-y-2">
+                                <label className="block text-sm font-bold text-gray-700">
+                                    Mensaje <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={replyMessage}
+                                    onChange={(e) => setReplyMessage(e.target.value)}
+                                    placeholder="Ej: Sí le corresponde resolver este caso. Adjunto captura del curso disponible en Humand que debe completar..."
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-50 outline-none transition-all resize-none text-sm"
+                                    rows={4}
+                                    autoFocus
+                                />
+                            </div>
+
+                            {/* Image upload */}
+                            <div className="space-y-2">
+                                <label className="block text-sm font-bold text-gray-700 flex items-center gap-2">
+                                    <ImagePlus className="w-4 h-4 text-gray-400" />
+                                    Adjuntar Imágenes
+                                    <span className="text-xs text-gray-400 font-normal ml-auto">{replyImages.length}/5</span>
+                                </label>
+
+                                {/* Image previews */}
+                                {replyImagePreviews.length > 0 && (
+                                    <div className="flex flex-wrap gap-2">
+                                        {replyImagePreviews.map((preview, idx) => (
+                                            <div key={idx} className="relative group">
+                                                <div
+                                                    className="w-20 h-20 rounded-xl bg-gray-100 bg-cover bg-center border-2 border-gray-200 shadow-sm transition-all group-hover:border-orange-300"
+                                                    style={{ backgroundImage: `url(${preview})` }}
+                                                />
+                                                <button
+                                                    onClick={() => handleRemoveReplyImage(idx)}
+                                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Upload button */}
+                                {replyImages.length < 5 && (
+                                    <button
+                                        onClick={() => replyFileInputRef.current?.click()}
+                                        className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-500 font-medium hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50/50 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <ImagePlus className="w-4 h-4" />
+                                        Seleccionar imagen{replyImages.length > 0 ? ' adicional' : ''}
+                                    </button>
+                                )}
+
+                                <input
+                                    ref={replyFileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={handleReplyImageAdd}
+                                    className="hidden"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-6 border-t border-gray-100 flex gap-3 flex-shrink-0">
+                            <button
+                                onClick={() => {
+                                    setShowReplyModal(false);
+                                    setReplyMessage('');
+                                    setReplyImages([]);
+                                    replyImagePreviews.forEach(p => URL.revokeObjectURL(p));
+                                    setReplyImagePreviews([]);
+                                }}
+                                disabled={sendingReply}
+                                className="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition-colors text-sm disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleReplyToRejection}
+                                disabled={sendingReply || (!replyMessage.trim() && replyImages.length === 0)}
+                                className="flex-1 px-4 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
+                            >
+                                {sendingReply ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Enviando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send className="w-4 h-4" />
+                                        Enviar por WhatsApp
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>
