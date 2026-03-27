@@ -12,6 +12,7 @@ import {
     Filter,
     FileQuestion,
     MessageSquare,
+    Search,
 } from 'lucide-react';
 
 interface Assignment {
@@ -55,6 +56,7 @@ export const MyCases = () => {
     const [assignments, setAssignments] = useState<Assignment[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'pending' | 'resolved'>('all');
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         const fetchMyCases = async () => {
@@ -116,8 +118,27 @@ export const MyCases = () => {
     }, [profile, sectors]);
 
     const filteredAssignments = assignments.filter(a => {
-        if (filter === 'pending') return a.status === 'pending';
-        if (filter === 'resolved') return a.status === 'resolved' || a.status === 'quality_validation';
+        // Status filter
+        if (filter === 'pending' && a.status !== 'pending') return false;
+        if (filter === 'resolved' && a.status !== 'resolved' && a.status !== 'quality_validation') return false;
+
+        // Search filter
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase().trim();
+            const report = a.reports as any;
+            const sectorLabel = (SECTOR_OPTIONS.find(s => s.value === a.sector)?.label || a.sector).toLowerCase();
+            const searchableFields = [
+                report.tracking_id,
+                report.content,
+                report.ai_summary,
+                a.immediate_action,
+                sectorLabel,
+                a.management_type,
+            ].filter(Boolean).map(f => f!.toLowerCase());
+
+            return searchableFields.some(field => field.includes(q));
+        }
+
         return true;
     });
 
@@ -161,21 +182,43 @@ export const MyCases = () => {
                 </div>
             </div>
 
-            {/* Filters */}
-            <div className="flex items-center gap-2 mb-6">
-                <Filter className="w-4 h-4 text-gray-400" />
-                {(['all', 'pending', 'resolved'] as const).map(f => (
-                    <button
-                        key={f}
-                        onClick={() => setFilter(f)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === f
-                            ? 'bg-sanatorio-primary text-white shadow-sm'
-                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                            }`}
-                    >
-                        {f === 'all' ? 'Todos' : f === 'pending' ? 'Pendientes' : 'Resueltos'}
-                    </button>
-                ))}
+            {/* Filters & Search */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+                <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-gray-400" />
+                    {(['all', 'pending', 'resolved'] as const).map(f => (
+                        <button
+                            key={f}
+                            onClick={() => setFilter(f)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === f
+                                ? 'bg-sanatorio-primary text-white shadow-sm'
+                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                }`}
+                        >
+                            {f === 'all' ? 'Todos' : f === 'pending' ? 'Pendientes' : 'Resueltos'}
+                        </button>
+                    ))}
+                </div>
+                <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                        id="search-cases"
+                        type="text"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        placeholder="Buscar por ID, palabras clave..."
+                        className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-sanatorio-primary/30 focus:border-sanatorio-primary transition-all placeholder:text-gray-400"
+                    />
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                            aria-label="Limpiar búsqueda"
+                        >
+                            <XCircle className="w-4 h-4" />
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Cases List */}
@@ -184,7 +227,7 @@ export const MyCases = () => {
                     <Inbox className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                     <h3 className="font-bold text-gray-500 mb-1">No hay casos</h3>
                     <p className="text-sm text-gray-400">
-                        {filter !== 'all' ? 'No hay casos con este filtro.' : 'Aún no tenés casos asignados.'}
+                        {searchQuery ? `No se encontraron resultados para "${searchQuery}"` : filter !== 'all' ? 'No hay casos con este filtro.' : 'Aún no tenés casos asignados.'}
                     </p>
                 </div>
             ) : (
