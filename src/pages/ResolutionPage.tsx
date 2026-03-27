@@ -79,6 +79,7 @@ export const ResolutionPage = () => {
                         draftUpdatedAt: data.draft_updated_at || null,
                         immediateAction: assignment.immediate_action || data.resolution_notes || '',
                         step1EvidenceUrls: assignment.resolution_evidence_urls || data.step1_evidence_urls || [],
+                        qualityObservations: data.quality_observations || '',
                     });
                 } else {
                     // Legacy: Check if already rejected at report level
@@ -103,6 +104,7 @@ export const ResolutionPage = () => {
                         draftUpdatedAt: data.draft_updated_at || null,
                         immediateAction: data.resolution_notes || '',
                         step1EvidenceUrls: data.step1_evidence_urls || [],
+                        qualityObservations: data.quality_observations || '',
                     });
                 }
 

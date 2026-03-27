@@ -687,7 +687,7 @@ export const ReportingForm = () => {
                         )}
                     </button>
                     <p className="text-center text-[10px] text-slate-400 mt-6 md:px-12 uppercase tracking-tight font-bold">
-                        Tus datos son tratados con estricta confidencialidad bajo normas de calidad del Sanatorio Argentino (ISO 9001).
+                        Tus datos son tratados con estricta confidencialidad.
                     </p>
                 </form >
             </div >

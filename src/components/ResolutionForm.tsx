@@ -55,6 +55,7 @@ interface Props {
         draftUpdatedAt?: string;
         immediateAction?: string;
         step1EvidenceUrls?: string[];
+        qualityObservations?: string;
     };
     onSubmit: (data: ResolutionFormData) => Promise<void>;
     onReject?: () => void;
@@ -699,6 +700,28 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                         </div>
                     )}
                 </section>
+
+                {/* ═══════════════════════════════════
+                    OBSERVACIONES DE CALIDAD (Read-only)
+                ═══════════════════════════════════ */}
+                {reportData.qualityObservations && (
+                    <section className="bg-indigo-50/60 rounded-2xl p-5 shadow-sm border border-indigo-200/60 animate-in fade-in duration-300">
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                                <MessageSquare className="w-4 h-4 text-indigo-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-indigo-900">Observaciones de Calidad</h3>
+                                <p className="text-[10px] text-indigo-500">Notas del equipo de Calidad sobre este caso</p>
+                            </div>
+                        </div>
+                        <div className="bg-white/80 rounded-xl p-4 border border-indigo-100">
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                                {reportData.qualityObservations}
+                            </p>
+                        </div>
+                    </section>
+                )}
 
                 {/* ═══════════════════════════════════
                     SUPPLEMENTARY INFO SECTION

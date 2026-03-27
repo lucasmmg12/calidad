@@ -11,6 +11,7 @@ import {
     Inbox,
     Filter,
     FileQuestion,
+    MessageSquare,
 } from 'lucide-react';
 
 interface Assignment {
@@ -32,6 +33,7 @@ interface Assignment {
         created_at: string;
         sector: string;
         evidence_urls: string[];
+        quality_observations: string | null;
     };
 }
 
@@ -82,7 +84,8 @@ export const MyCases = () => {
                             status,
                             created_at,
                             sector,
-                            evidence_urls
+                            evidence_urls,
+                            quality_observations
                         )
                     `)
                     .order('created_at', { ascending: false });
@@ -232,6 +235,16 @@ export const MyCases = () => {
                                         <div className="mt-3 p-2.5 bg-green-50 rounded-lg border border-green-100">
                                             <p className="text-[10px] font-bold text-green-500 uppercase tracking-wider mb-0.5">Acción Inmediata</p>
                                             <p className="text-xs text-green-700 line-clamp-2">{assignment.immediate_action}</p>
+                                        </div>
+                                    )}
+
+                                    {report.quality_observations && (
+                                        <div className="mt-3 p-2.5 bg-indigo-50 rounded-lg border border-indigo-100">
+                                            <div className="flex items-center gap-1.5 mb-1">
+                                                <MessageSquare className="w-3 h-3 text-indigo-500" />
+                                                <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Observaciones de Calidad</p>
+                                            </div>
+                                            <p className="text-xs text-indigo-700 line-clamp-3 whitespace-pre-wrap">{report.quality_observations}</p>
                                         </div>
                                     )}
                                 </div>
