@@ -1207,6 +1207,8 @@ export const Dashboard = () => {
                     .eq('id', currentAssignment.id);
 
                 // 2. Create a NEW sector_assignment (new round) with same sector/type
+                // IMPORTANT: Carry forward previous response data so the responsible
+                // doesn't have to re-type everything from scratch
                 const { data: newAssignment, error: insertError } = await supabase
                     .from('sector_assignments')
                     .insert({
@@ -1214,7 +1216,13 @@ export const Dashboard = () => {
                         sector: currentAssignment.sector,
                         assigned_phone: phoneTarget || currentAssignment.assigned_phone,
                         management_type: currentAssignment.management_type,
-                        status: 'pending'
+                        status: 'pending',
+                        // Pre-populate with previous response data for continuity
+                        immediate_action: currentAssignment.immediate_action || null,
+                        root_cause: currentAssignment.root_cause || null,
+                        corrective_plan: currentAssignment.corrective_plan || null,
+                        implementation_date: currentAssignment.implementation_date || null,
+                        resolution_evidence_urls: currentAssignment.resolution_evidence_urls || null,
                     })
                     .select('id')
                     .single();

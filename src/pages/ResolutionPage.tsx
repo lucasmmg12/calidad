@@ -61,6 +61,16 @@ export const ResolutionPage = () => {
                     // Determine if this assignment needs full RCA based on management_type
                     const needsRCA = assignment.management_type === 'desvio' || assignment.management_type === 'adverse';
 
+                    // Build draft data from assignment's previous response (for rejected/returned cases)
+                    // This ensures the responsible sees their previous RCA work pre-populated
+                    const assignmentDraft = (assignment.root_cause || assignment.corrective_plan || assignment.implementation_date)
+                        ? {
+                            rootCause: assignment.root_cause || '',
+                            correctivePlan: assignment.corrective_plan || '',
+                            implementationDate: assignment.implementation_date || '',
+                        }
+                        : null;
+
                     setReportData({
                         id: data.id,
                         trackingId: data.tracking_id,
@@ -75,7 +85,7 @@ export const ResolutionPage = () => {
                         status: assignment.status,
                         notes: data.notes,
                         resolutionStep: getAssignmentStep(),
-                        draftData: data.draft_data || null,
+                        draftData: assignmentDraft || data.draft_data || null,
                         draftUpdatedAt: data.draft_updated_at || null,
                         immediateAction: assignment.immediate_action || data.resolution_notes || '',
                         step1EvidenceUrls: assignment.resolution_evidence_urls || data.step1_evidence_urls || [],
