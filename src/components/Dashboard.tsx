@@ -477,13 +477,13 @@ const ReferralModal = ({
 }: {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: (type: 'simple' | 'desvio' | 'adverse', responsiblePhone: string, sectorAssignments?: SectorAssignmentRow[]) => void;
+    onConfirm: (type: 'simple' | 'desvio' | 'adverse' | 'felicitacion', responsiblePhone: string, sectorAssignments?: SectorAssignmentRow[]) => void;
     isSending: boolean;
     responsables: UserProfile[];
     loadingResponsables: boolean;
     reportSector?: string;
 }) => {
-    const [managementType, setManagementType] = useState<'simple' | 'desvio' | 'adverse'>('simple');
+    const [managementType, setManagementType] = useState<'simple' | 'desvio' | 'adverse' | 'felicitacion'>('simple');
     const [rows, setRows] = useState<SectorAssignmentRow[]>([
         { id: generateId(), sector: reportSector || '', selectedUserId: '', phone: '', selectedUserIds: [], phones: [], sendToAll: false }
     ]);
@@ -537,15 +537,17 @@ const ReferralModal = ({
                     {/* Tipo de Gestión (shared) */}
                     <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                         <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Tipo de Gestión Requerida</label>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             <button onClick={() => setManagementType('simple')} className={`p-2 rounded-lg text-xs font-bold transition-all border ${managementType === 'simple' ? 'bg-white border-blue-500 text-blue-700 shadow-sm ring-1 ring-blue-500' : 'border-transparent text-gray-500 hover:bg-gray-100'}`}>⚡ Simple</button>
                             <button onClick={() => setManagementType('desvio')} className={`p-2 rounded-lg text-xs font-bold transition-all border ${managementType === 'desvio' ? 'bg-white border-orange-500 text-orange-700 shadow-sm ring-1 ring-orange-500' : 'border-transparent text-gray-500 hover:bg-gray-100'}`}>🔧 Desvío</button>
                             <button onClick={() => setManagementType('adverse')} className={`p-2 rounded-lg text-xs font-bold transition-all border ${managementType === 'adverse' ? 'bg-white border-red-500 text-red-700 shadow-sm ring-1 ring-red-500' : 'border-transparent text-gray-500 hover:bg-gray-100'}`}>⚠️ Evento A.</button>
+                            <button onClick={() => setManagementType('felicitacion')} className={`p-2 rounded-lg text-xs font-bold transition-all border ${managementType === 'felicitacion' ? 'bg-white border-green-500 text-green-700 shadow-sm ring-1 ring-green-500' : 'border-transparent text-gray-500 hover:bg-gray-100'}`}>🌟 Felicitación</button>
                         </div>
                         <div className="mt-3 p-3 bg-white rounded-lg border border-gray-100 text-xs text-gray-600">
                             {managementType === 'simple' && <p className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>Solo solicita <strong>Acción Inmediata</strong>.</p>}
                             {managementType === 'desvio' && <p className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>Solicita <strong>Acción Inmediata + RCA + Plan</strong>.</p>}
                             {managementType === 'adverse' && <p className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>Solicita <strong>Acción Inmediata + RCA + Plan</strong> (Crítico).</p>}
+                            {managementType === 'felicitacion' && <p className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>Solo solicita <strong>Agradecimiento o Acuse</strong>.</p>}
                         </div>
                     </div>
 
@@ -1368,12 +1370,12 @@ export const Dashboard = () => {
         setLoading(false);
     };
 
-    const handleSendReferral = async (managementType: 'simple' | 'desvio' | 'adverse', responsiblePhone: string, sectorAssignments?: SectorAssignmentRow[]) => {
+    const handleSendReferral = async (managementType: 'simple' | 'desvio' | 'adverse' | 'felicitacion', responsiblePhone: string, sectorAssignments?: SectorAssignmentRow[]) => {
         if (!selectedReport) return;
         setIsSendingReferral(true);
 
-        const isAdverse = managementType !== 'simple';
-        const typeLabel = managementType === 'simple' ? 'Simple' : managementType === 'desvio' ? 'Desvío' : 'Evento Adverso';
+        const isAdverse = managementType === 'desvio' || managementType === 'adverse';
+        const typeLabel = managementType === 'simple' ? 'Simple' : managementType === 'desvio' ? 'Desvío' : managementType === 'felicitacion' ? 'Felicitación' : 'Evento Adverso';
         const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
 
         // Determine the valid rows to process
@@ -1421,6 +1423,8 @@ export const Dashboard = () => {
                 messageBody += `🛠️ *Tipo: Simple*\nSe solicita: *Contención / Acción Inmediata*.`;
             } else if (managementType === 'desvio') {
                 messageBody += `🔧 *Tipo: Desvío*\nSe solicita: *Acción Inmediata + Análisis de Causa + Plan de Acción*.`;
+            } else if (managementType === 'felicitacion') {
+                messageBody += `🌟 *Tipo: Felicitación*\nSe ha recibido un agradecimiento o felicitación para su sector. ¡Buen trabajo!`;
             } else {
                 messageBody += `⚠️ *Tipo: Evento Adverso*\nSe solicita: *Acción Inmediata + Análisis de Causa + Plan de Acción*.`;
             }

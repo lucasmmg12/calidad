@@ -56,6 +56,7 @@ interface Props {
         immediateAction?: string;
         step1EvidenceUrls?: string[];
         qualityObservations?: string;
+        managementType?: string;
     };
     onSubmit: (data: ResolutionFormData) => Promise<void>;
     onReject?: () => void;
@@ -802,8 +803,14 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-sm">1</div>
                                     <div>
-                                        <h2 className="font-bold text-gray-800">Respuesta Rápida</h2>
-                                        <p className="text-xs text-gray-400">¿Qué hiciste en el momento para resolver o contener la situación?</p>
+                                        <h2 className="font-bold text-gray-800">
+                                            {reportData.managementType === 'felicitacion' ? 'Mensaje de Acuse' : 'Respuesta Rápida'}
+                                        </h2>
+                                        <p className="text-xs text-gray-400">
+                                            {reportData.managementType === 'felicitacion' 
+                                                ? 'Agradecé o sumá un comentario a esta felicitación.' 
+                                                : '¿Qué hiciste en el momento para resolver o contener la situación?'}
+                                        </p>
                                     </div>
                                 </div>
                                 {/* Insufficient Data — inline with header */}
@@ -829,22 +836,31 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                             </div>
 
                             {/* Tip */}
-                            <div className="mb-4 bg-blue-50/50 p-3 rounded-lg border border-blue-100 flex gap-3">
-                                <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                                <p className="text-xs text-blue-600 leading-relaxed">
-                                    <strong>Contanos la acción inmediata.</strong> No necesitás un análisis profundo ahora — solo qué se hizo para contener el problema (ej: se reemplazó la luminaria, se notificó al proveedor, se limpió el derrame).
-                                </p>
-                            </div>
+                            {reportData.managementType === 'felicitacion' ? (
+                                <div className="mb-4 bg-green-50/50 p-3 rounded-lg border border-green-100 flex gap-3">
+                                    <Info className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                                    <p className="text-xs text-green-600 leading-relaxed">
+                                        <strong>¡Sector Destacado!</strong> Un usuario ha reconocido positivamente a tu área. Por favor, dejá un breve acuse de recibo.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="mb-4 bg-blue-50/50 p-3 rounded-lg border border-blue-100 flex gap-3">
+                                    <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                                    <p className="text-xs text-blue-600 leading-relaxed">
+                                        <strong>Contanos la acción inmediata.</strong> No necesitás un análisis profundo ahora — solo qué se hizo para contener el problema (ej: se reemplazó la luminaria, se notificó al proveedor, se limpió el derrame).
+                                    </p>
+                                </div>
+                            )}
 
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-600 mb-2">
-                                        Descripción de la solución inmediata <span className="text-red-500">*</span>
+                                        {reportData.managementType === 'felicitacion' ? 'Comentario / Agradecimiento' : 'Descripción de la solución inmediata'} <span className="text-red-500">*</span>
                                     </label>
                                     <textarea
                                         required
                                         className="w-full p-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all resize-none h-32 text-sm"
-                                        placeholder="Ej: Se reemplazó la luminaria afectada y se reportó a mantenimiento..."
+                                        placeholder={reportData.managementType === 'felicitacion' ? "Ej: ¡Gracias! Lo haremos llegar al equipo..." : "Ej: Se reemplazó la luminaria afectada y se reportó a mantenimiento..."}
                                         value={immediateAction}
                                         onChange={e => setImmediateAction(e.target.value)}
                                     />

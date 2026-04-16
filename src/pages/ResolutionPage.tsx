@@ -90,6 +90,7 @@ export const ResolutionPage = () => {
                         immediateAction: assignment.immediate_action || data.resolution_notes || '',
                         step1EvidenceUrls: assignment.resolution_evidence_urls || data.step1_evidence_urls || [],
                         qualityObservations: data.quality_observations || '',
+                        managementType: assignment.management_type || 'simple',
                     });
                 } else {
                     // Legacy: Check if already rejected at report level
@@ -115,6 +116,7 @@ export const ResolutionPage = () => {
                         immediateAction: data.resolution_notes || '',
                         step1EvidenceUrls: data.step1_evidence_urls || [],
                         qualityObservations: data.quality_observations || '',
+                        managementType: 'simple',
                     });
                 }
 
