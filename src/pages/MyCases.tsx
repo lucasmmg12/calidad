@@ -94,10 +94,16 @@ export const MyCases = () => {
 
                 // For responsables: filter by their phone or sectors
                 // For admins/directivos: show assignments for their sectors too
-                if (userPhone) {
-                    query = query.or(`assigned_phone.eq.${userPhone},sector.in.(${sectors.join(',')})`);
+                if (userPhone && sectors.length > 0) {
+                    const sectorString = sectors.map(s => `"${s}"`).join(',');
+                    query = query.or(`assigned_phone.eq.${userPhone},sector.in.(${sectorString})`);
                 } else if (sectors.length > 0) {
                     query = query.in('sector', sectors);
+                } else if (userPhone) {
+                    query = query.eq('assigned_phone', userPhone);
+                } else {
+                    // No phone and no sectors -> avoid fetching database completely for safety
+                    query = query.eq('id', '00000000-0000-0000-0000-000000000000'); 
                 }
 
                 const { data, error } = await query;

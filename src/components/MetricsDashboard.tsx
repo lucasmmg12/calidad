@@ -123,15 +123,13 @@ export const MetricsDashboard = () => {
             return;
         }
 
-        // --- Role Based Filtering ---
         // Admin & Directivo: View All
         // Responsable: View only assigned sectors
         let roleFiltered = reports;
 
         if (role === 'responsable') {
             roleFiltered = reports.filter(r =>
-                (r.sector && sectors.includes(r.sector)) ||
-                (r.reporter_sector && sectors.includes(r.reporter_sector))
+                r.sector && sectors.includes(r.sector)
             );
         }
 
