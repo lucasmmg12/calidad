@@ -474,6 +474,7 @@ const ReferralModal = ({
     responsables,
     loadingResponsables,
     reportSector,
+    reportFindingType,
 }: {
     isOpen: boolean;
     onClose: () => void;
@@ -482,6 +483,7 @@ const ReferralModal = ({
     responsables: UserProfile[];
     loadingResponsables: boolean;
     reportSector?: string;
+    reportFindingType?: string;
 }) => {
     const [managementType, setManagementType] = useState<'simple' | 'desvio' | 'adverse' | 'felicitacion'>('simple');
     const [rows, setRows] = useState<SectorAssignmentRow[]>([
@@ -490,7 +492,8 @@ const ReferralModal = ({
 
     useEffect(() => {
         if (isOpen) {
-            setManagementType('simple');
+            // Auto-select 'felicitacion' type when the report is a Felicitación
+            setManagementType(reportFindingType === 'Felicitación' ? 'felicitacion' : 'simple');
             setRows([{ id: generateId(), sector: reportSector || '', selectedUserId: '', phone: '', selectedUserIds: [], phones: [], sendToAll: false }]);
         }
     }, [isOpen]);
@@ -4376,6 +4379,7 @@ export const Dashboard = () => {
                 responsables={responsables}
                 loadingResponsables={loadingResponsables}
                 reportSector={selectedReport?.sector}
+                reportFindingType={selectedReport?.finding_type}
             />
 
             <ReopenModal

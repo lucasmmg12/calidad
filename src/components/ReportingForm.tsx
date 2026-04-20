@@ -16,7 +16,7 @@ export const ReportingForm = () => {
     const [copied, setCopied] = useState(false);
     const [isAnonymous, setIsAnonymous] = useState(false);
     const [reportMode, setReportMode] = useState<ReportMode>('hallazgo');
-    const [felicitacionSent, setFelicitacionSent] = useState(false);
+
     const [files, setFiles] = useState<File[]>([]);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
     const [formData, setFormData] = useState({
@@ -116,8 +116,9 @@ export const ReportingForm = () => {
 
             if (reportMode === 'felicitacion') {
                 // ── FELICITACIÓN FLOW ──
+                // Las felicitaciones entran como 'pending' para que el admin las derive
+                // al sector correspondiente, igual que los hallazgos.
                 const sectorLabel = SECTOR_OPTIONS.find(s => s.value === formData.sector)?.label || formData.sector;
-                const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
 
                 const { error: dbError } = await supabase
                     .from('reports')
@@ -129,42 +130,24 @@ export const ReportingForm = () => {
                         is_anonymous: false,
                         contact_name: dbName,
                         contact_number: dbNumber,
-                        status: 'resolved',
+                        status: 'pending',
                         finding_type: 'Felicitación',
                         ai_urgency: 'Verde',
                         ai_summary: `🎉 Felicitación para ${sectorLabel}`,
                         ai_category: 'Felicitación',
                         evidence_urls: evidenceUrls,
-                        resolved_at: new Date().toISOString(),
-                        notes: `[${timestamp}] 🎉 Felicitación recibida para ${sectorLabel}. Auto-cerrada.`
                     });
                 if (dbError) throw dbError;
 
-                // Auto-send WhatsApp to sector referentes
-                try {
-                    const { data: referentes } = await supabase
-                        .from('user_profiles')
-                        .select('display_name, phone_number, assigned_sectors')
-                        .eq('account_status', 'approved');
-
-                    const sectorReferentes = (referentes || []).filter(
-                        u => u.phone_number && u.assigned_sectors?.includes(formData.sector)
-                    );
-
-                    const fromName = dbName || 'Un colaborador';
-                    for (const ref of sectorReferentes) {
-                        const refNumber = `549${ref.phone_number.replace(/\D/g, '')}`;
-                        supabase.functions.invoke('send-whatsapp', {
-                            body: {
-                                number: refNumber,
-                                message: `🎉 *¡Felicitaciones, ${ref.display_name || 'equipo'}!*\n\n${fromName} ha reconocido el trabajo de tu sector *${sectorLabel}*.\n\n💬 _"${formData.content}"_\n\n¡Seguí así! Tu dedicación marca la diferencia. 💪✨\n\n— Sistema de Calidad, Sanatorio Argentino`,
-                                mediaUrl: "https://i.imgur.com/63f9RLD.jpeg"
-                            }
-                        }).catch(err => console.error('Error sending felicitacion whatsapp:', err));
-                    }
-                    setFelicitacionSent(sectorReferentes.length > 0);
-                } catch (waErr) {
-                    console.error('Error looking up referentes:', waErr);
+                // Confirmar recepción al reportante por WhatsApp
+                if (botNumber) {
+                    supabase.functions.invoke('send-whatsapp', {
+                        body: {
+                            number: botNumber,
+                            message: `🌟 *¡Gracias por tu felicitación!*\n\nRecibimos tu reconocimiento para el sector *${sectorLabel}*. El equipo de Calidad se encargará de hacerlo llegar al sector.\n\n🆔 Tu código de seguimiento: *${trackingId}*\n\n¡Gracias por valorar el trabajo del equipo! 💛✨`,
+                            mediaUrl: "https://i.imgur.com/63f9RLD.jpeg"
+                        }
+                    }).catch(err => console.error('Error sending felicitacion confirmation:', err));
                 }
 
                 setSuccessId(trackingId);
@@ -233,7 +216,7 @@ export const ReportingForm = () => {
                 </h2>
                 <p className="text-slate-500 mb-8 font-medium">
                     {isFelicitacion
-                        ? (felicitacionSent ? 'Tu reconocimiento fue enviado directamente al equipo del sector. ¡Gracias!' : 'Tu felicitación fue registrada exitosamente.')
+                        ? 'Tu felicitación fue registrada exitosamente. El equipo de Calidad se encargará de hacerla llegar al sector. 💛'
                         : 'Gracias por ayudarnos a mejorar. Tu código de seguimiento es:'}
                 </p>
                 <div className="bg-slate-50 border border-slate-200 p-6 rounded-2xl mb-8">
@@ -271,7 +254,7 @@ export const ReportingForm = () => {
                     </button>
                 </div>
                 <button
-                    onClick={() => { setSuccessId(null); setFormData({ originSector: '', reporterSector: '', sector: '', content: '', contactName: '', contactNumber: '' }); setFiles([]); setPreviewUrls([]); setIsAnonymous(false); setReportMode('hallazgo'); setFelicitacionSent(false); }}
+                    onClick={() => { setSuccessId(null); setFormData({ originSector: '', reporterSector: '', sector: '', content: '', contactName: '', contactNumber: '' }); setFiles([]); setPreviewUrls([]); setIsAnonymous(false); setReportMode('hallazgo'); }}
                     className="btn-primary w-full"
                 >
                     {isFelicitacion ? 'Enviar Otra' : 'Enviar Nuevo Reporte'}
