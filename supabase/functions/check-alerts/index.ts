@@ -18,6 +18,17 @@ serve(async (req) => {
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         );
 
+        // ── Weekday guard: Only send Mon-Fri in Argentina timezone ──
+        const nowArg = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
+        const dayOfWeek = nowArg.getDay(); // 0=Sun, 6=Sat
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+            console.log(`[Alerts] Skipping — today is ${dayOfWeek === 0 ? 'Sunday' : 'Saturday'} in Argentina`);
+            return new Response(JSON.stringify({ skipped: true, reason: 'Weekend' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 200,
+            });
+        }
+
         // 1. Get reports with implementation_date that are active
         const { data: reports, error } = await supabase
             .from('reports')

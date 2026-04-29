@@ -2,13 +2,19 @@
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
--- 2. Schedule the Daily Alert Job
--- This job runs every day at 9:00 AM UTC to check for overdue/upcoming deadlines.
+-- 2. First, unschedule any existing job with the old schedule
+-- (Run this FIRST to remove the 6am daily schedule)
+select cron.unschedule('check-quality-alerts');
+
+-- 3. Schedule the Weekday Alert Job (Mon-Fri at 09:00 Argentina time)
+-- Argentina is UTC-3, so 09:00 ART = 12:00 UTC
+-- Cron day-of-week: 1-5 = Monday to Friday
+-- This job checks for overdue/upcoming deadlines.
 -- Triggers alerts at 5 days left, 2 days left, and on the deadline day.
 
 SELECT cron.schedule(
     'check-quality-alerts',   -- Job name
-    '0 9 * * *',              -- Cron schedule (09:00 AM daily)
+    '0 12 * * 1-5',           -- Cron schedule: 12:00 UTC (09:00 ART), Mon-Fri only
     $$
     SELECT
       net.http_post(
@@ -26,6 +32,9 @@ SELECT cron.schedule(
 
 -- To check if it's running:
 -- select * from cron.job_run_details order by start_time desc;
+
+-- To verify the schedule:
+-- select * from cron.job;
 
 -- To unschedule:
 -- select cron.unschedule('check-quality-alerts');

@@ -604,12 +604,14 @@ const ReferralModal = ({
                 <div className="flex gap-3 w-full flex-shrink-0">
                     <button onClick={onClose} disabled={isSending} className="flex-1 py-2.5 px-4 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50">Cancelar</button>
                     <button
-                        onClick={() => onConfirm(managementType, validRows[0]?.phone || '', validRows.length > 0 ? rows : undefined)}
+                        onClick={() => onConfirm(managementType, validRows[0]?.phone || '', validRows.length > 0 ? validRows : undefined)}
                         disabled={isSending || validRows.length === 0}
-                        className="flex-1 py-2.5 px-4 bg-sanatorio-primary text-white font-bold rounded-xl hover:opacity-90 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                        className={`flex-1 py-2.5 px-4 text-white font-bold rounded-xl hover:opacity-90 transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 ${managementType === 'felicitacion' ? 'bg-gradient-to-r from-amber-400 to-yellow-500 shadow-amber-500/30' : 'bg-sanatorio-primary'}`}
                     >
                         {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                        {validRows.length > 1 ? `Enviar a ${validRows.length} sectores` : 'Enviar Solicitud'}
+                        {managementType === 'felicitacion' 
+                            ? (validRows.length > 1 ? `Enviar Felicitación a ${validRows.length} sectores` : 'Enviar Felicitación 🎉') 
+                            : (validRows.length > 1 ? `Enviar a ${validRows.length} sectores` : 'Enviar Solicitud')}
                     </button>
                 </div>
             </div>
@@ -1377,8 +1379,9 @@ export const Dashboard = () => {
         if (!selectedReport) return;
         setIsSendingReferral(true);
 
+        const isFelicitacion = managementType === 'felicitacion';
         const isAdverse = managementType === 'desvio' || managementType === 'adverse';
-        const typeLabel = managementType === 'simple' ? 'Simple' : managementType === 'desvio' ? 'Desvío' : managementType === 'felicitacion' ? 'Felicitación' : 'Evento Adverso';
+        const typeLabel = managementType === 'simple' ? 'Simple' : managementType === 'desvio' ? 'Desvío' : isFelicitacion ? 'Felicitación' : 'Evento Adverso';
         const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
 
         // Determine the valid rows to process
@@ -1388,6 +1391,7 @@ export const Dashboard = () => {
 
         const isMultiSector = validRows.length > 1;
         let allSuccess = true;
+        let waFailCount = 0;
         const logEntries: string[] = [];
         const assignmentIds: string[] = [];
 
@@ -1420,45 +1424,81 @@ export const Dashboard = () => {
 
             // 3. Build WhatsApp message
             const sectorLabel = SECTOR_OPTIONS.find(s => s.value === row.sector)?.label || row.sector;
-            let messageBody = `👋 *Solicitud de Gestión - Calidad*\n\nSe requiere su intervención para el caso: *${selectedReport.tracking_id}*\n📂 Sector: ${sectorLabel}\n\n📝 *Reporte:* "${selectedReport.ai_summary || selectedReport.content}"\n\n`;
 
-            if (managementType === 'simple') {
-                messageBody += `🛠️ *Tipo: Simple*\nSe solicita: *Contención / Acción Inmediata*.`;
-            } else if (managementType === 'desvio') {
-                messageBody += `🔧 *Tipo: Desvío*\nSe solicita: *Acción Inmediata + Análisis de Causa + Plan de Acción*.`;
-            } else if (managementType === 'felicitacion') {
-                messageBody += `🌟 *Tipo: Felicitación*\nSe ha recibido un agradecimiento o felicitación para su sector. ¡Buen trabajo!`;
+            let messageBody: string;
+            if (isFelicitacion) {
+                // Felicitación: mensaje diferenciado, más cálido
+                messageBody = `🌟 *¡Felicitación para ${sectorLabel}!*\n\n`;
+                messageBody += `Se ha recibido un reconocimiento para su sector a través del sistema de Calidad.\n\n`;
+                messageBody += `📝 *Mensaje:* "${selectedReport.ai_summary || selectedReport.content}"\n\n`;
+                messageBody += `🆔 Caso: *${selectedReport.tracking_id}*\n\n`;
+                messageBody += `👉 *Responda aquí:* ${resolutionLink}`;
             } else {
-                messageBody += `⚠️ *Tipo: Evento Adverso*\nSe solicita: *Acción Inmediata + Análisis de Causa + Plan de Acción*.`;
-            }
+                messageBody = `👋 *Solicitud de Gestión - Calidad*\n\nSe requiere su intervención para el caso: *${selectedReport.tracking_id}*\n📂 Sector: ${sectorLabel}\n\n📝 *Reporte:* "${selectedReport.ai_summary || selectedReport.content}"\n\n`;
 
-            if (isMultiSector) {
-                messageBody += `\n\n🏥 *Nota:* Este caso fue asignado a ${validRows.length} sectores simultáneamente. Su respuesta es independiente.`;
-            }
+                if (managementType === 'simple') {
+                    messageBody += `🛠️ *Tipo: Simple*\nSe solicita: *Contención / Acción Inmediata*.`;
+                } else if (managementType === 'desvio') {
+                    messageBody += `🔧 *Tipo: Desvío*\nSe solicita: *Acción Inmediata + Análisis de Causa + Plan de Acción*.`;
+                } else {
+                    messageBody += `⚠️ *Tipo: Evento Adverso*\nSe solicita: *Acción Inmediata + Análisis de Causa + Plan de Acción*.`;
+                }
 
-            messageBody += `\n\n👉 *Gestione el caso aquí:* ${resolutionLink}`;
+                if (isMultiSector) {
+                    messageBody += `\n\n🏥 *Nota:* Este caso fue asignado a ${validRows.length} sectores simultáneamente. Su respuesta es independiente.`;
+                }
+
+                messageBody += `\n\n👉 *Gestione el caso aquí:* ${resolutionLink}`;
+            }
 
             // 4. Send WhatsApp to ALL selected phones for this sector
-            const phonesToNotify = row.phones.length > 0 ? row.phones : [row.phone];
+            const phonesToNotify = row.phones.length > 0 ? row.phones : (row.phone ? [row.phone] : []);
+            
+            if (phonesToNotify.length === 0 || phonesToNotify.every(p => !p || p.length < 8)) {
+                console.warn(`[MultiSector] No valid phones for ${sectorLabel}, skipping WhatsApp`);
+                logEntries.push(`[${timestamp}] ⚠️ SIN TELÉFONO: No se pudo notificar vía WhatsApp a ${sectorLabel} (sin número válido)`);
+                if (!isFelicitacion) {
+                    waFailCount++;
+                }
+                continue;
+            }
+
             for (const phoneNum of phonesToNotify) {
+                if (!phoneNum || phoneNum.length < 8) continue;
                 const botNumber = `549${phoneNum}`;
                 console.log(`[MultiSector] Enviando a ${botNumber} (${sectorLabel}). Link: ${resolutionLink}`);
-                const { error: waError } = await supabase.functions.invoke('send-whatsapp', {
-                    body: {
-                        number: botNumber,
-                        message: messageBody,
-                        mediaUrl: managementType === 'adverse' ? "https://i.imgur.com/jgX2y4n.png" : "https://i.imgur.com/JGQlbiJ.jpeg"
-                    }
-                });
+                
+                try {
+                    const { data: waData, error: waError } = await supabase.functions.invoke('send-whatsapp', {
+                        body: {
+                            number: botNumber,
+                            message: messageBody,
+                            mediaUrl: isFelicitacion ? undefined : (managementType === 'adverse' ? "https://i.imgur.com/jgX2y4n.png" : "https://i.imgur.com/JGQlbiJ.jpeg")
+                        }
+                    });
 
-                if (waError) {
-                    console.error(`[MultiSector] WhatsApp error for ${sectorLabel} (${phoneNum}):`, waError);
-                    logEntries.push(`[${timestamp}] ❌ ERROR AL ENVIAR: Fallo WhatsApp a ${phoneNum} (${sectorLabel})`);
-                    allSuccess = false;
-                } else {
-                    logEntries.push(`[${timestamp}] 📤 DERIVADO: Enviado a ${phoneNum} como [${typeLabel}] → ${sectorLabel}`);
+                    // Check both invoke-level error AND provider-level error in response data
+                    const providerError = waData?.error;
+                    if (waError || providerError) {
+                        const errorDetail = waError?.message || providerError || 'Error desconocido';
+                        console.error(`[MultiSector] WhatsApp error for ${sectorLabel} (${phoneNum}):`, errorDetail);
+                        logEntries.push(`[${timestamp}] ⚠️ WA NO ENVIADO: ${phoneNum} (${sectorLabel}) — ${errorDetail}`);
+                        waFailCount++;
+                    } else {
+                        logEntries.push(`[${timestamp}] 📤 DERIVADO: Enviado a ${phoneNum} como [${typeLabel}] → ${sectorLabel}`);
+                    }
+                } catch (waException: any) {
+                    console.error(`[MultiSector] WhatsApp exception for ${sectorLabel} (${phoneNum}):`, waException);
+                    logEntries.push(`[${timestamp}] ⚠️ WA EXCEPCIÓN: ${phoneNum} (${sectorLabel})`);
+                    waFailCount++;
                 }
             }
+        }
+
+        // For felicitaciones: WA failures don't count as total failure
+        // The assignment was created successfully, which is what matters
+        if (waFailCount > 0 && !isFelicitacion) {
+            allSuccess = false;
         }
 
         // 5. Update report status and notes
@@ -1476,7 +1516,7 @@ export const Dashboard = () => {
                 notes: updatedNotes,
                 is_adverse_event: isAdverse,
                 assigned_to: isMultiSector ? `${validRows.length} sectores` : validRows[0]?.phone || responsiblePhone,
-                last_whatsapp_status: allSuccess ? 'sent' : 'failed',
+                last_whatsapp_status: (allSuccess || isFelicitacion) ? 'sent' : 'failed',
                 last_whatsapp_sent_at: new Date().toISOString()
             })
             .eq('id', selectedReport.id);
@@ -1487,7 +1527,7 @@ export const Dashboard = () => {
                 status: newStatus,
                 notes: updatedNotes,
                 assigned_to: isMultiSector ? `${validRows.length} sectores` : validRows[0]?.phone || responsiblePhone,
-                last_whatsapp_status: allSuccess ? 'sent' : 'failed',
+                last_whatsapp_status: (allSuccess || isFelicitacion) ? 'sent' : 'failed',
                 last_whatsapp_sent_at: new Date().toISOString()
             } : r));
             setShowReferralModal(false);
@@ -1496,7 +1536,17 @@ export const Dashboard = () => {
         }
 
         // Show feedback
-        if (allSuccess) {
+        if (isFelicitacion) {
+            // Felicitaciones always show success — the assignment was created
+            setFeedbackModal({
+                isOpen: true,
+                type: 'success',
+                title: '🌟 Felicitación Enviada',
+                message: waFailCount > 0
+                    ? `La felicitación fue registrada exitosamente.${waFailCount > 0 ? ' (Nota: el WhatsApp pudo no llegar a todos los destinatarios, pero el caso quedó asignado correctamente.)' : ''}`
+                    : `La felicitación fue enviada y notificada exitosamente al sector.`
+            });
+        } else if (allSuccess) {
             setFeedbackModal({
                 isOpen: true,
                 type: 'success',

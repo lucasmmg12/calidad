@@ -141,7 +141,11 @@ export const MetricsDashboard = () => {
     };
 
     // ─── Step 2: Compute all statistics from the given reports ───
-    const computeStats = (filteredReports: any[]) => {
+    const computeStats = (allReportsUnfiltered: any[]) => {
+        // Exclude discarded and rejected reports from all metrics
+        const filteredReports = allReportsUnfiltered.filter(
+            r => r.status !== 'discarded' && r.status !== 'assignment_rejected'
+        );
         setRawReports(filteredReports);
 
         const total = filteredReports.length;
