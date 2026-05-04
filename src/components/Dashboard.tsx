@@ -1111,8 +1111,7 @@ export const Dashboard = () => {
             const { error } = await supabase.functions.invoke('send-whatsapp', {
                 body: {
                     number: botNumber,
-                    message: `🔔 *Recordatorio - Caso Pendiente*\n\nEl caso *${selectedReport.tracking_id}* aún requiere su gestión.\n📂 Sector: ${sectorLabel}\n\n⏰ Este caso está esperando su respuesta. Por favor, gestione a la brevedad.\n\n👉 *Gestione aquí:* ${resolutionLink}`,
-                    mediaUrl: "https://i.imgur.com/JGQlbiJ.jpeg"
+                    message: `🔔 *Recordatorio - Caso Pendiente*\n\nEl caso *${selectedReport.tracking_id}* aún requiere su gestión.\n📂 Sector: ${sectorLabel}\n\n⏰ Este caso está esperando su respuesta. Por favor, gestione a la brevedad.\n\n👉 *Gestione aquí:* ${resolutionLink}`
                 }
             });
 
@@ -1260,8 +1259,7 @@ export const Dashboard = () => {
                 await supabase.functions.invoke('send-whatsapp', {
                     body: {
                         number: botNumber,
-                        message: `🛑 *Solución Insuficiente - Calidad*\n\nLa solución propuesta para el caso *${selectedReport.tracking_id}* ha sido rechazada por considerarse insuficiente.\n\n⚠️ *Motivo:* ${reason}\n\n👉 *Por favor, gestione nuevamente el caso e ingrese un nuevo plan de acción:* ${resolutionLink}`,
-                        mediaUrl: "https://i.imgur.com/GfBdckl.jpeg"
+                        message: `🛑 *Solución Insuficiente - Calidad*\n\nLa solución propuesta para el caso *${selectedReport.tracking_id}* ha sido rechazada por considerarse insuficiente.\n\n⚠️ *Motivo:* ${reason}\n\n👉 *Por favor, gestione nuevamente el caso e ingrese un nuevo plan de acción:* ${resolutionLink}`
                     }
                 });
             }
@@ -1286,8 +1284,7 @@ export const Dashboard = () => {
             await supabase.functions.invoke('send-whatsapp', {
                 body: {
                     number: userNumber,
-                    message: `✅ *Reporte Resuelto - Calidad*\n\nEstimado/a, su reporte *${selectedReport.tracking_id}* ha sido gestionado y cerrado exitosamente.\n\n📝 *Resolución:* "${selectedReport.resolution_notes || selectedReport.corrective_plan || 'Sin observaciones.'}"\n\nGracias por su compromiso con la mejora continua.`,
-                    mediaUrl: "https://i.imgur.com/rOkI8sA.png"
+                    message: `✅ *Reporte Resuelto - Calidad*\n\nEstimado/a, su reporte *${selectedReport.tracking_id}* ha sido gestionado y cerrado exitosamente.\n\n📝 *Resolución:* "${selectedReport.resolution_notes || selectedReport.corrective_plan || 'Sin observaciones.'}"\n\nGracias por su compromiso con la mejora continua.`
                 }
             });
         }
@@ -1472,8 +1469,7 @@ export const Dashboard = () => {
                     const { data: waData, error: waError } = await supabase.functions.invoke('send-whatsapp', {
                         body: {
                             number: botNumber,
-                            message: messageBody,
-                            mediaUrl: isFelicitacion ? undefined : (managementType === 'adverse' ? "https://i.imgur.com/jgX2y4n.png" : "https://i.imgur.com/JGQlbiJ.jpeg")
+                            message: messageBody
                         }
                     });
 

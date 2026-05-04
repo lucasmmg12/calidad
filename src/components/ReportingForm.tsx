@@ -144,8 +144,7 @@ export const ReportingForm = () => {
                     supabase.functions.invoke('send-whatsapp', {
                         body: {
                             number: botNumber,
-                            message: `🌟 *¡Gracias por tu felicitación!*\n\nRecibimos tu reconocimiento para el sector *${sectorLabel}*. El equipo de Calidad se encargará de hacerlo llegar al sector.\n\n🆔 Tu código de seguimiento: *${trackingId}*\n\n¡Gracias por valorar el trabajo del equipo! 💛✨`,
-                            mediaUrl: "https://i.imgur.com/63f9RLD.jpeg"
+                            message: `🌟 *¡Gracias por tu felicitación!*\n\nRecibimos tu reconocimiento para el sector *${sectorLabel}*. El equipo de Calidad se encargará de hacerlo llegar al sector.\n\n🆔 Tu código de seguimiento: *${trackingId}*\n\n¡Gracias por valorar el trabajo del equipo! 💛✨`
                         }
                     }).catch(err => console.error('Error sending felicitacion confirmation:', err));
                 }
@@ -173,8 +172,7 @@ export const ReportingForm = () => {
                     supabase.functions.invoke('send-whatsapp', {
                         body: {
                             number: botNumber,
-                            message: `👋 ¡Hola! Valoramos mucho que nos hayas contactado. Queremos contarte que ya recibimos tu reporte y el equipo de Calidad comenzará a revisarlo a la brevedad.\n\n🆔 Tu código de seguimiento personal es: *${trackingId}*\n\nCon este código podrás consultar los avances en el sistema cuando lo desees.\n\n¡Muchas gracias por ayudarnos a brindar una mejor atención cada día! ✨💙`,
-                            mediaUrl: "https://i.imgur.com/63f9RLD.jpeg"
+                            message: `👋 ¡Hola! Valoramos mucho que nos hayas contactado. Queremos contarte que ya recibimos tu reporte y el equipo de Calidad comenzará a revisarlo a la brevedad.\n\n🆔 Tu código de seguimiento personal es: *${trackingId}*\n\nCon este código podrás consultar los avances en el sistema cuando lo desees.\n\n¡Muchas gracias por ayudarnos a brindar una mejor atención cada día! ✨💙`
                         }
                     }).catch(err => console.error('Error sending immediate whatsapp:', err));
                 }

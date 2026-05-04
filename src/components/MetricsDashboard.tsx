@@ -1469,8 +1469,7 @@ export const MetricsDashboard = () => {
                     await supabase.functions.invoke('send-whatsapp', {
                         body: {
                             number: botNumber,
-                            message,
-                            mediaUrl: "https://i.imgur.com/JGQlbiJ.jpeg"
+                            message
                         }
                     });
                 }}
