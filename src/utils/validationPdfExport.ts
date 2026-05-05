@@ -16,8 +16,8 @@ const BLUE_ACCENT: [number, number, number] = [37, 99, 235];
 const AMBER_ACCENT: [number, number, number] = [180, 83, 9];
 const GREEN_ACCENT: [number, number, number] = [21, 128, 61];
 const DARK_TEXT: [number, number, number] = [30, 41, 59];
-const GRAY_TEXT: [number, number, number] = [100, 116, 139];
-const BODY_TEXT: [number, number, number] = [55, 65, 81];
+const GRAY_TEXT: [number, number, number] = [51, 65, 85];
+const BODY_TEXT: [number, number, number] = [30, 41, 59];
 
 // ─── Helpers ───
 const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
@@ -109,10 +109,16 @@ interface ReportData {
     resolution_history?: any[];
 }
 
+interface ResponsableInfo {
+    display_name?: string | null;
+    phone_number?: string | null;
+}
+
 export const generateValidationPDF = async (
     report: ReportData,
     sectorAssignments: SectorAssignment[],
-    sectorOptions: { value: string; label: string }[]
+    sectorOptions: { value: string; label: string }[],
+    responsables: ResponsableInfo[] = []
 ) => {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const fontName = await registerFonts(doc);
@@ -129,6 +135,17 @@ export const generateValidationPDF = async (
         a.status === 'resolved' || a.status === 'quality_validation'
     );
     const isMultiSector = sectorAssignments.length > 0;
+
+    // ─── Resolve responsible name from phone ───
+    const getResponsableName = (phone?: string): string | null => {
+        if (!phone || responsables.length === 0) return null;
+        const normalized = phone.replace(/\D/g, '');
+        const found = responsables.find(r => {
+            const rPhone = (r.phone_number || '').replace(/\D/g, '');
+            return rPhone && (rPhone === normalized || normalized.endsWith(rPhone) || rPhone.endsWith(normalized));
+        });
+        return found?.display_name || null;
+    };
 
     // ─── Font helper ───
     const setF = (style: 'normal' | 'bold', size: number, color: [number, number, number] = DARK_TEXT) => {
@@ -276,17 +293,20 @@ export const generateValidationPDF = async (
     // ─── AI Summary ───
     if (report.ai_summary) {
         checkBreak(30);
-        setF('bold', 8, GRAY_TEXT);
+        setF('bold', 9, GRAY_TEXT);
         doc.text('RESUMEN DEL CASO (IA)', M, y);
         y += 5;
 
         doc.setFillColor(248, 250, 252);
-        const summaryLines = doc.splitTextToSize(report.ai_summary, CW - 12);
-        const summaryH = summaryLines.length * 4.5 + 8;
+        setF('normal', 10, BODY_TEXT);
+        const summaryLines = doc.splitTextToSize(report.ai_summary, CW - 16);
+        const sumLineH = 5.2;
+        const summaryH = summaryLines.length * sumLineH + 12;
         doc.roundedRect(M, y, CW, summaryH, 3, 3, 'F');
 
-        setF('normal', 9, BODY_TEXT);
-        doc.text(summaryLines, M + 6, y + 6);
+        summaryLines.forEach((line: string, i: number) => {
+            doc.text(line, M + 8, y + 8 + i * sumLineH);
+        });
         y += summaryH + 6;
     }
 
@@ -302,10 +322,11 @@ export const generateValidationPDF = async (
         accentColor: [number, number, number],
         titleColor: [number, number, number]
     ) => {
-        setF('normal', 9.5);
-        const lines = doc.splitTextToSize(content, CW - 20);
-        const textH = lines.length * 4.5;
-        const boxH = textH + 14;
+        setF('normal', 10);
+        const lines = doc.splitTextToSize(content, CW - 22);
+        const lineH = 5.2;
+        const textH = lines.length * lineH;
+        const boxH = textH + 20;
 
         checkBreak(boxH + 4);
 
@@ -318,12 +339,14 @@ export const generateValidationPDF = async (
         doc.roundedRect(M, y, 2.5, boxH, 1, 1, 'F');
 
         // Title
-        setF('bold', 7.5, titleColor);
-        doc.text(title.toUpperCase(), M + 8, y + 7);
+        setF('bold', 9, titleColor);
+        doc.text(title.toUpperCase(), M + 8, y + 8);
 
-        // Content
-        setF('normal', 9.5, BODY_TEXT);
-        doc.text(lines, M + 8, y + 13);
+        // Content — render line by line for precise height control
+        setF('normal', 10, BODY_TEXT);
+        lines.forEach((line: string, i: number) => {
+            doc.text(line, M + 8, y + 16 + i * lineH);
+        });
 
         y += boxH + 4;
     };
@@ -371,6 +394,18 @@ export const generateValidationPDF = async (
             doc.text(statusBadge, pageW - M - badgeW, y + 7.5);
 
             y += 17;
+
+            // Responsible name
+            const responsableName = getResponsableName(assignment.assigned_phone);
+            if (responsableName || assignment.assigned_phone) {
+                checkBreak(8);
+                setF('bold', 8, GRAY_TEXT);
+                const nameLabel = responsableName
+                    ? `👤 Responsable: ${responsableName}${assignment.assigned_phone ? ` (${assignment.assigned_phone})` : ''}`
+                    : `📱 Teléfono: ${assignment.assigned_phone}`;
+                doc.text(nameLabel, M + 4, y);
+                y += 6;
+            }
 
             // Effective data (fallback to report level)
             const effectiveAction = assignment.immediate_action || report.resolution_notes;
@@ -446,6 +481,18 @@ export const generateValidationPDF = async (
         doc.text('Resolución del Caso', M, y + 4);
         y += 12;
 
+        // Show responsible name (resolve from assigned_to phone)
+        const singleResponsableName = getResponsableName(report.assigned_to);
+        if (singleResponsableName || report.assigned_to) {
+            checkBreak(8);
+            setF('bold', 9, GRAY_TEXT);
+            const nameText = singleResponsableName
+                ? `👤 Responsable: ${singleResponsableName}${report.assigned_to ? ` (${report.assigned_to})` : ''}`
+                : `📱 Responsable: ${report.assigned_to}`;
+            doc.text(nameText, M, y);
+            y += 8;
+        }
+
         if (report.resolution_notes) {
             const cleanAction = report.resolution_notes.split('Origen:')[0].trim();
             if (cleanAction) {
@@ -488,38 +535,38 @@ export const generateValidationPDF = async (
         report.resolution_history.forEach((entry: any, idx: number) => {
             checkBreak(30);
             doc.setFillColor(254, 249, 249);
-            doc.roundedRect(M, y, CW, 8, 2, 2, 'F');
-            setF('bold', 7, [185, 28, 28]);
-            doc.text(`Intento #${idx + 1} — Rechazado: ${new Date(entry.rejected_at).toLocaleDateString('es-AR')}`, M + 6, y + 5.5);
-            setF('normal', 7, [185, 28, 28]);
-            doc.text(`Motivo: "${entry.reject_reason}"`, M + 6 + CW * 0.45, y + 5.5);
-            y += 11;
+            doc.roundedRect(M, y, CW, 9, 2, 2, 'F');
+            setF('bold', 8, [185, 28, 28]);
+            doc.text(`Intento #${idx + 1} — Rechazado: ${new Date(entry.rejected_at).toLocaleDateString('es-AR')}`, M + 6, y + 6);
+            setF('normal', 8, [185, 28, 28]);
+            doc.text(`Motivo: "${entry.reject_reason}"`, M + 6 + CW * 0.45, y + 6);
+            y += 12;
 
             if (entry.previous_data?.immediate_action) {
-                setF('bold', 7, GRAY_TEXT);
+                setF('bold', 8, GRAY_TEXT);
                 doc.text('Acción:', M + 6, y);
-                setF('normal', 8, GRAY_TEXT);
-                const actionLines = doc.splitTextToSize(entry.previous_data.immediate_action, CW - 30);
+                setF('normal', 9, BODY_TEXT);
+                const actionLines = doc.splitTextToSize(entry.previous_data.immediate_action, CW - 32);
                 doc.text(actionLines.slice(0, 2), M + 24, y);
-                y += Math.min(actionLines.length, 2) * 4 + 2;
+                y += Math.min(actionLines.length, 2) * 5 + 2;
             }
 
             if (entry.previous_data?.root_cause) {
-                setF('bold', 7, GRAY_TEXT);
+                setF('bold', 8, GRAY_TEXT);
                 doc.text('RCA:', M + 6, y);
-                setF('normal', 8, GRAY_TEXT);
-                const rcaLines = doc.splitTextToSize(entry.previous_data.root_cause, CW - 30);
+                setF('normal', 9, BODY_TEXT);
+                const rcaLines = doc.splitTextToSize(entry.previous_data.root_cause, CW - 32);
                 doc.text(rcaLines.slice(0, 2), M + 24, y);
-                y += Math.min(rcaLines.length, 2) * 4 + 2;
+                y += Math.min(rcaLines.length, 2) * 5 + 2;
             }
 
             if (entry.previous_data?.corrective_plan) {
-                setF('bold', 7, GRAY_TEXT);
+                setF('bold', 8, GRAY_TEXT);
                 doc.text('Plan:', M + 6, y);
-                setF('normal', 8, GRAY_TEXT);
-                const planLines = doc.splitTextToSize(entry.previous_data.corrective_plan, CW - 30);
+                setF('normal', 9, BODY_TEXT);
+                const planLines = doc.splitTextToSize(entry.previous_data.corrective_plan, CW - 32);
                 doc.text(planLines.slice(0, 2), M + 24, y);
-                y += Math.min(planLines.length, 2) * 4 + 2;
+                y += Math.min(planLines.length, 2) * 5 + 2;
             }
 
             y += 4;
@@ -533,25 +580,28 @@ export const generateValidationPDF = async (
     y += 6;
 
     doc.setFillColor(248, 250, 252);
-    setF('bold', 8, GRAY_TEXT);
+    setF('bold', 9, GRAY_TEXT);
     doc.text('REPORTE ORIGINAL', M, y);
     y += 6;
 
     doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.3);
-    const reportLines = doc.splitTextToSize(report.content || 'Sin contenido.', CW - 12);
-    const reportH = reportLines.length * 4.5 + 10;
+    setF('normal', 10, BODY_TEXT);
+    const reportLines = doc.splitTextToSize(report.content || 'Sin contenido.', CW - 16);
+    const repLineH = 5.2;
+    const reportH = reportLines.length * repLineH + 14;
     checkBreak(reportH);
     doc.roundedRect(M, y, CW, reportH, 3, 3, 'S');
 
-    setF('normal', 9, BODY_TEXT);
-    doc.text(reportLines, M + 6, y + 7);
+    reportLines.forEach((line: string, i: number) => {
+        doc.text(line, M + 8, y + 9 + i * repLineH);
+    });
     y += reportH + 6;
 
     // ─── Assigned To ───
     if (report.assigned_to) {
         checkBreak(10);
-        setF('bold', 8, GRAY_TEXT);
+        setF('bold', 9, GRAY_TEXT);
         doc.text(`Responsable: ${report.assigned_to}`, M, y);
         y += 8;
     }
@@ -569,13 +619,13 @@ export const generateValidationPDF = async (
         doc.line(M, pageH - 14, pageW - M, pageH - 14);
 
         // Footer text
-        setF('normal', 7, GRAY_TEXT);
+        setF('bold', 8, GRAY_TEXT);
         doc.text(
-            'Sanatorio Argentino · Gestión de Calidad bajo Normas ISO 9001:2015 · Documento Confidencial',
+            'Sanatorio Argentino · Gestión de Calidad bajo Normas ITAES · Documento Confidencial',
             M, pageH - 9
         );
 
-        setF('bold', 7, GRAY_TEXT);
+        setF('bold', 8, GRAY_TEXT);
         doc.text(`Pág. ${i}/${totalPages}`, pageW - M, pageH - 9, { align: 'right' });
     }
 

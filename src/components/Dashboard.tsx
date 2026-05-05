@@ -3190,7 +3190,7 @@ export const Dashboard = () => {
                                                 <p className="text-sm text-green-700 font-medium">Gestión completada exitosamente</p>
                                             </div>
                                             <button
-                                                onClick={() => generateValidationPDF(selectedReport, sectorAssignmentsData, SECTOR_OPTIONS)}
+                                                onClick={() => generateValidationPDF(selectedReport, sectorAssignmentsData, SECTOR_OPTIONS, responsables)}
                                                 className="w-9 h-9 rounded-lg bg-white border border-green-200 text-green-600 flex items-center justify-center hover:bg-green-100 hover:border-green-300 transition-all active:scale-95 shadow-sm"
                                                 title="Descargar PDF"
                                             >
@@ -3753,7 +3753,7 @@ export const Dashboard = () => {
                                                             </p>
                                                         </div>
                                                         <button
-                                                            onClick={() => generateValidationPDF(selectedReport, sectorAssignmentsData, SECTOR_OPTIONS)}
+                                                            onClick={() => generateValidationPDF(selectedReport, sectorAssignmentsData, SECTOR_OPTIONS, responsables)}
                                                             className="w-9 h-9 rounded-lg bg-white border border-purple-200 text-purple-600 flex items-center justify-center hover:bg-purple-100 hover:border-purple-300 transition-all active:scale-95 shadow-sm"
                                                             title="Descargar PDF"
                                                         >
@@ -4207,7 +4207,7 @@ export const Dashboard = () => {
                                                     {isAdmin && (
                                                         <div className="space-y-2 flex-shrink-0 pt-2 border-t border-purple-100">
                                                             <button
-                                                                onClick={() => generateValidationPDF(selectedReport, sectorAssignmentsData, SECTOR_OPTIONS)}
+                                                                onClick={() => generateValidationPDF(selectedReport, sectorAssignmentsData, SECTOR_OPTIONS, responsables)}
                                                                 className="w-full py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold text-xs hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
                                                             >
                                                                 <Download className="w-3.5 h-3.5" />

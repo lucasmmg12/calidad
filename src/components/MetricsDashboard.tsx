@@ -363,7 +363,7 @@ export const MetricsDashboard = () => {
             const addFooter = (pageNum: number, totalPages: number) => {
                 doc.setFontSize(7);
                 doc.setTextColor(180, 180, 180);
-                doc.text(`Sanatorio Argentino - Gestión de Calidad bajo Normas ISO 9001:2015 | Documento Confidencial`, 20, pageHeight - 8);
+                doc.text(`Sanatorio Argentino - Gestión de Calidad bajo Normas ITAES | Documento Confidencial`, 20, pageHeight - 8);
                 doc.text(`Pág. ${pageNum} / ${totalPages}`, pageWidth - 20, pageHeight - 8, { align: 'right' });
             };
 
