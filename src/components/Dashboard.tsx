@@ -48,6 +48,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { ChatWindow } from './ChatWindow';
+import { generateValidationPDF } from '../utils/validationPdfExport';
 
 // Discard Confirmation Modal Component
 const DiscardConfirmationModal = ({
@@ -3184,10 +3185,17 @@ export const Dashboard = () => {
                                             <div className="w-12 h-12 rounded-full bg-white text-green-600 flex items-center justify-center shadow-sm">
                                                 <CheckCircle className="w-6 h-6" />
                                             </div>
-                                            <div>
+                                            <div className="flex-1">
                                                 <h4 className="font-bold text-gray-900 text-lg">Caso Cerrado</h4>
                                                 <p className="text-sm text-green-700 font-medium">Gestión completada exitosamente</p>
                                             </div>
+                                            <button
+                                                onClick={() => generateValidationPDF(selectedReport, sectorAssignmentsData, SECTOR_OPTIONS)}
+                                                className="w-9 h-9 rounded-lg bg-white border border-green-200 text-green-600 flex items-center justify-center hover:bg-green-100 hover:border-green-300 transition-all active:scale-95 shadow-sm"
+                                                title="Descargar PDF"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                            </button>
                                         </div>
 
                                         <div className="space-y-6 flex-1 overflow-y-auto pr-2 custom-scrollbar">
@@ -3736,7 +3744,7 @@ export const Dashboard = () => {
                                                         <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
                                                             <BrainCircuit className="w-6 h-6" />
                                                         </div>
-                                                        <div>
+                                                        <div className="flex-1">
                                                             <h4 className="font-bold text-gray-900">Validación de Calidad</h4>
                                                             <p className="text-xs text-purple-600">
                                                                 {isMultiSectorReport
@@ -3744,6 +3752,13 @@ export const Dashboard = () => {
                                                                     : 'Revisión requerida para cierre'}
                                                             </p>
                                                         </div>
+                                                        <button
+                                                            onClick={() => generateValidationPDF(selectedReport, sectorAssignmentsData, SECTOR_OPTIONS)}
+                                                            className="w-9 h-9 rounded-lg bg-white border border-purple-200 text-purple-600 flex items-center justify-center hover:bg-purple-100 hover:border-purple-300 transition-all active:scale-95 shadow-sm"
+                                                            title="Descargar PDF"
+                                                        >
+                                                            <Download className="w-4 h-4" />
+                                                        </button>
                                                     </div>
 
                                                     {/* Multi-sector progress indicator */}
@@ -4190,19 +4205,28 @@ export const Dashboard = () => {
                                                     )}
 
                                                     {isAdmin && (
-                                                        <div className="flex gap-3 flex-shrink-0 pt-2 border-t border-purple-100">
+                                                        <div className="space-y-2 flex-shrink-0 pt-2 border-t border-purple-100">
                                                             <button
-                                                                onClick={() => setShowQualityReturnModal(true)}
-                                                                className="flex-1 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold text-sm hover:bg-red-50 transition-colors"
+                                                                onClick={() => generateValidationPDF(selectedReport, sectorAssignmentsData, SECTOR_OPTIONS)}
+                                                                className="w-full py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold text-xs hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
                                                             >
-                                                                Devolver (Rechazo)
+                                                                <Download className="w-3.5 h-3.5" />
+                                                                Descargar Informe PDF
                                                             </button>
-                                                            <button
-                                                                onClick={() => setShowQualityApproveModal(true)}
-                                                                className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 shadow-lg shadow-purple-500/20"
-                                                            >
-                                                                Aprobar y Cerrar
-                                                            </button>
+                                                            <div className="flex gap-3">
+                                                                <button
+                                                                    onClick={() => setShowQualityReturnModal(true)}
+                                                                    className="flex-1 py-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold text-sm hover:bg-red-50 transition-colors"
+                                                                >
+                                                                    Devolver (Rechazo)
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setShowQualityApproveModal(true)}
+                                                                    className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 shadow-lg shadow-purple-500/20"
+                                                                >
+                                                                    Aprobar y Cerrar
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>
