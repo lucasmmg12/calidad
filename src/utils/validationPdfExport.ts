@@ -145,25 +145,6 @@ export const generateValidationPDF = async (
         }
     };
 
-    // ─── Wrapped text with auto page break ───
-    const writeWrappedText = (text: string, x: number, startY: number, maxWidth: number, fontSize: number, color: [number, number, number] = BODY_TEXT): number => {
-        setF('normal', fontSize, color);
-        const lines: string[] = doc.splitTextToSize(text, maxWidth);
-        const lineHeight = fontSize * 0.45;
-        let currentY = startY;
-
-        for (const line of lines) {
-            if (currentY + lineHeight > pageH - 22) {
-                doc.addPage();
-                currentY = 22;
-                setF('normal', fontSize, color);
-            }
-            doc.text(line, x, currentY);
-            currentY += lineHeight;
-        }
-        return currentY;
-    };
-
     // ═══════════════════════════════════════
     //  PAGE 1: HEADER + CASE SUMMARY
     // ═══════════════════════════════════════
