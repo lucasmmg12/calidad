@@ -1395,14 +1395,17 @@ export const Dashboard = () => {
 
         for (const row of validRows) {
             // 1. Create sector_assignment record
+            // NOTE: 'felicitacion' is not a valid DB enum for management_type;
+            // we store it as 'simple' and use the isFelicitacion flag for UI/message logic.
+            const dbManagementType = isFelicitacion ? 'simple' : managementType;
             const { data: assignmentData, error: insertError } = await supabase
                 .from('sector_assignments')
                 .insert({
                     report_id: selectedReport.id,
                     sector: row.sector,
                     assigned_phone: row.phone,
-                    management_type: managementType,
-                    status: 'pending'
+                    management_type: dbManagementType,
+                    status: isFelicitacion ? 'resolved' : 'pending'
                 })
                 .select('id')
                 .single();
@@ -1463,7 +1466,9 @@ export const Dashboard = () => {
 
             for (const phoneNum of phonesToNotify) {
                 if (!phoneNum || phoneNum.length < 8) continue;
-                const botNumber = `549${phoneNum}`;
+                // Normalize phone: strip country code if already present, then prepend 549
+                const normalizedPhone = phoneNum.replace(/\D/g, '').replace(/^549/, '');
+                const botNumber = `549${normalizedPhone}`;
                 console.log(`[MultiSector] Enviando a ${botNumber} (${sectorLabel}). Link: ${resolutionLink}`);
                 
                 try {
@@ -1504,7 +1509,8 @@ export const Dashboard = () => {
             ? `${currentNotes}\n\n${logEntries.join('\n\n')}`
             : logEntries.join('\n\n');
 
-        const newStatus = isMultiSector ? 'multi_sector_pending' : 'pending_resolution';
+        // Felicitaciones go straight to resolved (no corrective action needed)
+        const newStatus = isFelicitacion ? 'resolved' : (isMultiSector ? 'multi_sector_pending' : 'pending_resolution');
 
         const { error: dbError } = await supabase
             .from('reports')
@@ -1534,14 +1540,17 @@ export const Dashboard = () => {
 
         // Show feedback
         if (isFelicitacion) {
-            // Felicitaciones always show success — the assignment was created
+            // For felicitaciones: show success only if at least one assignment was created
+            const anyAssignmentCreated = assignmentIds.length > 0;
             setFeedbackModal({
                 isOpen: true,
-                type: 'success',
-                title: '🌟 Felicitación Enviada',
-                message: waFailCount > 0
-                    ? `La felicitación fue registrada exitosamente.${waFailCount > 0 ? ' (Nota: el WhatsApp pudo no llegar a todos los destinatarios, pero el caso quedó asignado correctamente.)' : ''}`
-                    : `La felicitación fue enviada y notificada exitosamente al sector.`
+                type: anyAssignmentCreated ? 'success' : 'error',
+                title: anyAssignmentCreated ? '🌟 Felicitación Enviada' : 'Error al Registrar',
+                message: !anyAssignmentCreated
+                    ? 'No se pudo registrar la felicitación. Intente nuevamente.'
+                    : waFailCount > 0
+                        ? `La felicitación fue registrada exitosamente. (Nota: el WhatsApp pudo no llegar a todos los destinatarios, pero el caso quedó asignado correctamente.)`
+                        : `La felicitación fue enviada y notificada exitosamente al sector.`
             });
         } else if (allSuccess) {
             setFeedbackModal({
