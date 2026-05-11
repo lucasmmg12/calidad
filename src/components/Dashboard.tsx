@@ -917,6 +917,9 @@ export const Dashboard = () => {
     const [expandedLogEntry, setExpandedLogEntry] = useState<number | null>(null);
     const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
 
+    // Synchronous guard ref to prevent double-click race conditions on WhatsApp sends
+    const actionInProgressRef = useRef(false);
+
     // Rejection reply state
     const [showReplyModal, setShowReplyModal] = useState(false);
     const [replyMessage, setReplyMessage] = useState('');
@@ -1187,7 +1190,8 @@ export const Dashboard = () => {
     }>({ isOpen: false, type: 'success', title: '', message: '' });
 
     const handleQualityReturn = async (reason: string, phoneTarget: string) => {
-        if (!selectedReport) return;
+        if (!selectedReport || actionInProgressRef.current) return;
+        actionInProgressRef.current = true;
         setIsProcessingQuality(true);
 
         const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
@@ -1274,10 +1278,12 @@ export const Dashboard = () => {
             setFeedbackModal({ isOpen: true, type: 'error', title: 'Error', message: 'No se pudo devolver el caso: ' + (err?.message || 'Error desconocido') });
         }
         setIsProcessingQuality(false);
+        actionInProgressRef.current = false;
     };
 
     const handleQualityApprove = async () => {
-        if (!selectedReport) return;
+        if (!selectedReport || actionInProgressRef.current) return;
+        actionInProgressRef.current = true;
         setIsProcessingQuality(true);
 
         if (selectedReport.contact_number && selectedReport.contact_number.length > 5) {
@@ -1310,6 +1316,7 @@ export const Dashboard = () => {
             setFeedbackModal({ isOpen: true, type: 'error', title: 'Error', message: 'Hubo un error al cerrar el caso.' });
         }
         setIsProcessingQuality(false);
+        actionInProgressRef.current = false;
     };
 
     // Fetch all users with assigned sectors (responsables + admin/directivo with sectors)
@@ -1374,7 +1381,8 @@ export const Dashboard = () => {
     };
 
     const handleSendReferral = async (managementType: 'simple' | 'desvio' | 'adverse' | 'felicitacion', responsiblePhone: string, sectorAssignments?: SectorAssignmentRow[]) => {
-        if (!selectedReport) return;
+        if (!selectedReport || actionInProgressRef.current) return;
+        actionInProgressRef.current = true;
         setIsSendingReferral(true);
 
         const isFelicitacion = managementType === 'felicitacion';
@@ -1571,10 +1579,12 @@ export const Dashboard = () => {
         }
 
         setIsSendingReferral(false);
+        actionInProgressRef.current = false;
     };
 
     const handleReopenCase = async (reason: string) => {
-        if (!selectedReport) return;
+        if (!selectedReport || actionInProgressRef.current) return;
+        actionInProgressRef.current = true;
         setIsReopening(true);
 
         const timestamp = new Date().toLocaleString();
@@ -1653,6 +1663,7 @@ export const Dashboard = () => {
             setFeedbackModal({ isOpen: true, type: 'error', title: 'Error', message: 'No se pudo reabrir el caso: ' + error.message });
         }
         setIsReopening(false);
+        actionInProgressRef.current = false;
     };
 
     // ... (Mantener funciones handleDeleteClick, confirmDelete, handleUpdateUrgency del código original)
