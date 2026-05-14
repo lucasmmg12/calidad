@@ -17,7 +17,8 @@ import {
     Sparkles,
     Tag,
     ClipboardCheck,
-    Star
+    Star,
+    Send
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -28,6 +29,7 @@ import { SlaAlertBanner } from './SlaAlerts';
 import { PdcaPanel } from './PdcaPanel';
 import { SectorFlowMetrics } from './SectorFlowMetrics';
 import { MetricsFilters, type MetricsFilterState } from './MetricsFilters';
+import { SECTOR_OPTIONS } from '../constants/sectors';
 
 Chart.register(...registerables);
 
@@ -40,6 +42,7 @@ export const MetricsDashboard = () => {
         urgentCount: 0,
         avgResolutionTimeDays: 0,
         bySector: [] as { sector: string; count: number; percentage: number }[],
+        byReporterSector: [] as { sector: string; count: number; percentage: number }[],
         byUrgency: { Verdes: 0, Amarillos: 0, Rojos: 0 },
         byStatus: { resolved: 0, pending: 0, waiting: 0, cancelled: 0 },
         byClassification: [] as { category: string; count: number; percentage: number }[],
@@ -50,6 +53,7 @@ export const MetricsDashboard = () => {
     const [rawReports, setRawReports] = useState<any[]>([]);
     const [roleFilteredReports, setRoleFilteredReports] = useState<any[]>([]);
     const [expandedSector, setExpandedSector] = useState<string | null>(null);
+    const [expandedEmitterSector, setExpandedEmitterSector] = useState<string | null>(null);
     const [expandedClassification, setExpandedClassification] = useState<string | null>(null);
     const [sectorFeedback, setSectorFeedback] = useState<Record<string, string>>({});
     const [loadingFeedback, setLoadingFeedback] = useState<string | null>(null);
@@ -65,7 +69,7 @@ export const MetricsDashboard = () => {
 
         // Multi-sector filter
         if (filters.sectors.length > 0) {
-            result = result.filter(r => filters.sectors.includes(r.sector));
+            result = result.filter(r => filters.sectors.includes(r.sector) || filters.sectors.includes(r.reporter_sector));
         }
 
         // Date range: from
@@ -129,7 +133,8 @@ export const MetricsDashboard = () => {
 
         if (role === 'responsable') {
             roleFiltered = reports.filter(r =>
-                r.sector && sectors.includes(r.sector)
+                (r.sector && sectors.includes(r.sector)) ||
+                (r.reporter_sector && sectors.includes(r.reporter_sector))
             );
         }
 
@@ -180,6 +185,16 @@ export const MetricsDashboard = () => {
             .map(([sector, count]) => ({ sector, count, percentage: total > 0 ? (count / total) * 100 : 0 }))
             .sort((a, b) => b.count - a.count);
 
+        // By Reporter Sector (Origin)
+        const reporterSectorMap: Record<string, number> = {};
+        filteredReports.forEach(r => {
+            const s = r.reporter_sector || 'Sin asignar';
+            reporterSectorMap[s] = (reporterSectorMap[s] || 0) + 1;
+        });
+        const byReporterSector = Object.entries(reporterSectorMap)
+            .map(([sector, count]) => ({ sector, count, percentage: total > 0 ? (count / total) * 100 : 0 }))
+            .sort((a, b) => b.count - a.count);
+
         // By Urgency
         const byUrgency = {
             Verdes: filteredReports.filter(r => r.ai_urgency === 'Verde').length,
@@ -217,6 +232,7 @@ export const MetricsDashboard = () => {
             urgentCount: urgent.length,
             avgResolutionTimeDays: Number(avgDays),
             bySector,
+            byReporterSector,
             byUrgency,
             byStatus,
             byClassification,
@@ -842,7 +858,7 @@ export const MetricsDashboard = () => {
                 <div className="bg-white p-8 rounded-3xl shadow-card border border-gray-100">
                     <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
                         <PieChart className="w-5 h-5 text-sanatorio-secondary" />
-                        Distribución por Sector
+                        Hallazgos Recibidos por Sector
                     </h3>
                     <div className="space-y-2">
                         {stats.bySector.map((item, idx) => {
@@ -1178,6 +1194,102 @@ export const MetricsDashboard = () => {
                     })()}
 
                     <p className="text-center text-xs text-gray-400 mt-6">Distribución basada en Triage AI</p>
+                </div>
+            </div>
+
+            {/* ── Hallazgos Emitidos por Sector (Origen) ── */}
+            <div className="bg-white p-8 rounded-3xl shadow-card border border-gray-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+                    <Send className="w-5 h-5 text-indigo-500" />
+                    Hallazgos Emitidos por Sector
+                </h3>
+                <p className="text-xs text-gray-400 mb-6">Cuántos hallazgos generó cada sector como emisor del reporte y a qué sectores fueron dirigidos.</p>
+
+                <div className="space-y-2">
+                    {stats.byReporterSector.map((item, idx) => {
+                        const sectorLabel = SECTOR_OPTIONS.find(s => s.value === item.sector)?.label || item.sector;
+                        const isExpanded = expandedEmitterSector === item.sector;
+                        const emitterReports = rawReports.filter(r => (r.reporter_sector || 'Sin asignar') === item.sector);
+
+                        // Group by destination sector
+                        const destMap: Record<string, number> = {};
+                        emitterReports.forEach(r => {
+                            const dest = r.sector || 'Sin asignar';
+                            destMap[dest] = (destMap[dest] || 0) + 1;
+                        });
+                        const destinations = Object.entries(destMap)
+                            .map(([sector, count]) => ({ sector, count }))
+                            .sort((a, b) => b.count - a.count);
+
+                        const barColors = [
+                            'bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500',
+                            'bg-rose-500', 'bg-cyan-500', 'bg-teal-500', 'bg-pink-500',
+                        ];
+
+                        return (
+                            <div key={idx} className="rounded-xl border border-gray-100 overflow-hidden transition-all duration-300">
+                                <button
+                                    onClick={() => setExpandedEmitterSector(isExpanded ? null : item.sector)}
+                                    className={`w-full p-4 flex items-center gap-4 transition-all duration-200 hover:bg-indigo-50/50 ${isExpanded ? 'bg-indigo-50/70 border-b border-indigo-100' : 'bg-white'}`}
+                                >
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-end mb-1.5">
+                                            <span className="text-sm font-medium text-gray-700">{sectorLabel}</span>
+                                            <span className="text-xs font-bold text-gray-500">{item.count} ({Math.round(item.percentage)}%)</span>
+                                        </div>
+                                        <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-700 ease-out ${isExpanded ? 'bg-indigo-500' : 'bg-indigo-500/70'}`}
+                                                style={{ width: `${item.percentage}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                                        <ChevronDown className="w-5 h-5 text-gray-400" />
+                                    </div>
+                                </button>
+
+                                {/* Expanded: destination breakdown */}
+                                {isExpanded && (
+                                    <div className="p-5 bg-gradient-to-b from-indigo-50/30 to-white animate-in slide-in-from-top-2 duration-300 space-y-4">
+                                        <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">
+                                            Dirigidos a {destinations.length} {destinations.length === 1 ? 'sector' : 'sectores'}
+                                        </h4>
+                                        <div className="space-y-2.5">
+                                            {destinations.map((dest, dIdx) => {
+                                                const destLabel = SECTOR_OPTIONS.find(s => s.value === dest.sector)?.label || dest.sector;
+                                                const maxCount = destinations[0]?.count || 1;
+                                                const barWidth = (dest.count / maxCount) * 100;
+                                                const pct = item.count > 0 ? Math.round((dest.count / item.count) * 100) : 0;
+
+                                                return (
+                                                    <div key={dest.sector}>
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                <span className="text-gray-300 text-xs">→</span>
+                                                                <span className="text-xs font-medium text-gray-600 truncate">{destLabel}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 shrink-0">
+                                                                <span className="text-sm font-black text-gray-800">{dest.count}</span>
+                                                                <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-medium">{pct}%</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                                                            <div
+                                                                className={`h-full rounded-full transition-all duration-700 ${barColors[dIdx % barColors.length]}`}
+                                                                style={{ width: `${barWidth}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                    {stats.byReporterSector.length === 0 && <p className="text-gray-400 text-sm p-4">Sin datos de sector emisor aún.</p>}
                 </div>
             </div>
 

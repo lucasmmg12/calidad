@@ -2,7 +2,11 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '../utils/supabase';
 import { ResolutionForm } from '../components/ResolutionForm';
 import { useEffect, useState } from 'react';
-import { Loader2, XCircle, AlertTriangle, X, Send } from 'lucide-react';
+import { Loader2, XCircle, AlertTriangle, X, Send, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { SECTOR_OPTIONS } from '../constants/sectors';
+import { ORIGIN_OPTIONS } from '../constants/origin_options';
 
 export const ResolutionPage = () => {
     const { ticketId, assignmentId } = useParams();
@@ -196,6 +200,161 @@ export const ResolutionPage = () => {
         }
     };
 
+    // ═══════════════════════════════════════════
+    //  PDF EXPORT — Dossier del Caso
+    // ═══════════════════════════════════════════
+    const handleDownloadPdf = () => {
+        if (!reportData) return;
+
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.width;
+        let y = 15;
+
+        // ── Header ──
+        doc.setFillColor(0, 56, 92); // sanatorio-primary
+        doc.rect(0, 0, pageWidth, 28, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.setTextColor(255, 255, 255);
+        doc.text('Dossier de Caso', 14, 12);
+        doc.setFontSize(10);
+        doc.text(`Ticket #${reportData.trackingId}`, 14, 19);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Generado: ${new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}`, 14, 25);
+        doc.text('Sanatorio Argentino — Gestión de Calidad', pageWidth - 14, 25, { align: 'right' });
+        y = 36;
+
+        // ── Sector Info Table ──
+        const sectorLabel = SECTOR_OPTIONS.find(s => s.value === reportData.sector)?.label || reportData.sector;
+        const reporterLabel = SECTOR_OPTIONS.find(s => s.value === reportData.reporterSector)?.label || reportData.reporterSector || '—';
+        const originLabel = ORIGIN_OPTIONS.find(o => o.value === reportData.originSector)?.label || reportData.originSector || '—';
+
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 56, 92);
+        doc.text('Información del Caso', 14, y);
+        y += 2;
+
+        autoTable(doc, {
+            startY: y,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 56, 92], fontSize: 8, fontStyle: 'bold' },
+            bodyStyles: { fontSize: 9, cellPadding: 3 },
+            columnStyles: { 0: { fontStyle: 'bold', cellWidth: 45, fillColor: [245, 247, 250] } },
+            body: [
+                ['Ticket ID', `#${reportData.trackingId}`],
+                ['Estado', reportData.status || 'Pendiente'],
+                ['Sector Destino', sectorLabel],
+                ['Sector Reportante', reporterLabel],
+                ['Origen', originLabel],
+                ['Requiere RCA', reportData.isAdverseEvent ? 'Sí — Análisis de Causa Raíz' : 'No'],
+                ['Tipo de Gestión', reportData.managementType === 'desvio' ? 'Desvío' : reportData.managementType === 'adverse' ? 'Evento Adverso' : 'Simple'],
+            ],
+            margin: { left: 14, right: 14 },
+        });
+        y = (doc as any).lastAutoTable.finalY + 8;
+
+        // ── Reporte Original ──
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 56, 92);
+        doc.text('Reporte Original', 14, y);
+        y += 5;
+
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(9);
+        doc.setTextColor(60, 60, 60);
+        const descLines = doc.splitTextToSize(`"${reportData.description}"`, pageWidth - 28);
+        doc.text(descLines, 14, y);
+        y += descLines.length * 4.5 + 6;
+
+        // ── Check page break ──
+        const checkPage = (needed: number) => {
+            if (y + needed > doc.internal.pageSize.height - 20) {
+                doc.addPage();
+                y = 15;
+            }
+        };
+
+        // ── Observaciones de Calidad ──
+        if (reportData.qualityObservations) {
+            checkPage(30);
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 56, 92);
+            doc.text('Observaciones de Calidad', 14, y);
+            y += 5;
+
+            doc.setFillColor(238, 242, 255);
+            const obsLines = doc.splitTextToSize(reportData.qualityObservations, pageWidth - 32);
+            const obsHeight = obsLines.length * 4.5 + 6;
+            doc.roundedRect(14, y - 2, pageWidth - 28, obsHeight, 2, 2, 'F');
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(50, 50, 80);
+            doc.text(obsLines, 16, y + 3);
+            y += obsHeight + 6;
+        }
+
+        // ── Historial de Actividad ──
+        if (reportData.notes) {
+            checkPage(20);
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 56, 92);
+            doc.text('Historial de Actividad', 14, y);
+            y += 2;
+
+            const entries = reportData.notes.split('\n\n').filter((n: string) => n.trim());
+            const timelineRows = entries.map((entry: string) => {
+                const match = entry.match(/^\[([^\]]+)\]\s?(.*)/);
+                if (match) return [match[1], match[2]];
+                return ['—', entry];
+            });
+
+            autoTable(doc, {
+                startY: y,
+                theme: 'striped',
+                headStyles: { fillColor: [0, 56, 92], fontSize: 8 },
+                bodyStyles: { fontSize: 8, cellPadding: 2.5 },
+                columnStyles: { 0: { cellWidth: 42, fontStyle: 'bold' } },
+                head: [['Fecha/Hora', 'Evento']],
+                body: timelineRows,
+                margin: { left: 14, right: 14 },
+            });
+            y = (doc as any).lastAutoTable.finalY + 8;
+        }
+
+        // ── Acción Inmediata (si ya completó step 1) ──
+        if (reportData.immediateAction) {
+            checkPage(25);
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 56, 92);
+            doc.text('Acción Inmediata Registrada', 14, y);
+            y += 5;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(60, 60, 60);
+            const actionLines = doc.splitTextToSize(reportData.immediateAction, pageWidth - 28);
+            doc.text(actionLines, 14, y);
+            y += actionLines.length * 4.5 + 6;
+        }
+
+        // ── Footer on all pages ──
+        const totalPages = doc.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            doc.setFontSize(7);
+            doc.setTextColor(160, 160, 160);
+            doc.text('Sanatorio Argentino — Sistema de Gestión de Calidad | Documento confidencial', 14, doc.internal.pageSize.height - 8);
+            doc.text(`Página ${i} de ${totalPages}`, pageWidth - 14, doc.internal.pageSize.height - 8, { align: 'right' });
+        }
+
+        doc.save(`dossier_caso_${reportData.trackingId}_${new Date().toISOString().slice(0, 10)}.pdf`);
+    };
+
     const handleSubmit = async (formData: any) => {
         if (!reportData) return;
 
@@ -316,6 +475,14 @@ export const ResolutionPage = () => {
         <div className="relative">
             {/* Top Action Bar — only "No me corresponde" now */}
             <div className="absolute top-4 right-4 z-10 md:top-8 md:right-8 flex gap-2">
+                <button
+                    onClick={handleDownloadPdf}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm border border-gray-200 text-gray-600 font-bold text-xs rounded-full shadow-sm hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all"
+                    title="Descargar dossier del caso en PDF"
+                >
+                    <Download className="w-4 h-4" />
+                    PDF
+                </button>
                 <button
                     onClick={() => setShowRejectionModal(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm border border-red-200 text-red-600 font-bold text-xs rounded-full shadow-sm hover:bg-red-50 transition-all"
