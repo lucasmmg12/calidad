@@ -80,8 +80,6 @@ export const SectorTracking = () => {
     const activeCount = reports.filter(r => r.status !== 'resolved').length;
     const resolvedCount = reports.filter(r => r.status === 'resolved').length;
 
-    const sectorLabels = sectors.map(s => SECTOR_OPTIONS.find(o => o.value === s)?.label || s).join(', ');
-
     const getStepProgress = (status: string) => {
         if (status === 'resolved') return 3;
         if (['in_progress', 'analyzed', 'pending_resolution', 'quality_validation'].includes(status)) return 2;

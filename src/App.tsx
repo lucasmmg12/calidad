@@ -14,7 +14,6 @@ import { UserManagement } from './pages/UserManagement';
 import { ResolutionPage } from './pages/ResolutionPage';
 import { SupplementaryInfoPage } from './pages/SupplementaryInfoPage';
 import { MyCases } from './pages/MyCases';
-import { SectorTracking } from './pages/SectorTracking';
 import Presentation from './pages/Presentation';
 import ProfileSettings from './pages/ProfileSettings';
 import Register from './pages/Register';
@@ -32,8 +31,7 @@ import {
   Shield,
   Users,
   Bell,
-  Briefcase,
-  Eye
+  Briefcase
 } from 'lucide-react';
 import { supabase } from './utils/supabase';
 
