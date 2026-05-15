@@ -110,10 +110,6 @@ function Navbar() {
                   <Briefcase className="w-4 h-4" /> Mis Casos
                 </Link>
 
-                <Link to="/seguimientos" className="hidden md:flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all">
-                  <Eye className="w-4 h-4" /> Seguimientos
-                </Link>
-
                 <Link to="/metrics" className="hidden md:flex items-center gap-2 px-4 py-2 text-sanatorio-primary font-bold text-sm hover:bg-sanatorio-primary/5 rounded-xl transition-all">
                   <BarChart3 className="w-4 h-4" /> Métricas
                 </Link>
@@ -213,10 +209,6 @@ function Navbar() {
                     <Briefcase className="w-4 h-4" /> Mis Casos
                   </Link>
 
-                  <Link onClick={closeMobileMenu} to="/seguimientos" className="flex items-center gap-3 px-4 py-3 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all">
-                    <Eye className="w-4 h-4" /> Seguimientos
-                  </Link>
-
                   <Link onClick={closeMobileMenu} to="/metrics" className="flex items-center gap-3 px-4 py-3 text-sanatorio-primary font-bold text-sm hover:bg-sanatorio-primary/5 rounded-xl transition-all">
                     <BarChart3 className="w-4 h-4" /> Métricas
                   </Link>
@@ -309,7 +301,6 @@ function App() {
               <Route element={<ProtectedRoute />}>
                 <Route path="/perfil" element={<ProfileSettings />} />
                 <Route path="/mis-casos" element={<MyCases />} />
-                <Route path="/seguimientos" element={<SectorTracking />} />
               </Route>
             </Routes>
           </main>
