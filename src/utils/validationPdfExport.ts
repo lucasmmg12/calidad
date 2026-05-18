@@ -354,7 +354,9 @@ export const generateValidationPDF = async (
     // For multi-sector: render each sector assignment
     if (isMultiSector) {
         const respondedOnly = sectorAssignments.filter(a =>
-            a.status === 'resolved' || a.status === 'quality_validation'
+            a.status === 'resolved' || 
+            a.status === 'quality_validation' ||
+            (a.status === 'pending' && report.status === 'quality_validation' && !!(report.resolution_notes || report.immediate_action))
         );
 
         // If no sectors responded yet but report has data, use report-level data
@@ -415,7 +417,11 @@ export const generateValidationPDF = async (
 
             // Acción Inmediata
             if (effectiveAction) {
-                const cleanAction = effectiveAction.split('Origen:')[0].trim();
+                // If it starts exactly with "Origen: ", it might be a system note. Otherwise keep it.
+                // We split only if it strictly starts with "Origen:" followed by a sector.
+                const isSystemOriginNote = effectiveAction.startsWith('Origen: ') && !effectiveAction.includes('\n');
+                const cleanAction = isSystemOriginNote ? '' : effectiveAction.replace(/^Origen:.*?(?=\n|$)/, '').trim() || effectiveAction.trim();
+                
                 if (cleanAction) {
                     drawSection(
                         '● Acción Inmediata',
@@ -493,10 +499,12 @@ export const generateValidationPDF = async (
             y += 8;
         }
 
-        if (report.resolution_notes) {
-            const cleanAction = report.resolution_notes.split('Origen:')[0].trim();
-            if (cleanAction) {
-                drawSection('● Acción Inmediata', cleanAction, BLUE_BG, BLUE_ACCENT, BLUE_ACCENT);
+        const effectiveLegacyAction = report.resolution_notes;
+        if (effectiveLegacyAction) {
+            const isSystemOriginNote = effectiveLegacyAction.startsWith('Origen: ') && !effectiveLegacyAction.includes('\n');
+            const cleanLegacy = isSystemOriginNote ? '' : effectiveLegacyAction.replace(/^Origen:.*?(?=\n|$)/, '').trim() || effectiveLegacyAction.trim();
+            if (cleanLegacy) {
+                drawSection('● Acción Inmediata', cleanLegacy, BLUE_BG, BLUE_ACCENT, BLUE_ACCENT);
             }
         }
 
@@ -579,6 +587,13 @@ export const generateValidationPDF = async (
     checkBreak(30);
     y += 6;
 
+    const reportLines = doc.splitTextToSize(report.content || 'Sin contenido.', CW - 16);
+    const repLineH = 5.2;
+    const reportH = reportLines.length * repLineH + 14;
+    
+    // Check break for both title and content box
+    checkBreak(reportH + 12);
+
     doc.setFillColor(248, 250, 252);
     setF('bold', 9, GRAY_TEXT);
     doc.text('REPORTE ORIGINAL', M, y);
@@ -587,10 +602,7 @@ export const generateValidationPDF = async (
     doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.3);
     setF('normal', 10, BODY_TEXT);
-    const reportLines = doc.splitTextToSize(report.content || 'Sin contenido.', CW - 16);
-    const repLineH = 5.2;
-    const reportH = reportLines.length * repLineH + 14;
-    checkBreak(reportH);
+    
     doc.roundedRect(M, y, CW, reportH, 3, 3, 'S');
 
     reportLines.forEach((line: string, i: number) => {
@@ -602,7 +614,9 @@ export const generateValidationPDF = async (
     if (report.assigned_to) {
         checkBreak(10);
         setF('bold', 9, GRAY_TEXT);
-        doc.text(`Responsable: ${report.assigned_to}`, M, y);
+        const singleName = getResponsableName(report.assigned_to);
+        const displayNameText = singleName ? `${singleName} (${report.assigned_to})` : report.assigned_to;
+        doc.text(`Responsable: ${displayNameText}`, M, y);
         y += 8;
     }
 
