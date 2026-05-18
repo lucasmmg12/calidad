@@ -27,7 +27,6 @@ import { Chart, registerables } from 'chart.js';
 import { AdvancedAnalytics } from './AdvancedAnalytics';
 import { SlaAlertBanner } from './SlaAlerts';
 import { PdcaPanel } from './PdcaPanel';
-import { SectorFlowMetrics } from './SectorFlowMetrics';
 import { MetricsFilters, type MetricsFilterState } from './MetricsFilters';
 import { SECTOR_OPTIONS } from '../constants/sectors';
 
@@ -179,20 +178,26 @@ export const MetricsDashboard = () => {
         const sectorMap: Record<string, number> = {};
         filteredReports.forEach(r => {
             const s = r.sector || 'Otros';
-            sectorMap[s] = (sectorMap[s] || 0) + 1;
+            if (canViewAll || sectors.includes(s)) {
+                sectorMap[s] = (sectorMap[s] || 0) + 1;
+            }
         });
+        const bySectorTotal = Object.values(sectorMap).reduce((acc, val) => acc + val, 0);
         const bySector = Object.entries(sectorMap)
-            .map(([sector, count]) => ({ sector, count, percentage: total > 0 ? (count / total) * 100 : 0 }))
+            .map(([sector, count]) => ({ sector, count, percentage: bySectorTotal > 0 ? (count / bySectorTotal) * 100 : 0 }))
             .sort((a, b) => b.count - a.count);
 
         // By Reporter Sector (Origin)
         const reporterSectorMap: Record<string, number> = {};
         filteredReports.forEach(r => {
             const s = r.reporter_sector || 'Sin asignar';
-            reporterSectorMap[s] = (reporterSectorMap[s] || 0) + 1;
+            if (canViewAll || sectors.includes(s)) {
+                reporterSectorMap[s] = (reporterSectorMap[s] || 0) + 1;
+            }
         });
+        const byReporterTotal = Object.values(reporterSectorMap).reduce((acc, val) => acc + val, 0);
         const byReporterSector = Object.entries(reporterSectorMap)
-            .map(([sector, count]) => ({ sector, count, percentage: total > 0 ? (count / total) * 100 : 0 }))
+            .map(([sector, count]) => ({ sector, count, percentage: byReporterTotal > 0 ? (count / byReporterTotal) * 100 : 0 }))
             .sort((a, b) => b.count - a.count);
 
         // By Urgency
@@ -1255,30 +1260,70 @@ export const MetricsDashboard = () => {
                                         <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">
                                             Dirigidos a {destinations.length} {destinations.length === 1 ? 'sector' : 'sectores'}
                                         </h4>
-                                        <div className="space-y-2.5">
+                                        <div className="space-y-4">
                                             {destinations.map((dest, dIdx) => {
                                                 const destLabel = SECTOR_OPTIONS.find(s => s.value === dest.sector)?.label || dest.sector;
                                                 const maxCount = destinations[0]?.count || 1;
                                                 const barWidth = (dest.count / maxCount) * 100;
                                                 const pct = item.count > 0 ? Math.round((dest.count / item.count) * 100) : 0;
+                                                
+                                                // Get the specific reports for this destination
+                                                const reportsForDest = emitterReports.filter(r => (r.sector || 'Sin asignar') === dest.sector);
 
                                                 return (
-                                                    <div key={dest.sector}>
-                                                        <div className="flex items-center justify-between mb-1">
+                                                    <div key={dest.sector} className="bg-white rounded-xl p-4 border border-indigo-50/50 shadow-sm">
+                                                        <div className="flex items-center justify-between mb-3">
                                                             <div className="flex items-center gap-2 min-w-0">
-                                                                <span className="text-gray-300 text-xs">→</span>
-                                                                <span className="text-xs font-medium text-gray-600 truncate">{destLabel}</span>
+                                                                <span className="text-indigo-300 text-sm">→</span>
+                                                                <span className="text-sm font-bold text-gray-700 truncate">{destLabel}</span>
                                                             </div>
                                                             <div className="flex items-center gap-2 shrink-0">
-                                                                <span className="text-sm font-black text-gray-800">{dest.count}</span>
-                                                                <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full font-medium">{pct}%</span>
+                                                                <span className="text-base font-black text-indigo-600">{dest.count}</span>
+                                                                <span className="text-[10px] text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full font-bold">{pct}%</span>
                                                             </div>
                                                         </div>
-                                                        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                                                        <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden mb-4">
                                                             <div
                                                                 className={`h-full rounded-full transition-all duration-700 ${barColors[dIdx % barColors.length]}`}
                                                                 style={{ width: `${barWidth}%` }}
                                                             />
+                                                        </div>
+
+                                                        {/* Casos Activos / Resueltos list */}
+                                                        <div className="space-y-2 mt-2">
+                                                            {reportsForDest.map(report => (
+                                                                <div key={report.id} className="flex items-center justify-between gap-3 p-2.5 bg-gray-50/50 hover:bg-indigo-50/30 rounded-lg border border-gray-100 transition-colors">
+                                                                    <div className="flex items-center gap-2 min-w-0">
+                                                                        <div className={`w-2 h-2 rounded-full shrink-0 ${report.ai_urgency === 'Rojo' ? 'bg-red-500' : report.ai_urgency === 'Amarillo' ? 'bg-amber-400' : 'bg-green-500'}`}></div>
+                                                                        <div className="min-w-0">
+                                                                            <p className="text-xs font-bold text-gray-700 font-mono">
+                                                                                {report.tracking_id || '—'}
+                                                                            </p>
+                                                                            <p className="text-[10px] text-gray-500 truncate max-w-[200px] md:max-w-[400px]">
+                                                                                {report.ai_summary || report.content?.substring(0, 80) || 'Sin descripción'}
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-3 shrink-0">
+                                                                        <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold ${
+                                                                            report.status === 'resolved' ? 'bg-green-100 text-green-700' :
+                                                                            report.status === 'pending_resolution' ? 'bg-blue-100 text-blue-700' :
+                                                                            'bg-gray-100 text-gray-600'
+                                                                        }`}>
+                                                                            {report.status === 'resolved' ? 'Resuelto' : 
+                                                                             report.status === 'pending_resolution' ? 'En Gestión' : 'Pendiente'}
+                                                                        </span>
+                                                                        <a
+                                                                            href={`/resolver-caso/${report.tracking_id}`}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded text-[10px] font-bold transition-colors flex items-center gap-1"
+                                                                        >
+                                                                            Ver Caso <ArrowUpRight className="w-3 h-3" />
+                                                                        </a>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
                                                         </div>
                                                     </div>
                                                 );
@@ -1567,8 +1612,6 @@ export const MetricsDashboard = () => {
                 )}
             </div>
 
-            {/* ── Reportes Emitidos por Sector ── */}
-            <SectorFlowMetrics reports={rawReports} />
 
             {/* ── Alertas de Tiempo de Respuesta ── */}
             <SlaAlertBanner
