@@ -94,14 +94,15 @@ export const MyCases = () => {
                     `)
                     .order('created_at', { ascending: false });
 
-                // For responsables: filter by their phone or sectors
-                // For admins/directivos: show assignments for their sectors too
-                if (userPhone && sectors.length > 0) {
-                    const sectorString = sectors.map(s => `"${s}"`).join(',');
-                    query = query.or(`assigned_phone.eq.${userPhone},sector.in.(${sectorString})`);
-                } else if (sectors.length > 0) {
+                // Filter by user's assigned sectors ONLY.
+                // Phone-based matching is intentionally removed because a user's phone
+                // can appear in sector_assignments for sectors they don't belong to
+                // (e.g., same person receiving ASMED notifications while being a FAR responsable).
+                // This caused cross-sector case leakage (bug: Farmacia seeing ASMED cases).
+                if (sectors.length > 0) {
                     query = query.in('sector', sectors);
                 } else if (userPhone) {
+                    // Fallback: if no sectors assigned, use phone as last resort
                     query = query.eq('assigned_phone', userPhone);
                 } else {
                     // No phone and no sectors -> avoid fetching database completely for safety
