@@ -99,6 +99,7 @@ interface ReportData {
     created_at: string;
     resolved_at?: string;
     resolution_notes?: string;
+    immediate_action?: string;
     root_cause?: string;
     corrective_plan?: string;
     implementation_date?: string;
