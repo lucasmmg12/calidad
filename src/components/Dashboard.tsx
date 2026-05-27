@@ -974,8 +974,8 @@ export const Dashboard = () => {
         setSendingReply(true);
 
         try {
-            // 1. Find the phone number of the sector that rejected
-            const rejectedAssignment = sectorAssignmentsData.find(a => a.status === 'rejected');
+            // 1. Find the phone number of the sector that rejected (latest rejection)
+            const rejectedAssignment = [...sectorAssignmentsData].reverse().find(a => a.status === 'rejected');
             // For assignment_rejected status, also check report-level data
             let targetPhone = rejectedAssignment?.assigned_phone || '';
 
@@ -3516,35 +3516,146 @@ export const Dashboard = () => {
                                                 <XCircle className="w-6 h-6 text-orange-500" />
                                             </div>
                                             <h4 className="font-bold text-orange-900">Asignación Rechazada</h4>
-                                            <p className="text-sm text-orange-700 mt-1 mb-2">
+                                            <p className="text-sm text-orange-700 mt-1 mb-4">
                                                 El sector indicó que este caso no le corresponde.
                                             </p>
-                                            {/* Show rejection reason from notes */}
-                                            {selectedReport.notes && (() => {
-                                                const rejectionMatch = selectedReport.notes.match(/RECHAZO DE ASIGNACIÓN:\s*([\s\S]+?)(?=\n\n\[|$)/);
-                                                return rejectionMatch ? (
-                                                    <div className="bg-white rounded-lg p-3 border border-orange-100 mb-4 text-left">
-                                                        <p className="text-xs font-bold text-orange-800 uppercase tracking-wider mb-1">Motivo:</p>
-                                                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{rejectionMatch[1].trim()}</p>
-                                                    </div>
-                                                ) : null;
+                                            
+                                            {/* Show all rejection reasons (historical rounds) */}
+                                            {(() => {
+                                                // Filter assignments rejected by sector (not by quality validation)
+                                                const sectorRejections = sectorAssignmentsData.filter(
+                                                    a => a.status === 'rejected' && 
+                                                    !(a.notes || '').includes('RECHAZO POR CALIDAD') && 
+                                                    !(a.notes || '').includes('RECHAZADO POR CALIDAD')
+                                                );
+
+                                                if (sectorRejections.length > 0) {
+                                                    return (
+                                                        <div className="space-y-3 mb-4 text-left">
+                                                            <p className="text-xs font-bold text-orange-850 uppercase tracking-wider mb-1">
+                                                                Motivos de Rechazo ({sectorRejections.length}):
+                                                            </p>
+                                                            {sectorRejections.map((assignment: any) => {
+                                                                const sectorLabel = SECTOR_OPTIONS.find(s => s.value === assignment.sector)?.label || assignment.sector;
+                                                                return (
+                                                                    <div key={assignment.id} className="bg-white rounded-lg p-3 border border-orange-100 shadow-sm">
+                                                                        <div className="flex justify-between items-center mb-1">
+                                                                            <span className="text-xs font-bold text-orange-755">
+                                                                                ❌ {sectorLabel}
+                                                                            </span>
+                                                                            {assignment.resolved_at && (
+                                                                                <span className="text-[10px] text-gray-400 font-mono">
+                                                                                    {new Date(assignment.resolved_at).toLocaleString('es-AR')}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                                                                            {assignment.notes || 'Sin motivo especificado'}
+                                                                        </p>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    );
+                                                }
+
+                                                // Fallback to notes parsing if no structured assignments exist (legacy)
+                                                const parsedNotes = selectedReport.notes ? (() => {
+                                                    const rejections: { timestamp?: string; reason: string }[] = [];
+                                                    const regex = /\[([^\]]+)\]\s*🔴\s*RECHAZO DE ASIGNACIÓN:\s*([\s\S]+?)(?=\n\n\[|$)/g;
+                                                    let match;
+                                                    while ((match = regex.exec(selectedReport.notes)) !== null) {
+                                                        rejections.push({
+                                                            timestamp: match[1].trim(),
+                                                            reason: match[2].trim()
+                                                        });
+                                                    }
+                                                    return rejections;
+                                                })() : [];
+
+                                                if (parsedNotes.length > 0) {
+                                                    return (
+                                                        <div className="space-y-3 mb-4 text-left">
+                                                            <p className="text-xs font-bold text-orange-855 uppercase tracking-wider mb-1">
+                                                                Motivos de Rechazo ({parsedNotes.length}):
+                                                            </p>
+                                                            {parsedNotes.map((rej, idx) => (
+                                                                <div key={idx} className="bg-white rounded-lg p-3 border border-orange-100 shadow-sm">
+                                                                    <div className="flex justify-between items-center mb-1">
+                                                                        <span className="text-xs font-bold text-orange-700">
+                                                                            ❌ Rechazo #{idx + 1}
+                                                                        </span>
+                                                                        {rej.timestamp && (
+                                                                            <span className="text-[10px] text-gray-400 font-mono">
+                                                                                {rej.timestamp}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                                                                        {rej.reason}
+                                                                    </p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                }
+
+                                                // Second fallback: match single rejection in notes if regex fails or format differs
+                                                const singleMatch = selectedReport.notes ? selectedReport.notes.match(/RECHAZO DE ASIGNACIÓN:\s*([\s\S]+?)(?=\n\n\[|$)/) : null;
+                                                if (singleMatch) {
+                                                    return (
+                                                        <div className="bg-white rounded-lg p-3 border border-orange-100 mb-4 text-left shadow-sm">
+                                                            <p className="text-xs font-bold text-orange-855 uppercase tracking-wider mb-1">Motivo:</p>
+                                                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{singleMatch[1].trim()}</p>
+                                                        </div>
+                                                    );
+                                                }
+
+                                                return null;
                                             })()}
-                                            {isAdmin && (
+
+                                            {/* Responsable Info */}
+                                            {selectedReport.assigned_to && (
+                                                <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-orange-100 mb-4 text-left shadow-sm">
+                                                    <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+                                                        <UserCog className="w-4 h-4" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-gray-400 font-bold uppercase">Asignado a</p>
+                                                        <p className="text-sm font-bold text-gray-700">{selectedReport.assigned_to}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {isAdmin ? (
                                                 <div className="space-y-2">
                                                     <button
                                                         onClick={() => setShowReferralModal(true)}
-                                                        className="w-full py-2.5 px-4 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+                                                        className="w-full py-2.5 px-4 bg-sanatorio-primary text-white font-bold text-sm rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-sm"
                                                     >
                                                         <Send className="w-4 h-4" />
                                                         Reenviar a otro sector
                                                     </button>
                                                     <button
                                                         onClick={() => setShowReplyModal(true)}
-                                                        className="w-full py-2.5 px-4 bg-orange-500 text-white font-bold text-sm rounded-xl hover:bg-orange-600 transition-all flex items-center justify-center gap-2"
+                                                        className="w-full py-2.5 px-4 bg-orange-500 text-white font-bold text-sm rounded-xl hover:bg-orange-600 transition-all flex items-center justify-center gap-2 shadow-sm"
                                                     >
                                                         <Reply className="w-4 h-4" />
                                                         Responder al Sector
                                                     </button>
+                                                    
+                                                    <div className="text-center py-2 border-t border-orange-100/50 mt-4">
+                                                        <button
+                                                            onClick={handleDiscardClick}
+                                                            className="text-gray-400 hover:text-gray-600 text-xs font-bold transition-colors flex items-center justify-center gap-1 mx-auto"
+                                                        >
+                                                            <Archive className="w-3 h-3" /> Descartar Caso
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center">
+                                                    <p className="text-sm text-blue-700 font-medium">👀 Solo lectura — la gestión de este caso está a cargo del equipo de Calidad.</p>
                                                 </div>
                                             )}
                                         </div>
@@ -4251,106 +4362,7 @@ export const Dashboard = () => {
                                                     )}
                                                 </div>
                                             );
-                                        })() : selectedReport.status === 'assignment_rejected' ? (
-                                            // VISTA RECHAZO DEL RESPONSABLE
-                                            <div className="space-y-4">
-                                                <div className="bg-red-50 border border-red-200 rounded-2xl p-6 relative overflow-hidden">
-                                                    <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500"></div>
-                                                    <div className="flex items-center gap-3 mb-4">
-                                                        <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
-                                                            <XCircle className="w-6 h-6" />
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="font-bold text-red-900 text-lg">Asignación Rechazada</h4>
-                                                            <p className="text-xs text-red-600 font-medium">El responsable indica que este caso no le corresponde</p>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Extract rejection reason from notes */}
-                                                    {(() => {
-                                                        const notes = selectedReport.notes || '';
-                                                        const rejectionMatch = notes.match(/RECHAZO DE ASIGNACIÓN:\s*(.+?)(?:\n|$)/);
-                                                        const rejectionReason = rejectionMatch ? rejectionMatch[1].trim() : null;
-                                                        // Extract timestamp
-                                                        const timestampMatch = notes.match(/\[([^\]]+)\]\s*🔴\s*RECHAZO/);
-                                                        const rejectionTime = timestampMatch ? timestampMatch[1] : null;
-
-                                                        return (
-                                                            <div className="space-y-3">
-                                                                {rejectionTime && (
-                                                                    <div className="flex items-center gap-2 text-xs text-red-500 font-medium">
-                                                                        <Clock className="w-3 h-3" />
-                                                                        Rechazado el {rejectionTime}
-                                                                    </div>
-                                                                )}
-                                                                <div className="bg-white p-4 rounded-xl border border-red-100 shadow-sm">
-                                                                    <h5 className="text-xs font-bold text-red-700 uppercase tracking-wider mb-2">Motivo del Rechazo</h5>
-                                                                    <p className="text-sm text-gray-700 leading-relaxed italic">
-                                                                        "{rejectionReason || 'Motivo no especificado'}"
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })()}
-                                                </div>
-
-                                                {/* Responsable info */}
-                                                {selectedReport.assigned_to && (
-                                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                                        <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-500">
-                                                            <UserCog className="w-4 h-4" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-xs text-gray-400 font-bold uppercase">Rechazado por</p>
-                                                            <p className="text-sm font-bold text-gray-700">{selectedReport.assigned_to}</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Actions - Admin Only */}
-                                                {isAdmin ? (
-                                                    <>
-                                                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                                                            <h4 className="font-bold text-gray-800 mb-2">Rederivación Requerida</h4>
-                                                            <p className="text-xs text-gray-500 mb-4">
-                                                                Asigná este caso a otro responsable o al sector correcto enviando una nueva solicitud por WhatsApp.
-                                                            </p>
-                                                            <div className="space-y-2">
-                                                                <button
-                                                                    onClick={() => setShowReferralModal(true)}
-                                                                    className="w-full py-3 bg-sanatorio-primary text-white rounded-xl font-bold text-sm hover:opacity-90 shadow-lg shadow-blue-900/10 flex items-center justify-center gap-2"
-                                                                >
-                                                                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                                                                        <Send className="w-3 h-3" />
-                                                                    </div>
-                                                                    Rederivación (WhatsApp)
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => setShowReplyModal(true)}
-                                                                    className="w-full py-3 bg-orange-500 text-white rounded-xl font-bold text-sm hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2"
-                                                                >
-                                                                    <Reply className="w-4 h-4" />
-                                                                    Responder al Sector
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-center py-4 border-t border-gray-100">
-                                                            <p className="text-xs text-gray-400 mb-2">Otras acciones</p>
-                                                            <button
-                                                                onClick={handleDiscardClick}
-                                                                className="text-gray-400 hover:text-gray-600 text-xs font-bold transition-colors flex items-center justify-center gap-1 mx-auto"
-                                                            >
-                                                                <Archive className="w-3 h-3" /> Descartar Caso
-                                                            </button>
-                                                        </div>
-                                                    </>
-                                                ) : (
-                                                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center">
-                                                        <p className="text-sm text-blue-700 font-medium">👀 Solo lectura — la gestión de este caso está a cargo del equipo de Calidad.</p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ) : (
+                                        })() : (
                                             // VISTA ACCIONES INICIALES (DERIVAR) - Admin Only
                                             <div className="space-y-4">
                                                 {isAdmin ? (
