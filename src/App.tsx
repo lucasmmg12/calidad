@@ -15,6 +15,7 @@ import { ResolutionPage } from './pages/ResolutionPage';
 import { SupplementaryInfoPage } from './pages/SupplementaryInfoPage';
 import { MyCases } from './pages/MyCases';
 import Presentation from './pages/Presentation';
+import ManualProcedimientos from './components/ManualProcedimientos';
 import ProfileSettings from './pages/ProfileSettings';
 import Register from './pages/Register';
 import Onboarding from './pages/Onboarding';
@@ -31,7 +32,8 @@ import {
   Shield,
   Users,
   Bell,
-  Briefcase
+  Briefcase,
+  BookMarked
 } from 'lucide-react';
 import { supabase } from './utils/supabase';
 
@@ -110,6 +112,10 @@ function Navbar() {
 
                 <Link to="/metrics" className="hidden md:flex items-center gap-2 px-4 py-2 text-sanatorio-primary font-bold text-sm hover:bg-sanatorio-primary/5 rounded-xl transition-all">
                   <BarChart3 className="w-4 h-4" /> Métricas
+                </Link>
+
+                <Link to="/manual" className="hidden md:flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all" title="Manual del Sistema">
+                  <BookMarked className="w-4 h-4" /> Manual
                 </Link>
 
                 {!isAdmin && !isDirectivo && (
@@ -211,6 +217,10 @@ function Navbar() {
                     <BarChart3 className="w-4 h-4" /> Métricas
                   </Link>
 
+                  <Link onClick={closeMobileMenu} to="/manual" className="flex items-center gap-3 px-4 py-3 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all">
+                    <BookMarked className="w-4 h-4" /> Manual del Sistema
+                  </Link>
+
                   {!isAdmin && !isDirectivo && (
                     <Link onClick={closeMobileMenu} to="/perfil" className="flex items-center gap-3 px-4 py-3 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all">
                       <UserCog className="w-4 h-4" /> Perfil
@@ -295,10 +305,11 @@ function App() {
                 <Route path="/metrics" element={<MetricsDashboard />} />
               </Route>
 
-              {/* Perfil — Cualquier rol autenticado */}
+              {/* Perfil y Manual — Cualquier rol autenticado */}
               <Route element={<ProtectedRoute />}>
                 <Route path="/perfil" element={<ProfileSettings />} />
                 <Route path="/mis-casos" element={<MyCases />} />
+                <Route path="/manual" element={<ManualProcedimientos />} />
               </Route>
             </Routes>
           </main>
