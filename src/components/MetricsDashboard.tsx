@@ -883,8 +883,8 @@ export const MetricsDashboard = () => {
                                     sectorResolvedWithDates++;
                                 }
                             });
-                            const sectorAvgHours = sectorResolvedWithDates > 0
-                                ? (sectorTotalTimeMs / sectorResolvedWithDates / (1000 * 60 * 60)).toFixed(1)
+                            const sectorAvgDays = sectorResolvedWithDates > 0
+                                ? (sectorTotalTimeMs / sectorResolvedWithDates / (1000 * 60 * 60 * 24)).toFixed(1)
                                 : 0;
 
                             return (
@@ -932,7 +932,7 @@ export const MetricsDashboard = () => {
                                                     <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wider">Pendientes</p>
                                                 </div>
                                                 <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-center">
-                                                    <p className="text-2xl font-black text-blue-700">{sectorAvgHours}h</p>
+                                                    <p className="text-2xl font-black text-blue-700">{sectorAvgDays}d</p>
                                                     <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Tiempo Prom.</p>
                                                 </div>
                                             </div>
