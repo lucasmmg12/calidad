@@ -23,6 +23,7 @@ export const SECTOR_OPTIONS = [
     { value: "FAR-Farmacia", label: "💊 FAR – Farmacia" },
     { value: "FER-Fertilidad", label: "🤰 FER – Fertilidad" },
     { value: "FUN-Fundacion", label: "🏛️ FUN – Fundación" },
+    { value: "GCA-Guardia-Cardiologica", label: "❤️‍🩹 GCA – Guardia Cardiológica" },
     { value: "GCM-Guardia-Clinica-Medica", label: "🚑 GCM – Guardia Clínica Médica" },
     { value: "GGO-Guardia-Gineco-Obstetrica", label: "🤱 GGO – Guardia Gineco Obstétrica" },
     { value: "GPE-Guardia-Pediatrica", label: "👧 GPE – Guardia Pediátrica" },
