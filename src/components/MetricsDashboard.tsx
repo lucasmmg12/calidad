@@ -1436,7 +1436,7 @@ export const MetricsDashboard = () => {
                                     backgroundColor: (context: any) => {
                                         const chart = context.chart;
                                         const { ctx, chartArea } = chart;
-                                        if (!chartArea) return 'rgba(99, 102, 241, 0.8)';
+                                        if (!chartArea || !chartArea.right || !isFinite(chartArea.right)) return 'rgba(99, 102, 241, 0.8)';
                                         const gradient = ctx.createLinearGradient(0, 0, chartArea.right, 0);
                                         gradient.addColorStop(0, 'rgba(99, 102, 241, 0.8)'); // Indigo
                                         gradient.addColorStop(1, 'rgba(168, 85, 247, 0.9)'); // Purple
@@ -1445,7 +1445,7 @@ export const MetricsDashboard = () => {
                                     hoverBackgroundColor: (context: any) => {
                                         const chart = context.chart;
                                         const { ctx, chartArea } = chart;
-                                        if (!chartArea) return 'rgba(79, 70, 229, 1)';
+                                        if (!chartArea || !chartArea.right || !isFinite(chartArea.right)) return 'rgba(79, 70, 229, 1)';
                                         const gradient = ctx.createLinearGradient(0, 0, chartArea.right, 0);
                                         gradient.addColorStop(0, 'rgba(79, 70, 229, 1)'); // Indigo Darker
                                         gradient.addColorStop(1, 'rgba(147, 51, 234, 1)'); // Purple Darker

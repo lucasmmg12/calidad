@@ -149,12 +149,12 @@ export const MyCases = () => {
             const report = a.reports as any;
             const sectorLabel = (SECTOR_OPTIONS.find(s => s.value === a.sector)?.label || a.sector).toLowerCase();
             const searchableFields = [
-                report.tracking_id,
-                report.content,
-                report.ai_summary,
-                a.immediate_action,
+                report?.tracking_id,
+                report?.content,
+                report?.ai_summary,
+                a?.immediate_action,
                 sectorLabel,
-                a.management_type,
+                a?.management_type,
             ].filter(Boolean).map(f => f!.toLowerCase());
 
             if (!searchableFields.some(field => field.includes(q))) {
@@ -163,8 +163,8 @@ export const MyCases = () => {
         }
 
         const report = a.reports as any;
-        const matchesUrgency = listUrgencyFilter ? report.ai_urgency === listUrgencyFilter : true;
-        const matchesCategory = listCategoryFilter ? (report.ai_category === listCategoryFilter || report.finding_type === listCategoryFilter) : true;
+        const matchesUrgency = listUrgencyFilter ? report?.ai_urgency === listUrgencyFilter : true;
+        const matchesCategory = listCategoryFilter ? (report?.ai_category === listCategoryFilter || report?.finding_type === listCategoryFilter) : true;
 
         return matchesUrgency && matchesCategory;
     });
