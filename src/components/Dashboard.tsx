@@ -1722,10 +1722,11 @@ export const Dashboard = () => {
     const queryParams = new URLSearchParams(location.search);
     const initialUrgency = queryParams.get('urgency');
     const initialCategory = queryParams.get('category');
+    const initialSector = queryParams.get('sector');
 
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation' | 'discarded' | 'assignment_rejected' | 'multi_sector_pending'>('all');
-    const [listSectorFilter, setListSectorFilter] = useState<string[]>([]);
+    const [listSectorFilter, setListSectorFilter] = useState<string[]>(initialSector ? [initialSector] : []);
     const [listDateFrom, setListDateFrom] = useState('');
     const [listDateTo, setListDateTo] = useState('');
     const [listUrgencyFilter, setListUrgencyFilter] = useState<string | null>(initialUrgency);
@@ -2090,8 +2091,13 @@ export const Dashboard = () => {
                         {/* Clear filters */}
                         {(listSectorFilter.length > 0 || listDateFrom || listDateTo || listUrgencyFilter || listCategoryFilter) && (
                             <div className="flex items-center gap-2">
-                                {(listUrgencyFilter || listCategoryFilter) && (
-                                    <div className="flex gap-2">
+                                {(listSectorFilter.length > 0 || listUrgencyFilter || listCategoryFilter) && (
+                                    <div className="flex flex-wrap gap-2">
+                                        {listSectorFilter.map(s => (
+                                            <span key={s} className="px-2 py-1 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-lg border border-blue-200">
+                                                Sector: {s}
+                                            </span>
+                                        ))}
                                         {listUrgencyFilter && (
                                             <span className="px-2 py-1 bg-red-50 text-red-700 text-[10px] font-bold rounded-lg border border-red-200">
                                                 Urgencia: {listUrgencyFilter}

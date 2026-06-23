@@ -65,9 +65,11 @@ export const MyCases = () => {
     const queryParams = new URLSearchParams(location.search);
     const initialUrgency = queryParams.get('urgency');
     const initialCategory = queryParams.get('category');
+    const initialSector = queryParams.get('sector');
     
     const [listUrgencyFilter, setListUrgencyFilter] = useState<string | null>(initialUrgency);
     const [listCategoryFilter, setListCategoryFilter] = useState<string | null>(initialCategory);
+    const [listSectorFilter, setListSectorFilter] = useState<string | null>(initialSector);
 
     useEffect(() => {
         const fetchMyCases = async () => {
@@ -165,8 +167,9 @@ export const MyCases = () => {
         const report = a.reports as any;
         const matchesUrgency = listUrgencyFilter ? report?.ai_urgency === listUrgencyFilter : true;
         const matchesCategory = listCategoryFilter ? (report?.ai_category === listCategoryFilter || report?.finding_type === listCategoryFilter) : true;
+        const matchesSector = listSectorFilter ? a.sector === listSectorFilter : true;
 
-        return matchesUrgency && matchesCategory;
+        return matchesUrgency && matchesCategory && matchesSector;
     });
 
     const pendingCount = assignments.filter(a => a.status === 'pending').length;
@@ -268,22 +271,34 @@ export const MyCases = () => {
                         </div>
                     </div>
                     
-                    {/* Active URL Filters */}
-                    {(listUrgencyFilter || listCategoryFilter) && (
-                        <div className="flex items-center gap-2 mb-4">
-                            <span className="text-xs text-gray-500 font-bold">Filtros Activos:</span>
-                            {listUrgencyFilter && (
-                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-50 text-red-700 text-xs font-bold border border-red-200">
-                                    Urgencia: {listUrgencyFilter}
-                                    <button onClick={() => setListUrgencyFilter(null)} className="hover:text-red-900"><XCircle className="w-3 h-3" /></button>
-                                </span>
-                            )}
-                            {listCategoryFilter && (
-                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 text-amber-700 text-xs font-bold border border-amber-200">
-                                    Categoría: {listCategoryFilter}
-                                    <button onClick={() => setListCategoryFilter(null)} className="hover:text-amber-900"><XCircle className="w-3 h-3" /></button>
-                                </span>
-                            )}
+                    {/* Active Global Filters */}
+                    {(listUrgencyFilter || listCategoryFilter || listSectorFilter) && (
+                        <div className="flex items-center gap-2 px-6 py-2 bg-gray-50 border-b border-gray-100">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Filtros Activos:</span>
+                            <div className="flex gap-2">
+                                {listSectorFilter && (
+                                    <span className="px-2 py-1 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-lg border border-blue-200">
+                                        Sector: {listSectorFilter}
+                                    </span>
+                                )}
+                                {listUrgencyFilter && (
+                                    <span className="px-2 py-1 bg-red-50 text-red-700 text-[10px] font-bold rounded-lg border border-red-200">
+                                        Urgencia: {listUrgencyFilter}
+                                    </span>
+                                )}
+                                {listCategoryFilter && (
+                                    <span className="px-2 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-lg border border-amber-200">
+                                        Categoría: {listCategoryFilter}
+                                    </span>
+                                )}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => { setListUrgencyFilter(null); setListCategoryFilter(null); setListSectorFilter(null); }}
+                                className="text-[10px] font-bold text-red-500 hover:text-red-700 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors ml-auto"
+                            >
+                                Limpiar Filtros
+                            </button>
                         </div>
                     )}
 

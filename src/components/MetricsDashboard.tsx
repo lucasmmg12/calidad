@@ -15,7 +15,7 @@ import {
     BrainCircuit,
     Loader2,
     ChevronDown,
-    Sparkles,
+
     Tag,
     ClipboardCheck,
     Star,
@@ -53,11 +53,7 @@ export const MetricsDashboard = () => {
     const [isExporting, setIsExporting] = useState(false);
     const [rawReports, setRawReports] = useState<any[]>([]);
     const [roleFilteredReports, setRoleFilteredReports] = useState<any[]>([]);
-    const [expandedSector, setExpandedSector] = useState<string | null>(null);
     const [expandedEmitterSector, setExpandedEmitterSector] = useState<string | null>(null);
-    // Delete unused state
-    const [sectorFeedback, setSectorFeedback] = useState<Record<string, string>>({});
-    const [loadingFeedback, setLoadingFeedback] = useState<string | null>(null);
     const [filters, setFilters] = useState<MetricsFilterState>({ sectors: [], dateFrom: '', dateTo: '' });
 
     const { role, sectors, profile, session } = useAuth();
@@ -65,11 +61,12 @@ export const MetricsDashboard = () => {
 
     const canViewAll = role === 'admin' || role === 'directivo';
 
-    const handleMetricClick = (urgency?: string, category?: string) => {
+    const handleMetricClick = (urgency?: string, category?: string, sector?: string) => {
         const base = (role === 'admin' || role === 'responsable') ? '/dashboard' : '/mis-casos';
         const params = new URLSearchParams();
         if (urgency) params.set('urgency', urgency);
         if (category) params.set('category', category);
+        if (sector) params.set('sector', sector);
         
         navigate(`${base}?${params.toString()}`);
     };
@@ -884,265 +881,99 @@ export const MetricsDashboard = () => {
                         Hallazgos Recibidos por Sector
                     </h3>
                     <div className="space-y-2">
-                        {stats.bySector.map((item, idx) => {
-                            const isExpanded = expandedSector === item.sector;
-                            const sectorReports = rawReports.filter(r => (r.sector || 'Otros') === item.sector);
-                            const sectorActive = sectorReports.filter(r => r.status !== 'resolved' && r.status !== 'discarded');
-                            const sectorResolved = sectorReports.filter(r => r.status === 'resolved');
-                            const sectorPending = sectorReports.filter(r => ['pending', 'analyzed'].includes(r.status));
-                            const sectorInProgress = sectorReports.filter(r => ['pending_resolution', 'in_progress', 'quality_validation'].includes(r.status));
-
-                            // Avg resolution time for this sector
-                            let sectorTotalTimeMs = 0;
-                            let sectorResolvedWithDates = 0;
-                            sectorResolved.forEach(r => {
-                                if (r.resolved_at && r.created_at) {
-                                    sectorTotalTimeMs += new Date(r.resolved_at).getTime() - new Date(r.created_at).getTime();
-                                    sectorResolvedWithDates++;
-                                }
-                            });
-                            const sectorAvgDays = sectorResolvedWithDates > 0
-                                ? (sectorTotalTimeMs / sectorResolvedWithDates / (1000 * 60 * 60 * 24)).toFixed(1)
-                                : 0;
-
-                            return (
-                                <div key={idx} className="rounded-xl border border-gray-100 overflow-hidden transition-all duration-300">
-                                    {/* Sector Bar - Clickable */}
-                                    <button
-                                        onClick={() => setExpandedSector(isExpanded ? null : item.sector)}
-                                        className={`w-full p-4 flex items-center gap-4 transition-all duration-200 hover:bg-blue-50/50 ${isExpanded ? 'bg-blue-50/70 border-b border-blue-100' : 'bg-white'
-                                            }`}
-                                    >
-                                        <div className="flex-1">
-                                            <div className="flex justify-between items-end mb-1.5">
-                                                <span className="text-sm font-medium text-gray-700">{item.sector}</span>
-                                                <span className="text-xs font-bold text-gray-500">{item.count} ({Math.round(item.percentage)}%)</span>
-                                            </div>
-                                            <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                                                <div
-                                                    className={`h-full rounded-full transition-all duration-700 ease-out ${isExpanded ? 'bg-sanatorio-primary' : 'bg-sanatorio-primary/70'
-                                                        }`}
-                                                    style={{ width: `${item.percentage}%` }}
-                                                ></div>
-                                            </div>
-                                        </div>
-                                        <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
-                                            <ChevronDown className="w-5 h-5 text-gray-400" />
-                                        </div>
-                                    </button>
-
-                                    {/* Expanded Drill-Down Panel */}
-                                    {isExpanded && (
-                                        <div className="p-5 bg-gradient-to-b from-blue-50/30 to-white animate-in slide-in-from-top-2 duration-300 space-y-5">
-
-                                            {/* Local Metrics Row */}
-                                            <div className="grid grid-cols-4 gap-3">
-                                                <div className="bg-white p-3 rounded-xl border border-gray-100 text-center">
-                                                    <p className="text-2xl font-black text-gray-800">{sectorReports.length}</p>
-                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total</p>
-                                                </div>
-                                                <div className="bg-green-50 p-3 rounded-xl border border-green-100 text-center">
-                                                    <p className="text-2xl font-black text-green-700">{sectorResolved.length}</p>
-                                                    <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider">Resueltos</p>
-                                                </div>
-                                                <div className="bg-orange-50 p-3 rounded-xl border border-orange-100 text-center">
-                                                    <p className="text-2xl font-black text-orange-700">{sectorPending.length + sectorInProgress.length}</p>
-                                                    <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wider">Pendientes</p>
-                                                </div>
-                                                <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-center">
-                                                    <p className="text-2xl font-black text-blue-700">{sectorAvgDays}d</p>
-                                                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Tiempo Prom.</p>
-                                                </div>
-                                            </div>
-
-                                            {/* Status Bar */}
-                                            {sectorReports.length > 0 && (
-                                                <div className="flex w-full h-2.5 rounded-full overflow-hidden">
-                                                    <div style={{ width: `${(sectorResolved.length / sectorReports.length) * 100}%` }} className="h-full bg-green-500" title="Resueltos"></div>
-                                                    <div style={{ width: `${(sectorPending.length / sectorReports.length) * 100}%` }} className="h-full bg-blue-500" title="Pendientes"></div>
-                                                    <div style={{ width: `${(sectorInProgress.length / sectorReports.length) * 100}%` }} className="h-full bg-orange-500" title="En Proceso"></div>
-                                                </div>
-                                            )}
-
-                                            {/* Gravity Breakdown per Sector */}
-                                            {sectorReports.length > 0 && (() => {
-                                                const sGreen = sectorReports.filter(r => r.ai_urgency === 'Verde').length;
-                                                const sYellow = sectorReports.filter(r => r.ai_urgency === 'Amarillo').length;
-                                                const sRed = sectorReports.filter(r => r.ai_urgency === 'Rojo').length;
-                                                const sTotal = sectorReports.length;
-                                                const pGreen = (sGreen / sTotal) * 100;
-                                                const pYellow = (sYellow / sTotal) * 100;
-                                                const pRed = (sRed / sTotal) * 100;
-
-                                                return (
-                                                    <div className="bg-white rounded-xl border border-gray-100 p-3.5">
-                                                        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">Gravedad del Sector</h4>
-
-                                                        {/* Segmented Bar */}
-                                                        <div className="flex w-full h-3 rounded-full overflow-hidden mb-3">
-                                                            {sGreen > 0 && (
-                                                                <div
-                                                                    style={{ width: `${pGreen}%` }}
-                                                                    className="h-full bg-green-500 transition-all duration-700"
-                                                                    title={`Leve: ${sGreen}`}
-                                                                />
-                                                            )}
-                                                            {sYellow > 0 && (
-                                                                <div
-                                                                    style={{ width: `${pYellow}%` }}
-                                                                    className="h-full bg-yellow-400 transition-all duration-700"
-                                                                    title={`Medio: ${sYellow}`}
-                                                                />
-                                                            )}
-                                                            {sRed > 0 && (
-                                                                <div
-                                                                    style={{ width: `${pRed}%` }}
-                                                                    className="h-full bg-red-500 transition-all duration-700"
-                                                                    title={`Crítico: ${sRed}`}
-                                                                />
-                                                            )}
-                                                        </div>
-
-                                                        {/* Legend */}
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="flex items-center gap-1.5">
-                                                                <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
-                                                                <span className="text-[10px] font-bold text-gray-600">Leve</span>
-                                                                <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">{sGreen}</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-1.5">
-                                                                <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-                                                                <span className="text-[10px] font-bold text-gray-600">Medio</span>
-                                                                <span className="text-[10px] font-bold text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded-full">{sYellow}</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-1.5">
-                                                                <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                                                                <span className="text-[10px] font-bold text-gray-600">Crítico</span>
-                                                                <span className="text-[10px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full">{sRed}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })()}
-
-                                            {/* Claims Table */}
-                                            <div>
-                                                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Casos Activos ({sectorActive.length})</h4>
-                                                {sectorActive.length > 0 ? (
-                                                    <div className="rounded-xl border border-gray-100 overflow-x-auto max-h-[400px] overflow-y-auto">
-                                                        <table className="w-full text-xs min-w-[600px]">
-                                                            <thead className="sticky top-0 z-10">
-                                                                <tr className="bg-gray-50 text-gray-400 font-bold uppercase tracking-wider">
-                                                                    <th className="px-3 py-2 text-left">ID</th>
-                                                                    <th className="px-3 py-2 text-left">Fecha</th>
-                                                                    <th className="px-3 py-2 text-left">Resumen</th>
-                                                                    <th className="px-3 py-2 text-center">Estado</th>
-                                                                    <th className="px-3 py-2 text-center">Urgencia</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody className="divide-y divide-gray-50">
-                                                                {sectorActive.map((r: any) => (
-                                                                    <tr key={r.id} className="hover:bg-blue-50/40 transition-colors">
-                                                                        <td className="px-3 py-2 font-bold text-sanatorio-primary">{r.tracking_id}</td>
-                                                                        <td className="px-3 py-2 text-gray-500">{new Date(r.created_at).toLocaleDateString()}</td>
-                                                                        <td className="px-3 py-2 text-gray-600 max-w-[200px] truncate">{r.ai_summary || r.content?.substring(0, 50)}</td>
-                                                                        <td className="px-3 py-2 text-center">
-                                                                            <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${r.status === 'pending' || r.status === 'analyzed' ? 'bg-orange-100 text-orange-700' :
-                                                                                r.status === 'pending_resolution' ? 'bg-blue-100 text-blue-700' :
-                                                                                    r.status === 'quality_validation' ? 'bg-purple-100 text-purple-700' :
-                                                                                        r.status === 'assignment_rejected' ? 'bg-red-100 text-red-700' :
-                                                                                            'bg-gray-100 text-gray-600'
-                                                                                }`}>
-                                                                                {r.status === 'pending' || r.status === 'analyzed' ? 'Pendiente' :
-                                                                                    r.status === 'pending_resolution' ? 'En Gestión' :
-                                                                                        r.status === 'quality_validation' ? 'Validación' :
-                                                                                            r.status === 'assignment_rejected' ? 'Rechazado' :
-                                                                                                r.status}
-                                                                            </span>
-                                                                        </td>
-                                                                        <td className="px-3 py-2 text-center">
-                                                                            <span className={`inline-block w-3 h-3 rounded-full ${r.ai_urgency === 'Rojo' ? 'bg-red-500' : r.ai_urgency === 'Amarillo' ? 'bg-yellow-400' : 'bg-green-500'
-                                                                                }`}></span>
-                                                                        </td>
-                                                                    </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                ) : (
-                                                    <div className="bg-green-50/50 border border-green-100 rounded-xl p-4 text-center">
-                                                        <CheckCircle2 className="w-5 h-5 text-green-500 mx-auto mb-1" />
-                                                        <p className="text-xs text-green-700 font-medium">Sin casos activos en este sector</p>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* AI Feedback Module */}
-                                            <div className="bg-gradient-to-r from-[#002b4d] to-[#004270] rounded-xl p-4 text-white relative overflow-hidden">
-                                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
-                                                <div className="relative z-10">
-                                                    <div className="flex items-center justify-between mb-3">
-                                                        <h4 className="text-xs font-bold uppercase tracking-wider flex items-center gap-2 text-[#00D1FF]">
-                                                            <Sparkles className="w-4 h-4" />
-                                                            Feedback Inteligente
-                                                        </h4>
-                                                        <button
-                                                            onClick={async () => {
-                                                                setLoadingFeedback(item.sector);
-                                                                try {
-                                                                    const recentReports = sectorReports
-                                                                        .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                                                                        .slice(0, 20)
-                                                                        .map((r: any) => ({
-                                                                            content: r.content?.substring(0, 200),
-                                                                            ai_summary: r.ai_summary,
-                                                                            status: r.status,
-                                                                            ai_category: r.ai_category
-                                                                        }));
-
-                                                                    const { data, error } = await supabase.functions.invoke('generate-sector-feedback', {
-                                                                        body: { sector: item.sector, reports: recentReports }
-                                                                    });
-
-                                                                    if (error) throw error;
-                                                                    setSectorFeedback(prev => ({ ...prev, [item.sector]: data.feedback }));
-                                                                } catch (err) {
-                                                                    console.error('Sector feedback error:', err);
-                                                                    setSectorFeedback(prev => ({ ...prev, [item.sector]: 'No se pudo generar el insight. Intente nuevamente.' }));
-                                                                } finally {
-                                                                    setLoadingFeedback(null);
-                                                                }
-                                                            }}
-                                                            disabled={loadingFeedback === item.sector}
-                                                            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 flex items-center gap-1.5"
-                                                        >
-                                                            {loadingFeedback === item.sector ? (
-                                                                <Loader2 className="w-3 h-3 animate-spin" />
-                                                            ) : (
-                                                                <BrainCircuit className="w-3 h-3" />
-                                                            )}
-                                                            {sectorFeedback[item.sector] ? 'Regenerar' : 'Generar Insight'}
-                                                        </button>
-                                                    </div>
-
-                                                    {sectorFeedback[item.sector] ? (
-                                                        <p className="text-sm text-gray-100 leading-relaxed italic">
-                                                            "{sectorFeedback[item.sector]}"
-                                                        </p>
-                                                    ) : (
-                                                        <p className="text-xs text-gray-300/60">
-                                                            Haz click en "Generar Insight" para obtener un análisis AI de los patrones de este sector.
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                        {stats.bySector.length === 0 && <p className="text-gray-400 text-sm p-4">Sin datos aún.</p>}
+                        {stats.bySector.length > 0 ? (
+                            <div className="h-[400px] w-full mt-4">
+                                <Bar 
+                                    data={{
+                                        labels: stats.bySector.map(c => c.sector),
+                                        datasets: [{
+                                            label: 'Reportes',
+                                            data: stats.bySector.map(c => c.count),
+                                            backgroundColor: (context: any) => {
+                                                const chart = context.chart;
+                                                const { ctx, chartArea } = chart;
+                                                if (!chartArea || !chartArea.right || !isFinite(chartArea.right)) return 'rgba(99, 102, 241, 0.8)';
+                                                const gradient = ctx.createLinearGradient(0, 0, chartArea.right, 0);
+                                                gradient.addColorStop(0, 'rgba(99, 102, 241, 0.8)'); // Indigo
+                                                gradient.addColorStop(1, 'rgba(168, 85, 247, 0.9)'); // Purple
+                                                return gradient;
+                                            },
+                                            hoverBackgroundColor: (context: any) => {
+                                                const chart = context.chart;
+                                                const { ctx, chartArea } = chart;
+                                                if (!chartArea || !chartArea.right || !isFinite(chartArea.right)) return 'rgba(79, 70, 229, 1)';
+                                                const gradient = ctx.createLinearGradient(0, 0, chartArea.right, 0);
+                                                gradient.addColorStop(0, 'rgba(79, 70, 229, 1)'); // Indigo Darker
+                                                gradient.addColorStop(1, 'rgba(147, 51, 234, 1)'); // Purple Darker
+                                                return gradient;
+                                            },
+                                            borderRadius: 6,
+                                            borderSkipped: false,
+                                            barThickness: 'flex',
+                                            maxBarThickness: 32,
+                                            borderWidth: 1,
+                                            borderColor: 'rgba(255,255,255,0.2)',
+                                        }]
+                                    }}
+                                    options={{
+                                        indexAxis: 'y',
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        onClick: (_event, elements, chart) => {
+                                            if (elements.length > 0) {
+                                                const index = elements[0].index;
+                                                const label = chart.data.labels![index] as string;
+                                                handleMetricClick(undefined, undefined, label);
+                                            }
+                                        },
+                                        animation: {
+                                            duration: 1500,
+                                            easing: 'easeOutQuart',
+                                        },
+                                        layout: {
+                                            padding: { right: 30 }
+                                        },
+                                        plugins: {
+                                            legend: { display: false },
+                                            tooltip: {
+                                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                                titleColor: '#1f2937',
+                                                bodyColor: '#4b5563',
+                                                borderColor: '#e5e7eb',
+                                                borderWidth: 1,
+                                                padding: 12,
+                                                boxPadding: 6,
+                                                usePointStyle: true,
+                                                callbacks: {
+                                                    label: (context: any) => {
+                                                        const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                                                        const percentage = Math.round((context.raw / total) * 100);
+                                                        return ` ${context.raw} Reportes (${percentage}%)`;
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        scales: {
+                                            x: {
+                                                grid: { display: true, color: '#f3f4f6', drawTicks: false },
+                                                border: { display: false },
+                                                ticks: { font: { family: "'Inter', sans-serif" }, color: '#9ca3af', padding: 10 }
+                                            },
+                                            y: {
+                                                grid: { display: false },
+                                                border: { display: false },
+                                                ticks: { font: { family: "'Inter', sans-serif", weight: 'bold' }, color: '#4b5563', padding: 10 }
+                                            }
+                                        }
+                                    }}
+                                />
+                            </div>
+                        ) : (
+                            <div className="text-center py-10 text-gray-400">
+                                <PieChart className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                                <p className="text-sm">No hay sectores registrados.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
