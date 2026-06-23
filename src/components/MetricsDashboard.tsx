@@ -25,6 +25,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import confetti from 'canvas-confetti';
 import { Chart, registerables } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
 import { AdvancedAnalytics } from './AdvancedAnalytics';
 import { SlaAlertBanner } from './SlaAlerts';
 import { PdcaPanel } from './PdcaPanel';
@@ -54,7 +55,7 @@ export const MetricsDashboard = () => {
     const [roleFilteredReports, setRoleFilteredReports] = useState<any[]>([]);
     const [expandedSector, setExpandedSector] = useState<string | null>(null);
     const [expandedEmitterSector, setExpandedEmitterSector] = useState<string | null>(null);
-    const [expandedClassification, setExpandedClassification] = useState<string | null>(null);
+    // Delete unused state
     const [sectorFeedback, setSectorFeedback] = useState<Record<string, string>>({});
     const [loadingFeedback, setLoadingFeedback] = useState<string | null>(null);
     const [filters, setFilters] = useState<MetricsFilterState>({ sectors: [], dateFrom: '', dateTo: '' });
@@ -1425,91 +1426,88 @@ export const MetricsDashboard = () => {
                 <p className="text-xs text-gray-400 mb-6">Categorías operativas asignadas a cada reporte.</p>
 
                 {stats.byClassification.length > 0 ? (
-                    <div className="space-y-3">
-                        {stats.byClassification.map((item, idx) => {
-                            const classificationColors = [
-                                'bg-indigo-500', 'bg-violet-500', 'bg-purple-500', 'bg-fuchsia-500',
-                                'bg-pink-500', 'bg-rose-500', 'bg-sky-500', 'bg-cyan-500',
-                                'bg-teal-500', 'bg-emerald-500', 'bg-amber-500', 'bg-orange-500',
-                                'bg-red-500', 'bg-blue-500', 'bg-lime-500', 'bg-slate-400'
-                            ];
-                            const barColor = classificationColors[idx % classificationColors.length];
-                            const isUnclassified = item.category === 'Sin clasificar';
-                            const isExpanded = expandedClassification === item.category;
-                            const associatedReports = rawReports.filter(r => (r.ai_category || 'Sin clasificar') === item.category);
-
-                            return (
-                                <div key={item.category} className={`rounded-xl transition-all ${isUnclassified ? 'opacity-60' : ''}`}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setExpandedClassification(isExpanded ? null : item.category)}
-                                        className={`w-full group rounded-xl p-3 transition-all text-left cursor-pointer ${isExpanded ? 'bg-slate-50' : 'hover:bg-slate-50'}`}
-                                    >
-                                        <div className="flex justify-between items-center mb-1.5">
-                                            <span className={`text-sm font-medium flex items-center gap-1.5 ${isUnclassified ? 'text-gray-400 italic' : 'text-gray-700'}`}>
-                                                <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-                                                {item.category}
-                                            </span>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs font-bold text-gray-500">{item.count}</span>
-                                                <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                                                    {Math.round(item.percentage)}%
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                                            <div
-                                                className={`h-full rounded-full transition-all duration-700 ease-out ${barColor} group-hover:opacity-90`}
-                                                style={{ width: `${item.percentage}%` }}
-                                            ></div>
-                                        </div>
-                                    </button>
-
-                                    {/* Expanded: list of associated reports */}
-                                    {isExpanded && associatedReports.length > 0 && (
-                                        <div className="mt-1 ml-4 mr-1 mb-2 space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
-                                            {associatedReports.map((report: any) => {
-                                                const urgencyColor = report.ai_urgency === 'Rojo' ? 'bg-red-500' : report.ai_urgency === 'Amarillo' ? 'bg-amber-400' : 'bg-green-500';
-                                                const statusLabel: Record<string, string> = {
-                                                    pending: 'Pendiente', analyzed: 'Analizado', pending_resolution: 'En resolución',
-                                                    in_progress: 'En progreso', quality_validation: 'Validación', resolved: 'Resuelto',
-                                                    cancelled: 'Cancelado', multi_sector_pending: 'Multi-sector'
-                                                };
-                                                return (
-                                                    <div
-                                                        key={report.id}
-                                                        className="flex items-center gap-3 p-2.5 bg-white border border-gray-100 rounded-lg hover:shadow-sm transition-all group/item"
-                                                    >
-                                                        <div className={`w-2 h-2 rounded-full shrink-0 ${urgencyColor}`}></div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2 mb-0.5">
-                                                                <span className="text-xs font-bold text-gray-700 font-mono">
-                                                                    {report.tracking_id || '—'}
-                                                                </span>
-                                                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-medium">
-                                                                    {statusLabel[report.status] || report.status}
-                                                                </span>
-                                                            </div>
-                                                            <p className="text-[11px] text-gray-500 truncate">
-                                                                {report.ai_summary || report.content?.substring(0, 80) || 'Sin descripción'}
-                                                            </p>
-                                                        </div>
-                                                        <div className="text-right shrink-0">
-                                                            <p className="text-[10px] text-gray-400 font-medium">
-                                                                {report.sector || '—'}
-                                                            </p>
-                                                            <p className="text-[10px] text-gray-300">
-                                                                {report.created_at ? new Date(report.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' }) : ''}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                    <div className="h-[400px] w-full mt-4">
+                        <Bar 
+                            data={{
+                                labels: stats.byClassification.map(c => c.category),
+                                datasets: [{
+                                    label: 'Reportes',
+                                    data: stats.byClassification.map(c => c.count),
+                                    backgroundColor: (context: any) => {
+                                        const chart = context.chart;
+                                        const { ctx, chartArea } = chart;
+                                        if (!chartArea) return 'rgba(99, 102, 241, 0.8)';
+                                        const gradient = ctx.createLinearGradient(0, 0, chartArea.right, 0);
+                                        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.8)'); // Indigo
+                                        gradient.addColorStop(1, 'rgba(168, 85, 247, 0.9)'); // Purple
+                                        return gradient;
+                                    },
+                                    hoverBackgroundColor: (context: any) => {
+                                        const chart = context.chart;
+                                        const { ctx, chartArea } = chart;
+                                        if (!chartArea) return 'rgba(79, 70, 229, 1)';
+                                        const gradient = ctx.createLinearGradient(0, 0, chartArea.right, 0);
+                                        gradient.addColorStop(0, 'rgba(79, 70, 229, 1)'); // Indigo Darker
+                                        gradient.addColorStop(1, 'rgba(147, 51, 234, 1)'); // Purple Darker
+                                        return gradient;
+                                    },
+                                    borderRadius: 6,
+                                    borderSkipped: false,
+                                    barThickness: 'flex',
+                                    maxBarThickness: 32,
+                                    borderWidth: 1,
+                                    borderColor: 'rgba(255,255,255,0.2)',
+                                }]
+                            }}
+                            options={{
+                                indexAxis: 'y',
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                animation: {
+                                    duration: 1500,
+                                    easing: 'easeOutQuart',
+                                },
+                                layout: {
+                                    padding: { right: 30 }
+                                },
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                        titleColor: '#1f2937',
+                                        bodyColor: '#4b5563',
+                                        borderColor: '#e5e7eb',
+                                        borderWidth: 1,
+                                        padding: 12,
+                                        boxPadding: 6,
+                                        usePointStyle: true,
+                                        callbacks: {
+                                            label: (context: any) => {
+                                                const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                                                const percentage = Math.round((context.raw / total) * 100);
+                                                return ` ${context.raw} Reportes (${percentage}%)`;
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        grid: { display: true, color: '#f3f4f6', drawTicks: false },
+                                        border: { display: false },
+                                        ticks: { font: { family: "'Inter', sans-serif" }, color: '#9ca3af', padding: 10 }
+                                    },
+                                    y: {
+                                        grid: { display: false },
+                                        border: { display: false },
+                                        ticks: { 
+                                            font: { family: "'Inter', sans-serif", weight: 'bold', size: 12 }, 
+                                            color: '#4b5563',
+                                            padding: 10,
+                                        }
+                                    }
+                                }
+                            }}
+                        />
                     </div>
                 ) : (
                     <div className="text-center py-10 text-gray-400">
