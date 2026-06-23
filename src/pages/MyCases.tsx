@@ -157,9 +157,9 @@ export const MyCases = () => {
                 a.management_type,
             ].filter(Boolean).map(f => f!.toLowerCase());
 
-            return searchableFields.some(field => field.includes(q));
-        }
-
+            if (!searchableFields.some(field => field.includes(q))) {
+                return false;
+            }
         }
 
         const report = a.reports as any;
