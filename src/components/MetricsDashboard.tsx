@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../utils/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -59,8 +60,18 @@ export const MetricsDashboard = () => {
     const [filters, setFilters] = useState<MetricsFilterState>({ sectors: [], dateFrom: '', dateTo: '' });
 
     const { role, sectors, profile, session } = useAuth();
+    const navigate = useNavigate();
 
     const canViewAll = role === 'admin' || role === 'directivo';
+
+    const handleMetricClick = (urgency?: string, category?: string) => {
+        const base = (role === 'admin' || role === 'responsable') ? '/dashboard' : '/mis-casos';
+        const params = new URLSearchParams();
+        if (urgency) params.set('urgency', urgency);
+        if (category) params.set('category', category);
+        
+        navigate(`${base}?${params.toString()}`);
+    };
 
     // ─── Apply user filters (sectors[], dateFrom, dateTo) on top of role-filtered reports ───
     const applyUserFilters = useCallback((reports: any[]) => {
@@ -830,7 +841,10 @@ export const MetricsDashboard = () => {
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group">
+                <div 
+                    onClick={() => handleMetricClick('Rojo', undefined)}
+                    className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group cursor-pointer hover:border-red-200 transition-all"
+                >
                     <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                         <AlertOctagon className="w-24 h-24 text-red-600" />
                     </div>
@@ -848,7 +862,10 @@ export const MetricsDashboard = () => {
                     <p className="text-xs text-gray-400 mt-2">Desde reporte hasta cierre</p>
                 </div>
 
-                <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-6 rounded-2xl shadow-sm border border-amber-200 relative overflow-hidden group">
+                <div 
+                    onClick={() => handleMetricClick(undefined, 'Felicitación')}
+                    className="bg-gradient-to-br from-amber-50 to-yellow-50 p-6 rounded-2xl shadow-sm border border-amber-200 relative overflow-hidden group cursor-pointer hover:border-amber-300 transition-all"
+                >
                     <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                         <Star className="w-24 h-24 text-amber-400" />
                     </div>

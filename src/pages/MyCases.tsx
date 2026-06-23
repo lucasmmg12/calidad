@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../utils/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { SECTOR_OPTIONS } from '../constants/sectors';
@@ -59,6 +60,14 @@ export const MyCases = () => {
     const [filter, setFilter] = useState<'all' | 'pending' | 'resolved'>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<'assignments' | 'tracking'>('assignments');
+    
+    const location = useLocation();
+    const queryParams = new URLSearchParams(location.search);
+    const initialUrgency = queryParams.get('urgency');
+    const initialCategory = queryParams.get('category');
+    
+    const [listUrgencyFilter, setListUrgencyFilter] = useState<string | null>(initialUrgency);
+    const [listCategoryFilter, setListCategoryFilter] = useState<string | null>(initialCategory);
 
     useEffect(() => {
         const fetchMyCases = async () => {
@@ -89,7 +98,10 @@ export const MyCases = () => {
                             created_at,
                             sector,
                             evidence_urls,
-                            quality_observations
+                            quality_observations,
+                            ai_urgency,
+                            ai_category,
+                            finding_type
                         )
                     `)
                     .order('created_at', { ascending: false });
@@ -148,7 +160,13 @@ export const MyCases = () => {
             return searchableFields.some(field => field.includes(q));
         }
 
-        return true;
+        }
+
+        const report = a.reports as any;
+        const matchesUrgency = listUrgencyFilter ? report.ai_urgency === listUrgencyFilter : true;
+        const matchesCategory = listCategoryFilter ? (report.ai_category === listCategoryFilter || report.finding_type === listCategoryFilter) : true;
+
+        return matchesUrgency && matchesCategory;
     });
 
     const pendingCount = assignments.filter(a => a.status === 'pending').length;
@@ -249,6 +267,25 @@ export const MyCases = () => {
                             )}
                         </div>
                     </div>
+                    
+                    {/* Active URL Filters */}
+                    {(listUrgencyFilter || listCategoryFilter) && (
+                        <div className="flex items-center gap-2 mb-4">
+                            <span className="text-xs text-gray-500 font-bold">Filtros Activos:</span>
+                            {listUrgencyFilter && (
+                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-50 text-red-700 text-xs font-bold border border-red-200">
+                                    Urgencia: {listUrgencyFilter}
+                                    <button onClick={() => setListUrgencyFilter(null)} className="hover:text-red-900"><XCircle className="w-3 h-3" /></button>
+                                </span>
+                            )}
+                            {listCategoryFilter && (
+                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 text-amber-700 text-xs font-bold border border-amber-200">
+                                    Categoría: {listCategoryFilter}
+                                    <button onClick={() => setListCategoryFilter(null)} className="hover:text-amber-900"><XCircle className="w-3 h-3" /></button>
+                                </span>
+                            )}
+                        </div>
+                    )}
 
                     {/* Cases List */}
                     {filteredAssignments.length === 0 ? (

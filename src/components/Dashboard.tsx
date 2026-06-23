@@ -1,6 +1,7 @@
 
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../utils/supabase';
 import {
     LayoutDashboard,
@@ -1717,11 +1718,19 @@ export const Dashboard = () => {
     }
 
     // FILTROS
+    const location = useLocation();
+    const queryParams = new URLSearchParams(location.search);
+    const initialUrgency = queryParams.get('urgency');
+    const initialCategory = queryParams.get('category');
+
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation' | 'discarded' | 'assignment_rejected' | 'multi_sector_pending'>('all');
     const [listSectorFilter, setListSectorFilter] = useState<string[]>([]);
     const [listDateFrom, setListDateFrom] = useState('');
     const [listDateTo, setListDateTo] = useState('');
+    const [listUrgencyFilter, setListUrgencyFilter] = useState<string | null>(initialUrgency);
+    const [listCategoryFilter, setListCategoryFilter] = useState<string | null>(initialCategory);
+    
     const [listSectorDropdownOpen, setListSectorDropdownOpen] = useState(false);
     const [listSectorSearch, setListSectorSearch] = useState('');
     const listSectorDropdownRef = useRef<HTMLDivElement>(null);
@@ -1777,7 +1786,13 @@ export const Dashboard = () => {
             matchesDateTo = new Date(report.created_at) <= to;
         }
 
-        return matchesStatus && matchesSearch && matchesSector && matchesDateFrom && matchesDateTo;
+        // Filtro por Urgencia
+        const matchesUrgency = listUrgencyFilter ? report.ai_urgency === listUrgencyFilter : true;
+        
+        // Filtro por Categoria
+        const matchesCategory = listCategoryFilter ? (report.ai_category === listCategoryFilter || report.finding_type === listCategoryFilter) : true;
+
+        return matchesStatus && matchesSearch && matchesSector && matchesDateFrom && matchesDateTo && matchesUrgency && matchesCategory;
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
 
@@ -2073,14 +2088,30 @@ export const Dashboard = () => {
                         </div>
 
                         {/* Clear filters */}
-                        {(listSectorFilter.length > 0 || listDateFrom || listDateTo) && (
-                            <button
-                                type="button"
-                                onClick={() => { setListSectorFilter([]); setListDateFrom(''); setListDateTo(''); }}
-                                className="text-[10px] font-bold text-red-500 hover:text-red-700 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors shrink-0"
-                            >
-                                ✕ Limpiar
-                            </button>
+                        {(listSectorFilter.length > 0 || listDateFrom || listDateTo || listUrgencyFilter || listCategoryFilter) && (
+                            <div className="flex items-center gap-2">
+                                {(listUrgencyFilter || listCategoryFilter) && (
+                                    <div className="flex gap-2">
+                                        {listUrgencyFilter && (
+                                            <span className="px-2 py-1 bg-red-50 text-red-700 text-[10px] font-bold rounded-lg border border-red-200">
+                                                Urgencia: {listUrgencyFilter}
+                                            </span>
+                                        )}
+                                        {listCategoryFilter && (
+                                            <span className="px-2 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-lg border border-amber-200">
+                                                Categoría: {listCategoryFilter}
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => { setListSectorFilter([]); setListDateFrom(''); setListDateTo(''); setListUrgencyFilter(null); setListCategoryFilter(null); }}
+                                    className="text-[10px] font-bold text-red-500 hover:text-red-700 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors shrink-0"
+                                >
+                                    ✕ Limpiar
+                                </button>
+                            </div>
                         )}
 
                         {/* Spacer — desktop only */}
