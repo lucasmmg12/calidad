@@ -996,10 +996,13 @@ export const MetricsDashboard = () => {
 
                 {/* Urgency Donut Chart */}
                 <div className="bg-white p-8 rounded-3xl shadow-card border border-gray-100 flex flex-col">
-                    <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-gray-800 mb-1 flex items-center gap-2">
                         <Zap className="w-5 h-5 text-yellow-500" />
                         Gravedad de Hallazgos
                     </h3>
+                    <p className="text-[11px] text-gray-400 mb-6 leading-tight">
+                        * No se incluyen {stats.total - (stats.byUrgency.Verdes + stats.byUrgency.Amarillos + stats.byUrgency.Rojos)} reportes sin riesgo clínico asignado (ej. históricos o felicitaciones).
+                    </p>
 
                     {(() => {
                         const green = stats.byUrgency.Verdes;
