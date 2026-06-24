@@ -64,7 +64,7 @@ export const MyCases = () => {
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
     const initialUrgency = queryParams.get('urgency');
-    const initialCategory = queryParams.get('category');
+    const initialCategory = queryParams.get('category') || queryParams.get('finding_type');
     const initialSector = queryParams.get('sector');
     
     const [listUrgencyFilter, setListUrgencyFilter] = useState<string | null>(initialUrgency);
