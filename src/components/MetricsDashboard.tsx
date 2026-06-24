@@ -162,8 +162,8 @@ export const MetricsDashboard = () => {
         setRawReports(filteredReports);
 
         const total = filteredReports.length;
-        const felicitaciones = filteredReports.filter(r => r.finding_type === 'Felicitación' || r.ai_category === 'Felicitación').length;
-        const nonFelicitaciones = filteredReports.filter(r => r.finding_type !== 'Felicitación' && r.ai_category !== 'Felicitación');
+        const felicitaciones = filteredReports.filter(r => r.finding_type?.startsWith('Felicitaci') || r.ai_category?.startsWith('Felicitaci')).length;
+        const nonFelicitaciones = filteredReports.filter(r => !r.finding_type?.startsWith('Felicitaci') && !r.ai_category?.startsWith('Felicitaci'));
         const resolved = nonFelicitaciones.filter(r => r.status === 'resolved');
         const pending = nonFelicitaciones.filter(r => r.status !== 'resolved');
         const urgent = nonFelicitaciones.filter(r => r.ai_urgency === 'Rojo');
@@ -227,7 +227,8 @@ export const MetricsDashboard = () => {
         // By Classification (ai_category)
         const classificationMap: Record<string, number> = {};
         filteredReports.forEach(r => {
-            const cat = r.ai_category || 'Sin clasificar';
+            let cat = r.ai_category || 'Sin clasificar';
+            if (cat.startsWith('Felicitaci')) cat = 'Felicitación';
             if (cat !== 'Sin clasificar') {
                 classificationMap[cat] = (classificationMap[cat] || 0) + 1;
             }
@@ -239,7 +240,8 @@ export const MetricsDashboard = () => {
         // By Finding Type
         const findingTypeMap: Record<string, number> = {};
         filteredReports.forEach(r => {
-            const type = r.finding_type || 'Sin clasificar';
+            let type = r.finding_type || 'Sin clasificar';
+            if (type.startsWith('Felicitaci')) type = 'Felicitación';
             if (type !== 'Sin clasificar' && type !== 'Sin asignar') {
                 findingTypeMap[type] = (findingTypeMap[type] || 0) + 1;
             }
