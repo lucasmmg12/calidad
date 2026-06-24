@@ -14,8 +14,6 @@ import {
     FileDown,
     BrainCircuit,
     Loader2,
-    ChevronDown,
-
     Tag,
     ClipboardCheck,
     Star,
@@ -47,13 +45,13 @@ export const MetricsDashboard = () => {
         byUrgency: { Verdes: 0, Amarillos: 0, Rojos: 0 },
         byStatus: { resolved: 0, pending: 0, waiting: 0, cancelled: 0 },
         byClassification: [] as { category: string; count: number; percentage: number }[],
+        byFindingType: [] as { type: string; count: number; percentage: number }[],
         byAnonymity: { anonymous: 0, identified: 0 },
         felicitaciones: 0
     });
     const [isExporting, setIsExporting] = useState(false);
     const [rawReports, setRawReports] = useState<any[]>([]);
     const [roleFilteredReports, setRoleFilteredReports] = useState<any[]>([]);
-    const [expandedEmitterSector, setExpandedEmitterSector] = useState<string | null>(null);
     const [filters, setFilters] = useState<MetricsFilterState>({ sectors: [], dateFrom: '', dateTo: '' });
 
     const { role, sectors, profile, session } = useAuth();
@@ -61,12 +59,14 @@ export const MetricsDashboard = () => {
 
     const canViewAll = role === 'admin' || role === 'directivo';
 
-    const handleMetricClick = (urgency?: string, category?: string, sector?: string) => {
+    const handleMetricClick = (filters: { urgency?: string; category?: string; sector?: string; reporter_sector?: string; finding_type?: string }) => {
         const base = (role === 'admin' || role === 'responsable') ? '/dashboard' : '/mis-casos';
         const params = new URLSearchParams();
-        if (urgency) params.set('urgency', urgency);
-        if (category) params.set('category', category);
-        if (sector) params.set('sector', sector);
+        if (filters.urgency) params.set('urgency', filters.urgency);
+        if (filters.category) params.set('category', filters.category);
+        if (filters.sector) params.set('sector', filters.sector);
+        if (filters.reporter_sector) params.set('reporter_sector', filters.reporter_sector);
+        if (filters.finding_type) params.set('finding_type', filters.finding_type);
         
         navigate(`${base}?${params.toString()}`);
     };
@@ -228,10 +228,24 @@ export const MetricsDashboard = () => {
         const classificationMap: Record<string, number> = {};
         filteredReports.forEach(r => {
             const cat = r.ai_category || 'Sin clasificar';
-            classificationMap[cat] = (classificationMap[cat] || 0) + 1;
+            if (cat !== 'Sin clasificar') {
+                classificationMap[cat] = (classificationMap[cat] || 0) + 1;
+            }
         });
         const byClassification = Object.entries(classificationMap)
             .map(([category, count]) => ({ category, count, percentage: total > 0 ? (count / total) * 100 : 0 }))
+            .sort((a, b) => b.count - a.count);
+
+        // By Finding Type
+        const findingTypeMap: Record<string, number> = {};
+        filteredReports.forEach(r => {
+            const type = r.finding_type || 'Sin clasificar';
+            if (type !== 'Sin clasificar' && type !== 'Sin asignar') {
+                findingTypeMap[type] = (findingTypeMap[type] || 0) + 1;
+            }
+        });
+        const byFindingType = Object.entries(findingTypeMap)
+            .map(([type, count]) => ({ type, count, percentage: total > 0 ? (count / total) * 100 : 0 }))
             .sort((a, b) => b.count - a.count);
 
         // By Anonymity
@@ -250,6 +264,7 @@ export const MetricsDashboard = () => {
             byUrgency,
             byStatus,
             byClassification,
+            byFindingType,
             byAnonymity,
             felicitaciones
         });
@@ -840,7 +855,7 @@ export const MetricsDashboard = () => {
                 </div>
 
                 <div 
-                    onClick={() => handleMetricClick('Rojo', undefined)}
+                    onClick={() => handleMetricClick({ urgency: 'Rojo' })}
                     className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group cursor-pointer hover:border-red-200 transition-all"
                 >
                     <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -861,7 +876,7 @@ export const MetricsDashboard = () => {
                 </div>
 
                 <div 
-                    onClick={() => handleMetricClick(undefined, 'Felicitación')}
+                    onClick={() => handleMetricClick({ category: 'Felicitación' })}
                     className="bg-gradient-to-br from-amber-50 to-yellow-50 p-6 rounded-2xl shadow-sm border border-amber-200 relative overflow-hidden group cursor-pointer hover:border-amber-300 transition-all"
                 >
                     <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -923,7 +938,7 @@ export const MetricsDashboard = () => {
                                             if (elements.length > 0) {
                                                 const index = elements[0].index;
                                                 const label = chart.data.labels![index] as string;
-                                                handleMetricClick(undefined, undefined, label);
+                                                handleMetricClick({ sector: label });
                                             }
                                         },
                                         animation: {
@@ -1057,134 +1072,99 @@ export const MetricsDashboard = () => {
                     <Send className="w-5 h-5 text-indigo-500" />
                     Hallazgos Emitidos por Sector
                 </h3>
-                <p className="text-xs text-gray-400 mb-6">Cuántos hallazgos generó cada sector como emisor del reporte y a qué sectores fueron dirigidos.</p>
+                <p className="text-xs text-gray-400 mb-6">Cuántos hallazgos generó cada sector como emisor del reporte.</p>
 
-                <div className="space-y-2">
-                    {stats.byReporterSector.map((item, idx) => {
-                        const sectorLabel = SECTOR_OPTIONS.find(s => s.value === item.sector)?.label || item.sector;
-                        const isExpanded = expandedEmitterSector === item.sector;
-                        const emitterReports = rawReports.filter(r => (r.reporter_sector || 'Sin asignar') === item.sector);
-
-                        // Group by destination sector
-                        const destMap: Record<string, number> = {};
-                        emitterReports.forEach(r => {
-                            const dest = r.sector || 'Sin asignar';
-                            destMap[dest] = (destMap[dest] || 0) + 1;
-                        });
-                        const destinations = Object.entries(destMap)
-                            .map(([sector, count]) => ({ sector, count }))
-                            .sort((a, b) => b.count - a.count);
-
-                        const barColors = [
-                            'bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500',
-                            'bg-rose-500', 'bg-cyan-500', 'bg-teal-500', 'bg-pink-500',
-                        ];
-
-                        return (
-                            <div key={idx} className="rounded-xl border border-gray-100 overflow-hidden transition-all duration-300">
-                                <button
-                                    onClick={() => setExpandedEmitterSector(isExpanded ? null : item.sector)}
-                                    className={`w-full p-4 flex items-center gap-4 transition-all duration-200 hover:bg-indigo-50/50 ${isExpanded ? 'bg-indigo-50/70 border-b border-indigo-100' : 'bg-white'}`}
-                                >
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-end mb-1.5">
-                                            <span className="text-sm font-medium text-gray-700">{sectorLabel}</span>
-                                            <span className="text-xs font-bold text-gray-500">{item.count} ({Math.round(item.percentage)}%)</span>
-                                        </div>
-                                        <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                                            <div
-                                                className={`h-full rounded-full transition-all duration-700 ease-out ${isExpanded ? 'bg-indigo-500' : 'bg-indigo-500/70'}`}
-                                                style={{ width: `${item.percentage}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
-                                        <ChevronDown className="w-5 h-5 text-gray-400" />
-                                    </div>
-                                </button>
-
-                                {/* Expanded: destination breakdown */}
-                                {isExpanded && (
-                                    <div className="p-5 bg-gradient-to-b from-indigo-50/30 to-white animate-in slide-in-from-top-2 duration-300 space-y-4">
-                                        <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">
-                                            Dirigidos a {destinations.length} {destinations.length === 1 ? 'sector' : 'sectores'}
-                                        </h4>
-                                        <div className="space-y-4">
-                                            {destinations.map((dest, dIdx) => {
-                                                const destLabel = SECTOR_OPTIONS.find(s => s.value === dest.sector)?.label || dest.sector;
-                                                const maxCount = destinations[0]?.count || 1;
-                                                const barWidth = (dest.count / maxCount) * 100;
-                                                const pct = item.count > 0 ? Math.round((dest.count / item.count) * 100) : 0;
-                                                
-                                                // Get the specific reports for this destination
-                                                const reportsForDest = emitterReports.filter(r => (r.sector || 'Sin asignar') === dest.sector);
-
-                                                return (
-                                                    <div key={dest.sector} className="bg-white rounded-xl p-4 border border-indigo-50/50 shadow-sm">
-                                                        <div className="flex items-center justify-between mb-3">
-                                                            <div className="flex items-center gap-2 min-w-0">
-                                                                <span className="text-indigo-300 text-sm">→</span>
-                                                                <span className="text-sm font-bold text-gray-700 truncate">{destLabel}</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-2 shrink-0">
-                                                                <span className="text-base font-black text-indigo-600">{dest.count}</span>
-                                                                <span className="text-[10px] text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full font-bold">{pct}%</span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden mb-4">
-                                                            <div
-                                                                className={`h-full rounded-full transition-all duration-700 ${barColors[dIdx % barColors.length]}`}
-                                                                style={{ width: `${barWidth}%` }}
-                                                            />
-                                                        </div>
-
-                                                        {/* Casos Activos / Resueltos list */}
-                                                        <div className="space-y-2 mt-2">
-                                                            {reportsForDest.map(report => (
-                                                                <div key={report.id} className="flex items-center justify-between gap-3 p-2.5 bg-gray-50/50 hover:bg-indigo-50/30 rounded-lg border border-gray-100 transition-colors">
-                                                                    <div className="flex items-center gap-2 min-w-0">
-                                                                        <div className={`w-2 h-2 rounded-full shrink-0 ${report.ai_urgency === 'Rojo' ? 'bg-red-500' : report.ai_urgency === 'Amarillo' ? 'bg-amber-400' : 'bg-green-500'}`}></div>
-                                                                        <div className="min-w-0">
-                                                                            <p className="text-xs font-bold text-gray-700 font-mono">
-                                                                                {report.tracking_id || '—'}
-                                                                            </p>
-                                                                            <p className="text-[10px] text-gray-500 truncate max-w-[200px] md:max-w-[400px]">
-                                                                                {report.ai_summary || report.content?.substring(0, 80) || 'Sin descripción'}
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-3 shrink-0">
-                                                                        <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold ${
-                                                                            report.status === 'resolved' ? 'bg-green-100 text-green-700' :
-                                                                            report.status === 'pending_resolution' ? 'bg-blue-100 text-blue-700' :
-                                                                            'bg-gray-100 text-gray-600'
-                                                                        }`}>
-                                                                            {report.status === 'resolved' ? 'Resuelto' : 
-                                                                             report.status === 'pending_resolution' ? 'En Gestión' : 'Pendiente'}
-                                                                        </span>
-                                                                        <a
-                                                                            href={`/resolver-caso/${report.tracking_id}`}
-                                                                            target="_blank"
-                                                                            rel="noreferrer"
-                                                                            className="text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded text-[10px] font-bold transition-colors flex items-center gap-1"
-                                                                        >
-                                                                            Ver Caso <ArrowUpRight className="w-3 h-3" />
-                                                                        </a>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                    {stats.byReporterSector.length === 0 && <p className="text-gray-400 text-sm p-4">Sin datos de sector emisor aún.</p>}
-                </div>
+                {stats.byReporterSector.length > 0 ? (
+                    <div className="h-[400px] w-full mt-4">
+                        <Bar 
+                            data={{
+                                labels: stats.byReporterSector.map(s => {
+                                    const option = SECTOR_OPTIONS.find(opt => opt.value === s.sector);
+                                    return option ? option.label : s.sector;
+                                }),
+                                datasets: [{
+                                    label: 'Reportes Emitidos',
+                                    data: stats.byReporterSector.map(s => s.count),
+                                    backgroundColor: (context: any) => {
+                                        const chart = context.chart;
+                                        const { ctx, chartArea } = chart;
+                                        if (!chartArea || !chartArea.right || !isFinite(chartArea.right)) return 'rgba(59, 130, 246, 0.8)';
+                                        const gradient = ctx.createLinearGradient(0, 0, chartArea.right, 0);
+                                        gradient.addColorStop(0, 'rgba(59, 130, 246, 0.8)'); // Blue
+                                        gradient.addColorStop(1, 'rgba(14, 165, 233, 0.9)'); // Sky
+                                        return gradient;
+                                    },
+                                    hoverBackgroundColor: (context: any) => {
+                                        const chart = context.chart;
+                                        const { ctx, chartArea } = chart;
+                                        if (!chartArea || !chartArea.right || !isFinite(chartArea.right)) return 'rgba(37, 99, 235, 1)';
+                                        const gradient = ctx.createLinearGradient(0, 0, chartArea.right, 0);
+                                        gradient.addColorStop(0, 'rgba(37, 99, 235, 1)');
+                                        gradient.addColorStop(1, 'rgba(2, 132, 199, 1)');
+                                        return gradient;
+                                    },
+                                    borderRadius: 6,
+                                    borderSkipped: false,
+                                    barThickness: 'flex',
+                                    maxBarThickness: 32,
+                                    borderWidth: 1,
+                                    borderColor: 'rgba(255,255,255,0.2)',
+                                }]
+                            }}
+                            options={{
+                                indexAxis: 'y',
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                onClick: (_event, elements) => {
+                                    if (elements.length > 0) {
+                                        const index = elements[0].index;
+                                        const rawLabel = stats.byReporterSector[index].sector;
+                                        handleMetricClick({ reporter_sector: rawLabel });
+                                    }
+                                },
+                                animation: { duration: 1500, easing: 'easeOutQuart' },
+                                layout: { padding: { right: 30 } },
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                        titleColor: '#1f2937',
+                                        bodyColor: '#4b5563',
+                                        borderColor: '#e5e7eb',
+                                        borderWidth: 1,
+                                        padding: 12,
+                                        boxPadding: 6,
+                                        usePointStyle: true,
+                                        callbacks: {
+                                            label: (context: any) => {
+                                                const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                                                const percentage = Math.round((context.raw / total) * 100);
+                                                return ` ${context.raw} Reportes Emitidos (${percentage}%)`;
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        grid: { display: true, color: '#f3f4f6', drawTicks: false },
+                                        border: { display: false },
+                                        ticks: { font: { family: "'Inter', sans-serif" }, color: '#9ca3af', padding: 10 }
+                                    },
+                                    y: {
+                                        grid: { display: false },
+                                        border: { display: false },
+                                        ticks: { font: { family: "'Inter', sans-serif", weight: 'bold', size: 12 }, color: '#4b5563', padding: 10 }
+                                    }
+                                }
+                            }}
+                        />
+                    </div>
+                ) : (
+                    <div className="text-center py-10 text-gray-400">
+                        <Send className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                        <p className="text-sm">No hay datos de sector emisor disponibles.</p>
+                    </div>
+                )}
             </div>
 
             {/* Status Breakdown Chart */}
@@ -1344,6 +1324,106 @@ export const MetricsDashboard = () => {
                     <div className="text-center py-10 text-gray-400">
                         <Tag className="w-8 h-8 mx-auto mb-2 opacity-30" />
                         <p className="text-sm">No hay datos de clasificación disponibles.</p>
+                    </div>
+                )}
+            </div>
+
+            {/* ── Distribución por Tipo de Hallazgo ── */}
+            <div className="bg-white p-8 rounded-3xl shadow-card border border-gray-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+                    <PieChart className="w-5 h-5 text-purple-500" />
+                    Distribución por Tipo de Hallazgo
+                </h3>
+                <p className="text-xs text-gray-400 mb-6">Categorías asignadas según el tipo de hallazgo.</p>
+
+                {stats.byFindingType.length > 0 ? (
+                    <div className="h-[400px] w-full mt-4">
+                        <Bar 
+                            data={{
+                                labels: stats.byFindingType.map(s => s.type),
+                                datasets: [{
+                                    label: 'Reportes',
+                                    data: stats.byFindingType.map(s => s.count),
+                                    backgroundColor: (context: any) => {
+                                        const typeColors: Record<string, string[]> = {
+                                            'Observación': ['rgba(168, 85, 247, 0.8)', 'rgba(147, 51, 234, 0.9)'],
+                                            'Oportunidad de Mejora': ['rgba(59, 130, 246, 0.8)', 'rgba(37, 99, 235, 0.9)'],
+                                            'Evento Adverso': ['rgba(239, 68, 68, 0.8)', 'rgba(220, 38, 38, 0.9)'],
+                                            'Evento Cuasi Adverso': ['rgba(249, 115, 22, 0.8)', 'rgba(234, 88, 12, 0.9)'],
+                                            'Desvío': ['rgba(234, 179, 8, 0.8)', 'rgba(202, 138, 4, 0.9)'],
+                                            'Felicitación': ['rgba(34, 197, 94, 0.8)', 'rgba(22, 163, 74, 0.9)']
+                                        };
+                                        const label = context.chart.data.labels[context.dataIndex] as string;
+                                        const colors = typeColors[label] || ['rgba(156, 163, 175, 0.8)', 'rgba(107, 114, 128, 0.9)'];
+                                        
+                                        const chart = context.chart;
+                                        const { ctx, chartArea } = chart;
+                                        if (!chartArea || !chartArea.right || !isFinite(chartArea.right)) return colors[0];
+                                        const gradient = ctx.createLinearGradient(0, 0, chartArea.right, 0);
+                                        gradient.addColorStop(0, colors[0]);
+                                        gradient.addColorStop(1, colors[1]);
+                                        return gradient;
+                                    },
+                                    borderRadius: 6,
+                                    borderSkipped: false,
+                                    barThickness: 'flex',
+                                    maxBarThickness: 32,
+                                    borderWidth: 1,
+                                    borderColor: 'rgba(255,255,255,0.2)',
+                                }]
+                            }}
+                            options={{
+                                indexAxis: 'y',
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                onClick: (_event, elements, chart) => {
+                                    if (elements.length > 0) {
+                                        const index = elements[0].index;
+                                        const label = chart.data.labels![index] as string;
+                                        handleMetricClick({ finding_type: label });
+                                    }
+                                },
+                                animation: { duration: 1500, easing: 'easeOutQuart' },
+                                layout: { padding: { right: 30 } },
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                        titleColor: '#1f2937',
+                                        bodyColor: '#4b5563',
+                                        borderColor: '#e5e7eb',
+                                        borderWidth: 1,
+                                        padding: 12,
+                                        boxPadding: 6,
+                                        usePointStyle: true,
+                                        callbacks: {
+                                            label: (context: any) => {
+                                                const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                                                const percentage = Math.round((context.raw / total) * 100);
+                                                return ` ${context.raw} Reportes (${percentage}%)`;
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        grid: { display: true, color: '#f3f4f6', drawTicks: false },
+                                        border: { display: false },
+                                        ticks: { font: { family: "'Inter', sans-serif" }, color: '#9ca3af', padding: 10 }
+                                    },
+                                    y: {
+                                        grid: { display: false },
+                                        border: { display: false },
+                                        ticks: { font: { family: "'Inter', sans-serif", weight: 'bold', size: 12 }, color: '#4b5563', padding: 10 }
+                                    }
+                                }
+                            }}
+                        />
+                    </div>
+                ) : (
+                    <div className="text-center py-10 text-gray-400">
+                        <PieChart className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                        <p className="text-sm">No hay datos de tipo de hallazgo disponibles.</p>
                     </div>
                 )}
             </div>

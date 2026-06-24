@@ -113,6 +113,37 @@ export const PdcaPanel = () => {
         setSaving(false);
     };
 
+    const handleApproveOverdue = async () => {
+        if (!confirm('¿Estás seguro de que deseas aprobar automáticamente todas las verificaciones vencidas? Esto las marcará como Completadas y Efectivas.')) return;
+        setSaving(true);
+        const overdueIds = followUps.filter(f => f.status === 'overdue').map(f => f.id);
+        
+        if (overdueIds.length === 0) {
+            setSaving(false);
+            return;
+        }
+
+        const { error } = await supabase
+            .from('follow_ups')
+            .update({
+                status: 'completed',
+                verification_result: 'effective',
+                notes: 'Aprobación automática en lote (Vencidas)',
+                verified_by: session?.user?.id,
+                verified_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            })
+            .in('id', overdueIds);
+
+        if (error) {
+            console.error('Error batch approving:', error);
+            alert('Error al aprobar las verificaciones vencidas.');
+        } else {
+            fetchFollowUps();
+        }
+        setSaving(false);
+    };
+
     const filteredFollowUps = followUps.filter(f => {
         if (filter === 'all') return true;
         if (filter === 'overdue') return f.status === 'overdue';
@@ -181,25 +212,37 @@ export const PdcaPanel = () => {
                 </div>
             </div>
 
-            {/* Filter tabs */}
-            <div className="flex items-center gap-2">
-                {[
-                    { id: 'pending' as const, label: 'Pendientes', count: followUps.filter(f => f.status === 'pending').length },
-                    { id: 'overdue' as const, label: 'Vencidas', count: totalOverdue },
-                    { id: 'completed' as const, label: 'Completadas', count: totalCompleted },
-                    { id: 'all' as const, label: 'Todas', count: followUps.length },
-                ].map(tab => (
+            {/* Filter tabs and Actions */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-2">
+                    {[
+                        { id: 'pending' as const, label: 'Pendientes', count: followUps.filter(f => f.status === 'pending').length },
+                        { id: 'overdue' as const, label: 'Vencidas', count: totalOverdue },
+                        { id: 'completed' as const, label: 'Completadas', count: totalCompleted },
+                        { id: 'all' as const, label: 'Todas', count: followUps.length },
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setFilter(tab.id)}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${filter === tab.id
+                                ? 'bg-sanatorio-primary text-white shadow-sm'
+                                : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                                }`}
+                        >
+                            {tab.label} ({tab.count})
+                        </button>
+                    ))}
+                </div>
+                {role === 'admin' && totalOverdue > 0 && (
                     <button
-                        key={tab.id}
-                        onClick={() => setFilter(tab.id)}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${filter === tab.id
-                            ? 'bg-sanatorio-primary text-white shadow-sm'
-                            : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-                            }`}
+                        onClick={handleApproveOverdue}
+                        disabled={saving}
+                        className="px-4 py-2 rounded-xl text-xs font-bold bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 transition-colors flex items-center justify-center gap-2"
                     >
-                        {tab.label} ({tab.count})
+                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                        Aprobar Vencidas
                     </button>
-                ))}
+                )}
             </div>
 
             {/* Follow-up list */}
