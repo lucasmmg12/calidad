@@ -60,7 +60,7 @@ export const ChatWindow = ({ phoneNumber, contactName, onClose, reportTrackingId
     const audioChunksRef = useRef<Blob[]>([]);
     const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    const normalized = phoneNumber.replace(/^549/, '').replace(/\D/g, '');
+    const normalized = phoneNumber.replace(/^549?/, '').replace(/\D/g, '');
 
     // ─── Load messages ───
     useEffect(() => {
@@ -314,7 +314,7 @@ export const ChatWindow = ({ phoneNumber, contactName, onClose, reportTrackingId
                     <p className="font-bold text-sm truncate uppercase tracking-wide">{contactName || 'Chat'}</p>
                     <p className="text-[10px] text-green-100 flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 bg-green-300 rounded-full"></span>
-                        549{normalized} · <span className="bg-green-700/40 px-1.5 py-0.5 rounded text-[9px] font-bold">WhatsApp</span>
+                        54{normalized} · <span className="bg-green-700/40 px-1.5 py-0.5 rounded text-[9px] font-bold">WhatsApp</span>
                     </p>
                 </div>
                 <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors">

@@ -182,13 +182,15 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
 
             // 2. Send WhatsApp to reporter
             const rawPhone = (reportData.contactNumber || '').replace(/\D/g, '');
-            const botNumber = `549${rawPhone}`;
+            const botNumber = `54${rawPhone}`;
             const infoLink = `${window.location.origin}/info-adicional/${newReq.id}`;
 
             await supabase.functions.invoke('send-whatsapp', {
                 body: {
                     number: botNumber,
-                    message: `📋 *Solicitud de Información Adicional*\n\nEl responsable del sector *${sectorLabel}* necesita más información para gestionar su caso *${reportData.trackingId}*.\n\n💬 Mensaje: "${insufficientDataMessage.trim()}"\n\n👉 *Complete aquí:* ${infoLink}\n\nSanatorio Argentino | Gestión de Calidad`
+                    templateName: '10_solicitud_de_informacin_adicional_al_reportante_original',
+                    languageCode: 'en',
+                    templateVariables: [sectorLabel, reportData.trackingId, insufficientDataMessage.trim(), infoLink]
                 }
             });
 

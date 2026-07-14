@@ -153,7 +153,7 @@ export const SupplementaryInfoPage = () => {
                     .single();
 
                 if (assignment?.assigned_phone) {
-                    const botNumber = `549${assignment.assigned_phone.replace(/\D/g, '').replace(/^549/, '')}`;
+                    const botNumber = `54${assignment.assigned_phone.replace(/\D/g, '').replace(/^549?/, '')}`;
                     const trackingId = reportData?.tracking_id || '';
                     const resolutionLink = `${window.location.origin}/resolver-caso/${trackingId}/${requestData.assignment_id}`;
                     const preview = responseText.trim().substring(0, 100);
@@ -161,7 +161,14 @@ export const SupplementaryInfoPage = () => {
                     await supabase.functions.invoke('send-whatsapp', {
                         body: {
                             number: botNumber,
-                            message: `✅ *Información Adicional Recibida*\n\nEl reportante completó los datos faltantes para el caso *${trackingId}*.\n\n📝 Resumen: "${preview}${responseText.length > 100 ? '...' : ''}"\n📎 ${uploadedUrls.length} imagen${uploadedUrls.length !== 1 ? 'es' : ''} adjunta${uploadedUrls.length !== 1 ? 's' : ''}\n\n👉 *Continúe la gestión aquí:* ${resolutionLink}\n\nSanatorio Argentino | Gestión de Calidad`,
+                            templateName: '11_aviso_de_informacin_adicional_recibida_para_el_sector',
+                            languageCode: 'es_AR',
+                            templateVariables: [
+                                trackingId, 
+                                `"${preview}${responseText.length > 100 ? '...' : ''}"`, 
+                                `${uploadedUrls.length} imagen(es) adjunta(s)`, 
+                                resolutionLink
+                            ]
                         }
                     });
                 }

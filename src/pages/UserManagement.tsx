@@ -158,8 +158,8 @@ export const UserManagement = () => {
             if (user.phone_number) {
                 try {
                     const cleanPhone = user.phone_number.trim().replace(/\D/g, '');
-                    // Format: 549 + area code + number (e.g. "2645438114" → "5492645438114")
-                    const botNumber = cleanPhone.startsWith('549') ? cleanPhone : `549${cleanPhone}`;
+                    // Format: 54 + area code + number (e.g. "2645438114" → "542645438114")
+                    const botNumber = cleanPhone.startsWith('54') ? cleanPhone : `54${cleanPhone}`;
                     const appUrl = window.location.origin;
 
                     console.log('[Approve] Sending WhatsApp to:', botNumber, '(raw:', user.phone_number, ')');
@@ -167,7 +167,9 @@ export const UserManagement = () => {
                     const { error: waError } = await supabase.functions.invoke('send-whatsapp', {
                         body: {
                             number: botNumber,
-                            message: `✅ *Cuenta Autorizada - Calidad*\n\nEstimado/a ${user.display_name || 'Usuario'}, su cuenta ha sido autorizada exitosamente.\n\nYa puede acceder al sistema con su email y contraseña.\n\n👉 *Ingrese aquí:* ${appUrl}/login\n\n_Sanatorio Argentino - Departamento de Calidad_`
+                            templateName: '3_cuenta_de_usuario_autorizada',
+                            languageCode: 'es_AR',
+                            templateVariables: [user.display_name || 'Usuario', `${appUrl}/login`]
                         }
                     });
 

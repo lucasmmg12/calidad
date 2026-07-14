@@ -1566,13 +1566,14 @@ export const MetricsDashboard = () => {
                 reports={rawReports}
                 onResendWhatsApp={async (report) => {
                     if (!report.assigned_to) return;
-                    const botNumber = `549${report.assigned_to}`;
+                    const botNumber = `54${report.assigned_to}`;
                     const resolutionLink = `${window.location.origin}/resolver-caso/${report.tracking_id}`;
-                    const message = `⏰ *Recordatorio de Tiempo de Respuesta - Calidad*\n\nEl caso *${report.tracking_id}* del sector *${report.sector}* requiere su atención urgente.\n\n📝 "${(report.ai_summary || report.content || '').substring(0, 150)}"\n\n👉 *Gestione el caso aquí:* ${resolutionLink}\n\n⚠️ Este caso ha superado el tiempo de respuesta esperado.`;
                     await supabase.functions.invoke('send-whatsapp', {
                         body: {
                             number: botNumber,
-                            message
+                            templateName: '7_recordatorio_automtico_vencimiento_de_tiempo_de_respuesta__sla',
+                            languageCode: 'en',
+                            templateVariables: [report.tracking_id, report.sector, report.ai_summary || report.content || '', resolutionLink]
                         }
                     });
                 }}

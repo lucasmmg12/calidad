@@ -97,7 +97,7 @@ export const ReportingForm = () => {
 
         const dbNumber = rawNumber.length >= 8 ? rawNumber : null;
         const dbName = formData.contactName.trim() || null;
-        const botNumber = dbNumber ? `549${dbNumber}` : null;
+        const botNumber = dbNumber ? `54${dbNumber}` : null;
 
         try {
             // 1. Upload Files if exist
@@ -144,7 +144,9 @@ export const ReportingForm = () => {
                     supabase.functions.invoke('send-whatsapp', {
                         body: {
                             number: botNumber,
-                            message: `🌟 *¡Gracias por tu felicitación!*\n\nRecibimos tu reconocimiento para el sector *${sectorLabel}*. El equipo de Calidad se encargará de hacerlo llegar al sector.\n\n🆔 Tu código de seguimiento: *${trackingId}*\n\n¡Gracias por valorar el trabajo del equipo! 💛✨`
+                            templateName: '2_confirmacin_de_reporte_recibido_felicitacin',
+                            languageCode: 'es_AR',
+                            templateVariables: [sectorLabel, trackingId]
                         }
                     }).catch(err => console.error('Error sending felicitacion confirmation:', err));
                 }
@@ -172,7 +174,9 @@ export const ReportingForm = () => {
                     supabase.functions.invoke('send-whatsapp', {
                         body: {
                             number: botNumber,
-                            message: `👋 ¡Hola! Valoramos mucho que nos hayas contactado. Queremos contarte que ya recibimos tu reporte y el equipo de Calidad comenzará a revisarlo a la brevedad.\n\n🆔 Tu código de seguimiento personal es: *${trackingId}*\n\nCon este código podrás consultar los avances en el sistema cuando lo desees.\n\n¡Muchas gracias por ayudarnos a brindar una mejor atención cada día! ✨💙`
+                            templateName: '1_confirmacin_de_reporte_recibido_hallazgo',
+                            languageCode: 'en',
+                            templateVariables: [trackingId]
                         }
                     }).catch(err => console.error('Error sending immediate whatsapp:', err));
                 }

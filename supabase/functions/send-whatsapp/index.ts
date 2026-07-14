@@ -12,7 +12,7 @@ serve(async (req) => {
     }
 
     try {
-        const { number, message, mediaUrl } = await req.json()
+        const { number, message, mediaUrl, templateName, languageCode, templateVariables } = await req.json()
         const builderbotToken = Deno.env.get('BUILDERBOT_TOKEN')
 
         if (!builderbotToken) {
@@ -20,30 +20,58 @@ serve(async (req) => {
             throw new Error('Missing BUILDERBOT_TOKEN env var')
         }
 
-        if (!number || !message) {
-            console.error('[WhatsApp] Missing params:', { number: !!number, message: !!message })
-            throw new Error(`Missing number or message. Got number=${number}, message length=${message?.length}`)
+        if (!number) {
+            console.error('[WhatsApp] Missing number')
+            throw new Error(`Missing number. Got number=${number}`)
         }
 
-        console.log(`[WhatsApp] Sending to ${number}: ${message.substring(0, 80)}...`)
-
-        // Build messages payload — only include mediaUrl if it's actually set
-        const messagesPayload: any = { content: message };
-        if (mediaUrl && mediaUrl.trim() !== '') {
-            messagesPayload.mediaUrl = mediaUrl;
+        if (!templateName && !message) {
+            console.error('[WhatsApp] Missing both templateName and message')
+            throw new Error(`Missing templateName or message.`)
         }
 
-        const response = await fetch('https://app.builderbot.cloud/api/v2/9981a143-f290-4ebe-a426-21c4d234371c/messages', {
+        let apiUrl = 'https://app.builderbot.cloud/api/v2/9981a143-f290-4ebe-a426-21c4d234371c/messages';
+        let apiBody: any = {
+            number: number,
+            checkIfExists: false
+        };
+
+        if (templateName) {
+            console.log(`[WhatsApp] Sending template ${templateName} to ${number}...`)
+            apiUrl = 'https://app.builderbot.cloud/api/v2/9981a143-f290-4ebe-a426-21c4d234371c/whatsapp-template';
+            
+            const parameters = (templateVariables || []).map((text: string) => ({
+                type: "text",
+                text: text
+            }));
+
+            apiBody = {
+                to: number,
+                templateName: templateName,
+                languageCode: languageCode || 'es_AR',
+                components: [
+                    {
+                        type: "body",
+                        parameters: parameters
+                    }
+                ]
+            };
+        } else {
+            console.log(`[WhatsApp] Sending to ${number}: ${message?.substring(0, 80)}...`)
+            const messagesPayload: any = { content: message };
+            if (mediaUrl && mediaUrl.trim() !== '') {
+                messagesPayload.mediaUrl = mediaUrl;
+            }
+            apiBody.messages = messagesPayload;
+        }
+
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'x-api-builderbot': builderbotToken
             },
-            body: JSON.stringify({
-                messages: messagesPayload,
-                number: number,
-                checkIfExists: false
-            })
+            body: JSON.stringify(apiBody)
         })
 
         // Safely read response body (may not be JSON)

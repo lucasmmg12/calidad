@@ -992,8 +992,8 @@ export const Dashboard = () => {
                 return;
             }
 
-            const normalizedPhone = targetPhone.replace(/\D/g, '').replace(/^549/, '');
-            const botNumber = `549${normalizedPhone}`;
+            const normalizedPhone = targetPhone.replace(/\D/g, '').replace(/^549?/, '');
+            const botNumber = `54${normalizedPhone}`;
 
             if (normalizedPhone.length < 10) {
                 setFeedbackModal({ isOpen: true, type: 'error', title: 'Teléfono inválido', message: 'El número de teléfono del sector no es válido.' });
@@ -1025,25 +1025,35 @@ export const Dashboard = () => {
 
             // If there are images, send them (one message per image with text on first)
             if (uploadedUrls.length > 0) {
-                for (let i = 0; i < uploadedUrls.length; i++) {
-                    const msgText = i === 0
-                        ? `📋 *Respuesta de Calidad - Caso ${trackingId}*\n\n${messageText}`
-                        : '';
+                // Template message text
+                if (messageText) {
                     await supabase.functions.invoke('send-whatsapp', {
                         body: {
                             number: botNumber,
-                            message: msgText,
+                            templateName: '6_respuesta_del_depto_de_calidad_al_sector',
+                            languageCode: 'es_AR',
+                            templateVariables: [trackingId, messageText],
+                        },
+                    });
+                }
+                // Send images separately as standard messages (best-effort outside 24h window)
+                for (let i = 0; i < uploadedUrls.length; i++) {
+                    await supabase.functions.invoke('send-whatsapp', {
+                        body: {
+                            number: botNumber,
+                            message: `Imagen adjunta - Caso ${trackingId}`,
                             mediaUrl: uploadedUrls[i],
                         },
                     });
                 }
             } else {
-                // Text only
+                // Text only template
                 await supabase.functions.invoke('send-whatsapp', {
                     body: {
                         number: botNumber,
-                        message: `📋 *Respuesta de Calidad - Caso ${trackingId}*\n\n${messageText}`,
-                        mediaUrl: '',
+                        templateName: '6_respuesta_del_depto_de_calidad_al_sector',
+                        languageCode: 'es_AR',
+                        templateVariables: [trackingId, messageText],
                     },
                 });
             }
@@ -1105,7 +1115,7 @@ export const Dashboard = () => {
         try {
             const sectorLabel = SECTOR_OPTIONS.find(s => s.value === assignment.sector)?.label || assignment.sector;
             const resolutionLink = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}/${assignment.id}`;
-            const botNumber = `549${(assignment.assigned_phone || '').replace(/\D/g, '').replace(/^549/, '')}`;
+            const botNumber = `54${(assignment.assigned_phone || '').replace(/\D/g, '').replace(/^549?/, '')}`;
 
             if (botNumber.length < 12) {
                 setFeedbackModal({ isOpen: true, type: 'error', title: 'Sin teléfono', message: 'No hay un número de teléfono válido para esta asignación.' });
@@ -1116,7 +1126,9 @@ export const Dashboard = () => {
             const { error } = await supabase.functions.invoke('send-whatsapp', {
                 body: {
                     number: botNumber,
-                    message: `🔔 *Recordatorio - Caso Pendiente*\n\nEl caso *${selectedReport.tracking_id}* aún requiere su gestión.\n📂 Sector: ${sectorLabel}\n\n⏰ Este caso está esperando su respuesta. Por favor, gestione a la brevedad.\n\n👉 *Gestione aquí:* ${resolutionLink}`
+                    templateName: '8_recordatorio_manual_de_caso_pendiente_al_sector',
+                    languageCode: 'en',
+                    templateVariables: [selectedReport.tracking_id, sectorLabel, resolutionLink]
                 }
             });
 
@@ -1257,7 +1269,7 @@ export const Dashboard = () => {
 
             // 4. Send WhatsApp with the NEW assignment link
             if (phoneTarget && phoneTarget.length > 5) {
-                const botNumber = `549${phoneTarget.replace(/\D/g, '').replace(/^549/, '')}`;
+                const botNumber = `54${phoneTarget.replace(/\D/g, '').replace(/^549?/, '')}`;
                 const resolutionLink = newAssignmentId
                     ? `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}/${newAssignmentId}`
                     : `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}`;
@@ -1265,7 +1277,9 @@ export const Dashboard = () => {
                 await supabase.functions.invoke('send-whatsapp', {
                     body: {
                         number: botNumber,
-                        message: `🛑 *Solución Insuficiente - Calidad*\n\nLa solución propuesta para el caso *${selectedReport.tracking_id}* ha sido rechazada por considerarse insuficiente.\n\n⚠️ *Motivo:* ${reason}\n\n👉 *Por favor, gestione nuevamente el caso e ingrese un nuevo plan de acción:* ${resolutionLink}`
+                        templateName: '9_devolucin_de_ticket_por_solucin_insuficiente',
+                        languageCode: 'es_AR',
+                        templateVariables: [selectedReport.tracking_id, reason, resolutionLink]
                     }
                 });
             }
@@ -1288,11 +1302,13 @@ export const Dashboard = () => {
         setIsProcessingQuality(true);
 
         if (selectedReport.contact_number && selectedReport.contact_number.length > 5) {
-            const userNumber = `549${selectedReport.contact_number}`;
+            const userNumber = `54${selectedReport.contact_number}`;
             await supabase.functions.invoke('send-whatsapp', {
                 body: {
                     number: userNumber,
-                    message: `✅ *Reporte Resuelto - Calidad*\n\nEstimado/a, su reporte *${selectedReport.tracking_id}* ha sido gestionado y cerrado exitosamente.\n\n📝 *Resolución:* "${selectedReport.resolution_notes || selectedReport.corrective_plan || 'Sin observaciones.'}"\n\nGracias por su compromiso con la mejora continua.`
+                    templateName: '12_aviso_de_caso_resuelto_al_reportante',
+                    languageCode: 'es_AR',
+                    templateVariables: [selectedReport.tracking_id, selectedReport.resolution_notes || selectedReport.corrective_plan || 'Sin observaciones.']
                 }
             });
         }
@@ -1435,30 +1451,43 @@ export const Dashboard = () => {
             // 3. Build WhatsApp message
             const sectorLabel = SECTOR_OPTIONS.find(s => s.value === row.sector)?.label || row.sector;
 
-            let messageBody: string;
-            if (isFelicitacion) {
-                // Felicitación: mensaje diferenciado, más cálido
-                messageBody = `🌟 *¡Felicitación para ${sectorLabel}!*\n\n`;
-                messageBody += `Se ha recibido un reconocimiento para su sector a través del sistema de Calidad.\n\n`;
-                messageBody += `📝 *Mensaje:* "${selectedReport.ai_summary || selectedReport.content}"\n\n`;
-                messageBody += `🆔 Caso: *${selectedReport.tracking_id}*\n\n`;
-                messageBody += `👉 *Responda aquí:* ${resolutionLink}`;
-            } else {
-                messageBody = `👋 *Solicitud de Gestión - Calidad*\n\nSe requiere su intervención para el caso: *${selectedReport.tracking_id}*\n📂 Sector: ${sectorLabel}\n\n📝 *Reporte:* "${selectedReport.ai_summary || selectedReport.content}"\n\n`;
+            let templateName: string;
+            let languageCode: string = 'es_AR';
+            let templateVariables: string[];
+            let messageBody: string = ''; // Keep for fallback logging
 
+            if (isFelicitacion) {
+                templateName = '5_felicitacin_enviada_a_responsable_de_sector';
+                templateVariables = [
+                    sectorLabel,
+                    selectedReport.ai_summary || selectedReport.content,
+                    selectedReport.tracking_id,
+                    resolutionLink
+                ];
+                messageBody = `Felicitación al sector (Template 5)`;
+            } else {
+                templateName = '4_solicitud_de_gestin_a_responsable_de_sector';
+                let extraText = '';
                 if (managementType === 'simple') {
-                    messageBody += `🛠️ *Tipo: Simple*\nSe solicita: *Contención / Acción Inmediata*.`;
+                    extraText = '🛠️ Tipo: Simple\nSe solicita: Contención / Acción Inmediata.';
                 } else if (managementType === 'desvio') {
-                    messageBody += `🔧 *Tipo: Desvío*\nSe solicita: *Acción Inmediata + Análisis de Causa + Plan de Acción*.`;
+                    extraText = '🔧 Tipo: Desvío\nSe solicita: Acción Inmediata + Análisis de Causa + Plan de Acción.';
                 } else {
-                    messageBody += `⚠️ *Tipo: Evento Adverso*\nSe solicita: *Acción Inmediata + Análisis de Causa + Plan de Acción*.`;
+                    extraText = '⚠️ Tipo: Evento Adverso\nSe solicita: Acción Inmediata + Análisis de Causa + Plan de Acción.';
                 }
 
                 if (isMultiSector) {
-                    messageBody += `\n\n🏥 *Nota:* Este caso fue asignado a ${validRows.length} sectores simultáneamente. Su respuesta es independiente.`;
+                    extraText += `\n\n🏥 Nota: Este caso fue asignado a ${validRows.length} sectores.`;
                 }
 
-                messageBody += `\n\n👉 *Gestione el caso aquí:* ${resolutionLink}`;
+                templateVariables = [
+                    selectedReport.tracking_id,
+                    sectorLabel,
+                    selectedReport.ai_summary || selectedReport.content,
+                    extraText,
+                    resolutionLink
+                ];
+                messageBody = `Derivación al sector (Template 4)`;
             }
 
             // 4. Send WhatsApp to ALL selected phones for this sector
@@ -1475,16 +1504,19 @@ export const Dashboard = () => {
 
             for (const phoneNum of phonesToNotify) {
                 if (!phoneNum || phoneNum.length < 8) continue;
-                // Normalize phone: strip country code if already present, then prepend 549
-                const normalizedPhone = phoneNum.replace(/\D/g, '').replace(/^549/, '');
-                const botNumber = `549${normalizedPhone}`;
+                // Normalize phone: strip country code if already present, then prepend 54
+                const normalizedPhone = phoneNum.replace(/\D/g, '').replace(/^549?/, '');
+                const botNumber = `54${normalizedPhone}`;
                 console.log(`[MultiSector] Enviando a ${botNumber} (${sectorLabel}). Link: ${resolutionLink}`);
                 
                 try {
                     const { data: waData, error: waError } = await supabase.functions.invoke('send-whatsapp', {
                         body: {
                             number: botNumber,
-                            message: messageBody
+                            message: messageBody,
+                            templateName,
+                            languageCode,
+                            templateVariables
                         }
                     });
 
