@@ -40,10 +40,17 @@ serve(async (req) => {
             console.log(`[WhatsApp] Sending template ${templateName} to ${number}...`)
             apiUrl = 'https://app.builderbot.cloud/api/v2/9981a143-f290-4ebe-a426-21c4d234371c/whatsapp-template';
             
-            const parameters = (templateVariables || []).map((text: string) => ({
-                type: "text",
-                text: text
-            }));
+            const parameters = (templateVariables || []).map((text: string) => {
+                // Meta API rejects template parameters with newlines, tabs, or consecutive spaces
+                const sanitizedText = (text || '').toString()
+                    .replace(/[\n\r\t]+/g, ' ')
+                    .replace(/\s{2,}/g, ' ')
+                    .trim();
+                return {
+                    type: "text",
+                    text: sanitizedText
+                };
+            });
 
             apiBody = {
                 to: number,
