@@ -12,6 +12,11 @@ export const TrackingPage = () => {
     const [sectorAssignments, setSectorAssignments] = useState<any[]>([]);
     const [error, setError] = useState('');
     const [expandedLogEntry, setExpandedLogEntry] = useState<number | null>(null);
+    
+    // Feedback state
+    const [feedbackType, setFeedbackType] = useState<'conforme' | 'no_conforme' | null>(null);
+    const [feedbackNotes, setFeedbackNotes] = useState('');
+    const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
     const computedTrackingId = useFullInput ? fullCode.trim() : `${PREFIX}${suffix}`;
     const canSearch = useFullInput ? fullCode.trim().length > 0 : suffix.length === 4;
@@ -57,6 +62,31 @@ export const TrackingPage = () => {
         if (status === 'resolved') return 3;
         if (status === 'in_progress' || status === 'analyzed' || status === 'pending_resolution' || status === 'quality_validation') return 2;
         return 1;
+    };
+
+    const handleSubmitFeedback = async () => {
+        if (!feedbackType) return;
+        if (feedbackType === 'no_conforme' && !feedbackNotes.trim()) {
+            alert('Por favor, indicanos por qué consideras que la solución es insuficiente.');
+            return;
+        }
+        
+        setSubmittingFeedback(true);
+        try {
+            const { error } = await supabase.from('reports').update({
+                claimant_feedback: feedbackType,
+                claimant_feedback_notes: feedbackNotes.trim()
+            }).eq('id', report.id);
+            
+            if (error) throw error;
+            
+            setReport({ ...report, claimant_feedback: feedbackType, claimant_feedback_notes: feedbackNotes.trim() });
+        } catch (err) {
+            console.error(err);
+            alert('Hubo un error al enviar tu evaluación. Por favor, intenta de nuevo.');
+        } finally {
+            setSubmittingFeedback(false);
+        }
     };
 
     return (
@@ -595,6 +625,73 @@ export const TrackingPage = () => {
                                         <div className="mt-3 pt-3 border-t border-green-200/50">
                                             <p className="text-xs font-bold text-green-800 uppercase mb-1">Acción Tomada:</p>
                                             <p className="text-xs text-green-700">{report.corrective_plan}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* FEEDBACK SECTION */}
+                            {report.status === 'resolved' && (
+                                <div className="mt-6 border-t border-gray-100 pt-6">
+                                    {report.claimant_feedback ? (
+                                        <div className={`p-4 rounded-xl border ${report.claimant_feedback === 'conforme' ? 'bg-green-50 border-green-100 text-green-800' : 'bg-red-50 border-red-100 text-red-800'}`}>
+                                            <div className="flex items-center gap-2 font-bold mb-2">
+                                                {report.claimant_feedback === 'conforme' ? (
+                                                    <><CheckCircle className="w-5 h-5" /> Estás conforme con la solución</>
+                                                ) : (
+                                                    <><AlertTriangle className="w-5 h-5" /> Indicaste No Conformidad / Solución Insuficiente</>
+                                                )}
+                                            </div>
+                                            {report.claimant_feedback_notes && (
+                                                <div className="text-sm mt-2 pt-2 border-t border-current/20 opacity-90">
+                                                    <strong>Tus comentarios:</strong> {report.claimant_feedback_notes}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                                            <h4 className="font-bold text-gray-800 mb-2">¿Qué te pareció la resolución?</h4>
+                                            <p className="text-sm text-gray-500 mb-4">Tu opinión es importante para nuestra mejora continua.</p>
+                                            
+                                            <div className="flex gap-3 mb-4">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFeedbackType('conforme')}
+                                                    className={`flex-1 py-2 px-3 rounded-lg border text-sm font-bold flex items-center justify-center gap-2 transition-colors ${feedbackType === 'conforme' ? 'bg-green-50 border-green-500 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}`}
+                                                >
+                                                    <CheckCircle className="w-4 h-4" /> Conforme
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFeedbackType('no_conforme')}
+                                                    className={`flex-1 py-2 px-3 rounded-lg border text-sm font-bold flex items-center justify-center gap-2 transition-colors ${feedbackType === 'no_conforme' ? 'bg-red-50 border-red-500 text-red-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}`}
+                                                >
+                                                    <AlertTriangle className="w-4 h-4" /> Insuficiente
+                                                </button>
+                                            </div>
+
+                                            {feedbackType === 'no_conforme' && (
+                                                <div className="mb-4 animate-in fade-in slide-in-from-top-2">
+                                                    <label className="block text-xs font-bold text-gray-700 mb-1">Por favor, indicanos el motivo:</label>
+                                                    <textarea
+                                                        className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-sanatorio-primary focus:border-transparent outline-none resize-none"
+                                                        rows={3}
+                                                        placeholder="¿Por qué la solución te resulta insuficiente o no conforme?"
+                                                        value={feedbackNotes}
+                                                        onChange={(e) => setFeedbackNotes(e.target.value)}
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {feedbackType && (
+                                                <button
+                                                    onClick={handleSubmitFeedback}
+                                                    disabled={submittingFeedback || (feedbackType === 'no_conforme' && !feedbackNotes.trim())}
+                                                    className="w-full py-2.5 bg-sanatorio-primary text-white rounded-lg font-bold text-sm hover:bg-[#004270] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                                >
+                                                    {submittingFeedback ? 'Enviando...' : 'Enviar Evaluación'}
+                                                </button>
+                                            )}
                                         </div>
                                     )}
                                 </div>

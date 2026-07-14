@@ -17,7 +17,8 @@ import {
     Tag,
     ClipboardCheck,
     Star,
-    Send
+    Send,
+    AlertTriangle
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -47,7 +48,8 @@ export const MetricsDashboard = () => {
         byClassification: [] as { category: string; count: number; percentage: number }[],
         byFindingType: [] as { type: string; count: number; percentage: number }[],
         byAnonymity: { anonymous: 0, identified: 0 },
-        felicitaciones: 0
+        felicitaciones: 0,
+        nonConforming: 0
     });
     const [isExporting, setIsExporting] = useState(false);
     const [rawReports, setRawReports] = useState<any[]>([]);
@@ -255,6 +257,9 @@ export const MetricsDashboard = () => {
         const identifiedCount = total - anonymousCount;
         const byAnonymity = { anonymous: anonymousCount, identified: identifiedCount };
 
+        // Claimant Feedback
+        const nonConforming = filteredReports.filter(r => r.claimant_feedback === 'no_conforme').length;
+
         setStats({
             total,
             resolved: resolved.length,
@@ -268,7 +273,8 @@ export const MetricsDashboard = () => {
             byClassification,
             byFindingType,
             byAnonymity,
-            felicitaciones
+            felicitaciones,
+            nonConforming
         });
         setLoading(false);
     };
@@ -827,7 +833,7 @@ export const MetricsDashboard = () => {
             )}
 
             {/* KPI Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group">
                     <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                         <BarChart3 className="w-24 h-24 text-blue-600" />
@@ -887,6 +893,17 @@ export const MetricsDashboard = () => {
                     <p className="text-amber-600 text-xs font-bold uppercase tracking-wider">Felicitaciones</p>
                     <p className="text-4xl font-black text-amber-600 mt-2">{stats.felicitaciones}</p>
                     <p className="text-xs text-amber-500 mt-2 font-medium">Reconocimientos positivos 🎉</p>
+                </div>
+
+                <div 
+                    className="bg-white p-6 rounded-2xl shadow-sm border border-red-100 relative overflow-hidden group hover:border-red-300 transition-all"
+                >
+                    <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <AlertTriangle className="w-24 h-24 text-red-600" />
+                    </div>
+                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">No Conformidad</p>
+                    <p className="text-4xl font-black text-gray-800 mt-2">{stats.nonConforming || 0}</p>
+                    <p className="text-xs text-red-500 mt-2 font-medium">Solución Insuficiente</p>
                 </div>
             </div>
 

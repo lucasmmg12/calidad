@@ -2287,7 +2287,14 @@ export const Dashboard = () => {
                                         {/* Content */}
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between gap-2 mb-1">
-                                                <span className="text-sm font-bold text-gray-700 group-hover:text-sanatorio-primary transition-colors">#{report.tracking_id}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-bold text-gray-700 group-hover:text-sanatorio-primary transition-colors">#{report.tracking_id}</span>
+                                                    {report.claimant_feedback === 'no_conforme' && (
+                                                        <span title="Usuario reportó Solución Insuficiente" className="bg-red-100 text-red-600 rounded-full p-0.5 animate-pulse">
+                                                            <AlertTriangle className="w-3 h-3" />
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className="flex items-center gap-1.5 shrink-0">
                                                     <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase
                                                         ${report.ai_urgency === 'Rojo' ? 'bg-red-100 text-red-700' :
@@ -2366,7 +2373,16 @@ export const Dashboard = () => {
                                                         <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center"><AlertCircle className="w-3 h-3" /></div>
                                                     )}
                                                 </td>
-                                                <td className="px-6 py-4 text-sm font-bold text-gray-700 group-hover:text-sanatorio-primary transition-colors">{report.tracking_id}</td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-2 text-sm font-bold text-gray-700 group-hover:text-sanatorio-primary transition-colors">
+                                                        {report.tracking_id}
+                                                        {report.claimant_feedback === 'no_conforme' && (
+                                                            <span title="Usuario reportó Solución Insuficiente" className="bg-red-100 text-red-600 rounded-full p-0.5 animate-pulse">
+                                                                <AlertTriangle className="w-3.5 h-3.5" />
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
                                                 <td className="px-6 py-4 text-xs text-gray-400 whitespace-nowrap">{report.created_at ? new Date(report.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-600">{report.sector || '-'}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-600 line-clamp-1 max-w-xs">{report.ai_summary || report.content}</td>
@@ -2757,8 +2773,28 @@ export const Dashboard = () => {
                                     </div>
                                 )}
 
+                                {/* ========== FEEDBACK DEL USUARIO ========== */}
+                                {selectedReport.claimant_feedback && (
+                                    <div className="mt-6 border-t border-gray-100 pt-6">
+                                        <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                                            {selectedReport.claimant_feedback === 'conforme' ? (
+                                                <><CheckCircle className="w-4 h-4 text-green-500" /> Evaluación del Usuario: Conforme</>
+                                            ) : (
+                                                <><AlertTriangle className="w-4 h-4 text-red-500" /> Evaluación del Usuario: Solución Insuficiente</>
+                                            )}
+                                        </h3>
+                                        <div className={`p-4 rounded-xl border ${selectedReport.claimant_feedback === 'conforme' ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}>
+                                            {selectedReport.claimant_feedback_notes ? (
+                                                <p className="text-sm text-gray-700"><strong>Motivo:</strong> {selectedReport.claimant_feedback_notes}</p>
+                                            ) : (
+                                                <p className="text-sm text-gray-500 italic">Sin comentarios adicionales.</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* ========== OBSERVACIONES DE CALIDAD ========== */}
-                                <div className="border-t border-gray-100 pt-6">
+                                <div className="border-t border-gray-100 pt-6 mt-6">
                                     <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
                                         <MessageSquare className="w-4 h-4 text-indigo-500" />
                                         Observaciones de Calidad
