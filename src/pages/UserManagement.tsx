@@ -158,8 +158,8 @@ export const UserManagement = () => {
             if (user.phone_number) {
                 try {
                     const cleanPhone = user.phone_number.trim().replace(/\D/g, '');
-                    // Format: 54 + area code + number (e.g. "2645438114" → "542645438114")
-                    const botNumber = cleanPhone.startsWith('54') ? cleanPhone : `54${cleanPhone}`;
+                    // Format: 549 + area code + number (e.g. "2645438114" → "5492645438114")
+                    const botNumber = cleanPhone.startsWith('549') ? cleanPhone : (cleanPhone.startsWith('54') ? cleanPhone.replace(/^54/, '549') : `549${cleanPhone}`);
                     const appUrl = window.location.origin;
 
                     console.log('[Approve] Sending WhatsApp to:', botNumber, '(raw:', user.phone_number, ')');

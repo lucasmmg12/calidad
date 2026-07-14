@@ -1566,7 +1566,7 @@ export const MetricsDashboard = () => {
                 reports={rawReports}
                 onResendWhatsApp={async (report) => {
                     if (!report.assigned_to) return;
-                    const botNumber = `54${report.assigned_to}`;
+                    const botNumber = `549${report.assigned_to}`;
                     const resolutionLink = `${window.location.origin}/resolver-caso/${report.tracking_id}`;
                     await supabase.functions.invoke('send-whatsapp', {
                         body: {

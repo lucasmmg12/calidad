@@ -182,7 +182,7 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
 
             // 2. Send WhatsApp to reporter
             const rawPhone = (reportData.contactNumber || '').replace(/\D/g, '');
-            const botNumber = `54${rawPhone}`;
+            const botNumber = `549${rawPhone}`;
             const infoLink = `${window.location.origin}/info-adicional/${newReq.id}`;
 
             await supabase.functions.invoke('send-whatsapp', {

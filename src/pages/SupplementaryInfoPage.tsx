@@ -153,7 +153,7 @@ export const SupplementaryInfoPage = () => {
                     .single();
 
                 if (assignment?.assigned_phone) {
-                    const botNumber = `54${assignment.assigned_phone.replace(/\D/g, '').replace(/^549?/, '')}`;
+                    const botNumber = `549${assignment.assigned_phone.replace(/\D/g, '').replace(/^549?/, '')}`;
                     const trackingId = reportData?.tracking_id || '';
                     const resolutionLink = `${window.location.origin}/resolver-caso/${trackingId}/${requestData.assignment_id}`;
                     const preview = responseText.trim().substring(0, 100);

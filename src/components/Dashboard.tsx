@@ -993,7 +993,7 @@ export const Dashboard = () => {
             }
 
             const normalizedPhone = targetPhone.replace(/\D/g, '').replace(/^549?/, '');
-            const botNumber = `54${normalizedPhone}`;
+            const botNumber = `549${normalizedPhone}`;
 
             if (normalizedPhone.length < 10) {
                 setFeedbackModal({ isOpen: true, type: 'error', title: 'Teléfono inválido', message: 'El número de teléfono del sector no es válido.' });
@@ -1115,7 +1115,7 @@ export const Dashboard = () => {
         try {
             const sectorLabel = SECTOR_OPTIONS.find(s => s.value === assignment.sector)?.label || assignment.sector;
             const resolutionLink = `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}/${assignment.id}`;
-            const botNumber = `54${(assignment.assigned_phone || '').replace(/\D/g, '').replace(/^549?/, '')}`;
+            const botNumber = `549${(assignment.assigned_phone || '').replace(/\D/g, '').replace(/^549?/, '')}`;
 
             if (botNumber.length < 12) {
                 setFeedbackModal({ isOpen: true, type: 'error', title: 'Sin teléfono', message: 'No hay un número de teléfono válido para esta asignación.' });
@@ -1269,7 +1269,7 @@ export const Dashboard = () => {
 
             // 4. Send WhatsApp with the NEW assignment link
             if (phoneTarget && phoneTarget.length > 5) {
-                const botNumber = `54${phoneTarget.replace(/\D/g, '').replace(/^549?/, '')}`;
+                const botNumber = `549${phoneTarget.replace(/\D/g, '').replace(/^549?/, '')}`;
                 const resolutionLink = newAssignmentId
                     ? `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}/${newAssignmentId}`
                     : `${window.location.origin}/resolver-caso/${selectedReport.tracking_id}`;
@@ -1506,7 +1506,7 @@ export const Dashboard = () => {
                 if (!phoneNum || phoneNum.length < 8) continue;
                 // Normalize phone: strip country code if already present, then prepend 54
                 const normalizedPhone = phoneNum.replace(/\D/g, '').replace(/^549?/, '');
-                const botNumber = `54${normalizedPhone}`;
+                const botNumber = `549${normalizedPhone}`;
                 console.log(`[MultiSector] Enviando a ${botNumber} (${sectorLabel}). Link: ${resolutionLink}`);
                 
                 try {

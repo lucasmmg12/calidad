@@ -63,7 +63,7 @@ export const sendTextMessage = async (
     mediaUrl?: string,
 ): Promise<ChatMessage | null> => {
     const normalized = phoneNumber.replace(/^549?/, '').replace(/\D/g, '');
-    const botNumber = `54${normalized}`;
+    const botNumber = `549${normalized}`;
 
     // 1. Optimistic insert — save outgoing message locally FIRST so the user sees it immediately
     const msgType = mediaUrl ? 'image' : 'text';
