@@ -1605,6 +1605,7 @@ export const Dashboard = () => {
                     ? `Se derivó el caso a ${validRows.length} sectores exitosamente.`
                     : `Solicitud de gestión (${typeLabel}) enviada correctamente.`
             });
+        } else {
             let userMessage = 'Algunos sectores no pudieron ser notificados. Revise el historial del caso.';
             if (waErrorTypes.some(err => err.includes('400') || err.includes('404'))) {
                 userMessage = 'El mensaje no ha sido enviado (Error de Proveedor). Por favor, chequear que el número de teléfono esté correcto y registrado en WhatsApp.';
