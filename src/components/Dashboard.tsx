@@ -1467,6 +1467,7 @@ export const Dashboard = () => {
                 messageBody = `Felicitación al sector (Template 5)`;
             } else {
                 templateName = '4_solicitud_de_gestin_a_responsable_de_sector';
+                languageCode = 'en'; // Fix: Template 4 uses 'en' instead of 'es_AR'
                 let extraText = '';
                 if (managementType === 'simple') {
                     extraText = '🛠️ Tipo: Simple\nSe solicita: Contención / Acción Inmediata.';
