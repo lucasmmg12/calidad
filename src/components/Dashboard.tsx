@@ -1467,7 +1467,6 @@ export const Dashboard = () => {
                 messageBody = `Felicitación al sector (Template 5)`;
             } else {
                 templateName = '4_solicitud_de_gestin_a_responsable_de_sector';
-                languageCode = 'en'; // Fix: Template 4 uses 'en' instead of 'es_AR'
                 let extraText = '';
                 if (managementType === 'simple') {
                     extraText = '🛠️ Tipo: Simple\nSe solicita: Contención / Acción Inmediata.';
@@ -1524,7 +1523,7 @@ export const Dashboard = () => {
                     // Check both invoke-level error AND provider-level error in response data
                     const providerError = waData?.error;
                     if (waError || providerError) {
-                        const errorDetail = waError?.message || providerError || 'Error desconocido';
+                        const errorDetail = waData?.details ? `${providerError} - ${JSON.stringify(waData.details)}` : (waError?.message || providerError || 'Error desconocido');
                         console.error(`[MultiSector] WhatsApp error for ${sectorLabel} (${phoneNum}):`, errorDetail);
                         logEntries.push(`[${timestamp}] ⚠️ WA NO ENVIADO: ${phoneNum} (${sectorLabel}) — ${errorDetail}`);
                         waFailCount++;
