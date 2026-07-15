@@ -1417,6 +1417,7 @@ export const Dashboard = () => {
         let waFailCount = 0;
         const logEntries: string[] = [];
         const assignmentIds: string[] = [];
+        const waErrorTypes: string[] = [];
 
         for (const row of validRows) {
             // 1. Create sector_assignment record
@@ -1527,6 +1528,7 @@ export const Dashboard = () => {
                         console.error(`[MultiSector] WhatsApp error for ${sectorLabel} (${phoneNum}):`, errorDetail);
                         logEntries.push(`[${timestamp}] ⚠️ WA NO ENVIADO: ${phoneNum} (${sectorLabel}) — ${errorDetail}`);
                         waFailCount++;
+                        waErrorTypes.push(errorDetail);
                     } else {
                         logEntries.push(`[${timestamp}] 📤 DERIVADO: Enviado a ${phoneNum} como [${typeLabel}] → ${sectorLabel}`);
                     }
@@ -1534,6 +1536,7 @@ export const Dashboard = () => {
                     console.error(`[MultiSector] WhatsApp exception for ${sectorLabel} (${phoneNum}):`, waException);
                     logEntries.push(`[${timestamp}] ⚠️ WA EXCEPCIÓN: ${phoneNum} (${sectorLabel})`);
                     waFailCount++;
+                    waErrorTypes.push(waException?.message || 'Exception');
                 }
             }
         }
@@ -1602,12 +1605,16 @@ export const Dashboard = () => {
                     ? `Se derivó el caso a ${validRows.length} sectores exitosamente.`
                     : `Solicitud de gestión (${typeLabel}) enviada correctamente.`
             });
-        } else {
+            let userMessage = 'Algunos sectores no pudieron ser notificados. Revise el historial del caso.';
+            if (waErrorTypes.some(err => err.includes('400') || err.includes('404'))) {
+                userMessage = 'El mensaje no ha sido enviado (Error de Proveedor). Por favor, chequear que el número de teléfono esté correcto y registrado en WhatsApp.';
+            }
+            
             setFeedbackModal({
                 isOpen: true,
                 type: 'error',
-                title: 'Envío Parcial',
-                message: 'Algunos sectores no pudieron ser notificados. Revise el historial del caso.'
+                title: 'Error al Enviar WhatsApp',
+                message: userMessage
             });
         }
 
