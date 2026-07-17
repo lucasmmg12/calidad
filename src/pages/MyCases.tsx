@@ -128,7 +128,19 @@ export const MyCases = () => {
                 if (error) {
                     console.error('[MyCases] Error:', error);
                 } else {
-                    setAssignments((data as any) || []);
+                    // Deduplicate assignments by report_id and sector
+                    // Since query is ordered by created_at desc, we keep the most recent one
+                    const uniqueAssignments = (data || []).reduce((acc: any[], current: any) => {
+                        const isDuplicate = acc.find(
+                            item => item.report_id === current.report_id && item.sector === current.sector
+                        );
+                        if (!isDuplicate) {
+                            acc.push(current);
+                        }
+                        return acc;
+                    }, []);
+                    
+                    setAssignments(uniqueAssignments);
                 }
             } catch (err) {
                 console.error('[MyCases] Unexpected error:', err);

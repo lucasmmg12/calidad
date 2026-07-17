@@ -1420,30 +1420,64 @@ export const Dashboard = () => {
         const waErrorTypes: string[] = [];
 
         for (const row of validRows) {
-            // 1. Create sector_assignment record
+            // 1. Create or Update sector_assignment record
             // NOTE: 'felicitacion' is not a valid DB enum for management_type;
             // we store it as 'simple' and use the isFelicitacion flag for UI/message logic.
             const dbManagementType = isFelicitacion ? 'simple' : managementType;
-            const { data: assignmentData, error: insertError } = await supabase
+            
+            // Check if there is already an active assignment for this sector and report
+            const { data: existingAssignment } = await supabase
                 .from('sector_assignments')
-                .insert({
-                    report_id: selectedReport.id,
-                    sector: row.sector,
-                    assigned_phone: row.phone,
-                    management_type: dbManagementType,
-                    status: isFelicitacion ? 'resolved' : 'pending'
-                })
                 .select('id')
-                .single();
+                .eq('report_id', selectedReport.id)
+                .eq('sector', row.sector)
+                // Optionally we could add .neq('status', 'rejected') if we want to allow new rounds after rejection
+                // but usually we just update the latest one. We order by created_at desc to get the latest.
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
 
-            if (insertError) {
-                console.error('[MultiSector] Error creating assignment:', insertError);
-                logEntries.push(`[${timestamp}] ❌ ERROR: No se pudo crear asignación para ${row.sector}`);
+            let assignmentId: string;
+            let dbError: any;
+
+            if (existingAssignment) {
+                const { data, error } = await supabase
+                    .from('sector_assignments')
+                    .update({
+                        assigned_phone: row.phone,
+                        management_type: dbManagementType,
+                        status: isFelicitacion ? 'resolved' : 'pending'
+                    })
+                    .eq('id', existingAssignment.id)
+                    .select('id')
+                    .single();
+                
+                if (data) assignmentId = data.id;
+                dbError = error;
+            } else {
+                const { data, error } = await supabase
+                    .from('sector_assignments')
+                    .insert({
+                        report_id: selectedReport.id,
+                        sector: row.sector,
+                        assigned_phone: row.phone,
+                        management_type: dbManagementType,
+                        status: isFelicitacion ? 'resolved' : 'pending'
+                    })
+                    .select('id')
+                    .single();
+                
+                if (data) assignmentId = data.id;
+                dbError = error;
+            }
+
+            if (dbError || !assignmentId!) {
+                console.error('[MultiSector] Error creating/updating assignment:', dbError);
+                logEntries.push(`[${timestamp}] ❌ ERROR: No se pudo crear/actualizar asignación para ${row.sector}`);
                 allSuccess = false;
                 continue;
             }
 
-            const assignmentId = assignmentData.id;
             assignmentIds.push(assignmentId);
 
             // 2. Generate unique resolution link per assignment
