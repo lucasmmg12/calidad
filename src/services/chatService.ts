@@ -143,7 +143,21 @@ export const fetchShortcuts = async (): Promise<ChatShortcut[]> => {
         console.error('[Chat] Shortcuts error:', error);
         return [];
     }
-    return data || [];
+    
+    const dbShortcuts = data || [];
+    
+    const humandShortcut: ChatShortcut = {
+        id: 'local-humand-shortcut',
+        shortcut_key: 'humand',
+        title: 'Derivar a Humand',
+        content: '¡Hola! 👋 Hemos revisado el reporte que ingresaste a través de Dora.\n\nNotamos que tu solicitud corresponde a temas de *mantenimiento o reparación* (equipos, mobiliario, infraestructura, etc.). \n\nTe recordamos que este tipo de solicitudes deben cargarse exclusivamente a través de la aplicación *Humand* para que el equipo correspondiente pueda gestionarlas de manera rápida y eficiente. 🛠️\n\nPor favor, ingresá a Humand y realizá la carga de tu solicitud allí. \n\n¡Muchas gracias por tu colaboración!\n🏥 Sanatorio Argentino',
+        category: 'general',
+        created_by: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+    };
+    
+    return [...dbShortcuts, humandShortcut].sort((a, b) => a.shortcut_key.localeCompare(b.shortcut_key));
 };
 
 /** Create a shortcut */

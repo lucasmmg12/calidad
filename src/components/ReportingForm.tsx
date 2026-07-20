@@ -16,6 +16,9 @@ export const ReportingForm = () => {
     const [copied, setCopied] = useState(false);
     const [isAnonymous, setIsAnonymous] = useState(false);
     const [reportMode, setReportMode] = useState<ReportMode>('hallazgo');
+    const [showHumandWarning, setShowHumandWarning] = useState(false);
+    const [hasAcceptedHumandWarning, setHasAcceptedHumandWarning] = useState(false);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const [files, setFiles] = useState<File[]>([]);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
@@ -476,12 +479,19 @@ export const ReportingForm = () => {
                         <div className="space-y-2">
                             <label className="label-text">{reportMode === 'felicitacion' ? 'Tu mensaje de felicitación' : 'Detalle del Hallazgo'}</label>
                             <textarea
+                                ref={textareaRef}
                                 required
                                 rows={reportMode === 'felicitacion' ? 4 : 6}
                                 placeholder={reportMode === 'felicitacion' ? 'Contanos qué te gustó y por qué querés felicitar a este sector...' : 'Describe brevemente lo sucedido...'}
                                 className="input-field resize-none leading-relaxed placeholder:text-slate-300"
                                 value={formData.content}
                                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                                onFocus={(e) => {
+                                    if (reportMode === 'hallazgo' && !hasAcceptedHumandWarning) {
+                                        e.target.blur();
+                                        setShowHumandWarning(true);
+                                    }
+                                }}
                             />
                         </div>
 
@@ -676,6 +686,36 @@ export const ReportingForm = () => {
                     </p>
                 </form >
             </div >
+
+            {/* Modal de Advertencia de Humand */}
+            {showHumandWarning && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-100 flex flex-col items-center text-center">
+                        <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-6">
+                            <AlertTriangle className="w-8 h-8" />
+                        </div>
+                        <h3 className="text-2xl font-bold text-slate-800 mb-4">¡Atención!</h3>
+                        <p className="text-slate-600 mb-6 leading-relaxed">
+                            Si este reporte es por <strong>reparaciones o mantenimiento</strong> de equipos, mobiliario o infraestructura, <strong className="text-sanatorio-primary">NO debe cargarse por Dora</strong>.
+                            <br /><br />
+                            Por favor, realizá la solicitud a través de la aplicación <strong>Humand</strong>.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShowHumandWarning(false);
+                                setHasAcceptedHumandWarning(true);
+                                setTimeout(() => {
+                                    textareaRef.current?.focus();
+                                }, 100);
+                            }}
+                            className="w-full btn-primary py-3 rounded-xl font-bold"
+                        >
+                            Entendido, continuar en Dora
+                        </button>
+                    </div>
+                </div>
+            )}
         </div >
     );
 };
