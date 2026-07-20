@@ -410,6 +410,19 @@ export const ChatWindow = ({ phoneNumber, contactName, onClose, reportTrackingId
                 </div>
             )}
 
+            {/* ─── Quick Actions ─── */}
+            <div className="bg-white px-2 py-2 flex items-center gap-2 overflow-x-auto border-t border-gray-100">
+                <button
+                    onClick={() => {
+                        const humandShortcut = shortcuts.find(s => s.shortcut_key === 'humand');
+                        if (humandShortcut) applyShortcut(humandShortcut);
+                    }}
+                    className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg whitespace-nowrap font-semibold flex items-center gap-1.5 transition-colors border border-slate-200 shadow-sm"
+                >
+                    🛠️ Derivar a Humand
+                </button>
+            </div>
+
             {/* ─── Input Area ─── */}
             <div className="border-t border-gray-200 bg-gray-50 p-2 flex items-end gap-1.5 flex-shrink-0">
                 {/* Emoji toggle */}
