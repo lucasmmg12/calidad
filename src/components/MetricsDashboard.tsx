@@ -77,9 +77,9 @@ export const MetricsDashboard = () => {
     const applyUserFilters = useCallback((reports: any[]) => {
         let result = reports;
 
-        // Multi-sector filter
+        // Multi-sector filter (assigned sector)
         if (filters.sectors.length > 0) {
-            result = result.filter(r => filters.sectors.includes(r.sector) || filters.sectors.includes(r.reporter_sector));
+            result = result.filter(r => filters.sectors.includes(r.sector));
         }
 
         // Date range: from
@@ -138,7 +138,8 @@ export const MetricsDashboard = () => {
         }
 
         // Admin & Directivo: View All
-        // Responsable: View only assigned sectors (via reports.sector, reports.reporter_sector, OR sector_assignments)
+        // Responsable: View ONLY cases assigned to sector (via reports.sector OR sector_assignments)
+        // Outbound reports created BY the sector (reporter_sector) are excluded per business requirements.
         let roleFiltered = reports;
 
         if (role === 'responsable' && sectors && sectors.length > 0) {
@@ -151,7 +152,6 @@ export const MetricsDashboard = () => {
 
             roleFiltered = reports.filter(r =>
                 (r.sector && sectors.includes(r.sector)) ||
-                (r.reporter_sector && sectors.includes(r.reporter_sector)) ||
                 assignedReportIds.has(r.id)
             );
         } else if (role === 'responsable') {
