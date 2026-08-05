@@ -138,14 +138,24 @@ export const MetricsDashboard = () => {
         }
 
         // Admin & Directivo: View All
-        // Responsable: View only assigned sectors
+        // Responsable: View only assigned sectors (via reports.sector, reports.reporter_sector, OR sector_assignments)
         let roleFiltered = reports;
 
-        if (role === 'responsable') {
+        if (role === 'responsable' && sectors && sectors.length > 0) {
+            const { data: assignments } = await supabase
+                .from('sector_assignments')
+                .select('report_id, sector')
+                .in('sector', sectors);
+
+            const assignedReportIds = new Set((assignments || []).map(a => a.report_id));
+
             roleFiltered = reports.filter(r =>
                 (r.sector && sectors.includes(r.sector)) ||
-                (r.reporter_sector && sectors.includes(r.reporter_sector))
+                (r.reporter_sector && sectors.includes(r.reporter_sector)) ||
+                assignedReportIds.has(r.id)
             );
+        } else if (role === 'responsable') {
+            roleFiltered = [];
         }
 
         setRoleFilteredReports(roleFiltered);
