@@ -1836,14 +1836,19 @@ export const Dashboard = () => {
 
         // Filtro por Texto (ID, Sector, Contenido)
         const searchLower = searchTerm.toLowerCase();
-        const matchesSearch =
+        const matchesSearch = !searchTerm ||
             report.tracking_id?.toLowerCase().includes(searchLower) ||
             report.sector?.toLowerCase().includes(searchLower) ||
+            report.reporter_sector?.toLowerCase().includes(searchLower) ||
+            report.origin_sector?.toLowerCase().includes(searchLower) ||
             report.content?.toLowerCase().includes(searchLower) ||
             report.ai_summary?.toLowerCase().includes(searchLower);
 
         // Filtro por Sector (multi-select)
-        const matchesSector = listSectorFilter.length === 0 || listSectorFilter.includes(report.sector);
+        const matchesSector = listSectorFilter.length === 0 || 
+            listSectorFilter.includes(report.sector) || 
+            (report.reporter_sector && listSectorFilter.includes(report.reporter_sector)) ||
+            (report.origin_sector && listSectorFilter.includes(report.origin_sector));
 
         // Filtro por Fecha Desde
         let matchesDateFrom = true;
@@ -2415,7 +2420,7 @@ export const Dashboard = () => {
                                         <th className="px-6 py-4">Estado</th>
                                         <th className="px-6 py-4">ID</th>
                                         <th className="px-6 py-4">Fecha</th>
-                                        <th className="px-6 py-4">Sector</th>
+                                        <th className="px-6 py-4">Destino / Origen</th>
                                         <th className="px-6 py-4">Problema</th>
                                         <th className="px-6 py-4">Prioridad</th>
                                         <th className="px-6 py-4 text-center">Notif.</th>
@@ -2458,7 +2463,14 @@ export const Dashboard = () => {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-xs text-gray-400 whitespace-nowrap">{report.created_at ? new Date(report.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
-                                                <td className="px-6 py-4 text-sm text-gray-600">{report.sector || '-'}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-600">
+                                                    <div className="font-bold">{report.sector || '-'}</div>
+                                                    {(report.reporter_sector || report.origin_sector) && (
+                                                        <div className="text-[10px] text-gray-400 mt-0.5">
+                                                            Origen: {report.reporter_sector || report.origin_sector}
+                                                        </div>
+                                                    )}
+                                                </td>
                                                 <td className="px-6 py-4 text-sm text-gray-600 line-clamp-1 max-w-xs">{report.ai_summary || report.content}</td>
                                                 <td className="px-6 py-4">
                                                     <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase
