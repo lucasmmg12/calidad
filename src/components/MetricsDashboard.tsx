@@ -17,8 +17,7 @@ import {
     Tag,
     ClipboardCheck,
     Star,
-    Send,
-    AlertTriangle
+    Send
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
