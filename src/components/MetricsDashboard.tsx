@@ -37,6 +37,8 @@ export const MetricsDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
         total: 0,
+        totalReceived: 0,
+        totalEmitted: 0,
         resolved: 0,
         pending: 0,
         urgentCount: 0,
@@ -156,6 +158,8 @@ export const MetricsDashboard = () => {
 
             roleFiltered = reports.filter(r =>
                 (r.sector && sectors.includes(r.sector)) ||
+                (r.reporter_sector && sectors.includes(r.reporter_sector)) ||
+                (r.origin_sector && sectors.includes(r.origin_sector)) ||
                 assignedReportIds.has(r.id)
             );
         } else if (role === 'responsable') {
@@ -178,6 +182,25 @@ export const MetricsDashboard = () => {
         setRawReports(filteredReports);
 
         const total = filteredReports.length;
+
+        const activeSectors = filters.sectors.length > 0 ? filters.sectors : (!canViewAll ? sectors : []);
+        let totalReceived = 0;
+        let totalEmitted = 0;
+
+        if (activeSectors.length > 0) {
+            filteredReports.forEach(r => {
+                if (r.sector && activeSectors.includes(r.sector)) {
+                    totalReceived++;
+                }
+                if ((r.reporter_sector && activeSectors.includes(r.reporter_sector)) || 
+                    (r.origin_sector && activeSectors.includes(r.origin_sector))) {
+                    totalEmitted++;
+                }
+            });
+        } else {
+            totalReceived = total;
+            totalEmitted = total;
+        }
         const felicitaciones = filteredReports.filter(r => r.finding_type?.startsWith('Felicitaci') || r.ai_category?.startsWith('Felicitaci')).length;
         const nonFelicitaciones = filteredReports.filter(r => !r.finding_type?.startsWith('Felicitaci') && !r.ai_category?.startsWith('Felicitaci'));
         const resolved = nonFelicitaciones.filter(r => r.status === 'resolved');
@@ -276,6 +299,8 @@ export const MetricsDashboard = () => {
 
         setStats({
             total,
+            totalReceived,
+            totalEmitted,
             resolved: resolved.length,
             pending: pending.length,
             urgentCount: urgent.length,
@@ -852,11 +877,10 @@ export const MetricsDashboard = () => {
                     <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                         <BarChart3 className="w-24 h-24 text-blue-600" />
                     </div>
-                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Reportes</p>
-                    <p className="text-4xl font-black text-gray-800 mt-2">{stats.total}</p>
-                    <div className="mt-4 flex items-center gap-1 text-xs text-green-600 font-medium">
-                        <ArrowUpRight className="w-3 h-3" />
-                        <span>100% Data Actual</span>
+                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Reportes Recibidos</p>
+                    <p className="text-4xl font-black text-gray-800 mt-2">{stats.totalReceived}</p>
+                    <div className="mt-4 flex items-center gap-1 text-xs text-blue-600 font-medium">
+                        <span>Como Sector Destino</span>
                     </div>
                 </div>
 
@@ -909,15 +933,15 @@ export const MetricsDashboard = () => {
                     <p className="text-xs text-amber-500 mt-2 font-medium">Reconocimientos positivos 🎉</p>
                 </div>
 
-                <div 
-                    className="bg-white p-6 rounded-2xl shadow-sm border border-red-100 relative overflow-hidden group hover:border-red-300 transition-all"
-                >
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group">
                     <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <AlertTriangle className="w-24 h-24 text-red-600" />
+                        <ArrowUpRight className="w-24 h-24 text-indigo-600" />
                     </div>
-                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">No Conformidad</p>
-                    <p className="text-4xl font-black text-gray-800 mt-2">{stats.nonConforming || 0}</p>
-                    <p className="text-xs text-red-500 mt-2 font-medium">Solución Insuficiente</p>
+                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Reportes Emitidos</p>
+                    <p className="text-4xl font-black text-gray-800 mt-2">{stats.totalEmitted}</p>
+                    <div className="mt-4 flex items-center gap-1 text-xs text-indigo-600 font-medium">
+                        <span>Como Sector Origen</span>
+                    </div>
                 </div>
             </div>
 
