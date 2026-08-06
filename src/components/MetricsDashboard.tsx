@@ -79,7 +79,11 @@ export const MetricsDashboard = () => {
 
         // Multi-sector filter (assigned sector)
         if (filters.sectors.length > 0) {
-            result = result.filter(r => filters.sectors.includes(r.sector));
+            result = result.filter(r => 
+                filters.sectors.includes(r.sector) ||
+                (r.reporter_sector && filters.sectors.includes(r.reporter_sector)) ||
+                (r.origin_sector && filters.sectors.includes(r.origin_sector))
+            );
         }
 
         // Date range: from
@@ -211,7 +215,7 @@ export const MetricsDashboard = () => {
         // By Reporter Sector (Origin)
         const reporterSectorMap: Record<string, number> = {};
         filteredReports.forEach(r => {
-            const s = r.reporter_sector || 'Sin asignar';
+            const s = r.reporter_sector || r.origin_sector || 'Sin asignar';
             if (canViewAll || sectors.includes(s)) {
                 reporterSectorMap[s] = (reporterSectorMap[s] || 0) + 1;
             }
