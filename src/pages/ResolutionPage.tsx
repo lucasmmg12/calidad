@@ -81,7 +81,7 @@ export const ResolutionPage = () => {
                         description: data.content,
                         isAdverseEvent: needsRCA,
                         sector: assignment.sector || data.sector,
-                        originSector: data.origin_sector || '',
+                        originSector: data.origin_sector || data.reporter_sector || '',
                         reporterSector: data.reporter_sector || '',
                         contactNumber: data.contact_number,
                         isAnonymous: data.is_anonymous || false,
@@ -108,10 +108,11 @@ export const ResolutionPage = () => {
                         description: data.content,
                         isAdverseEvent: data.is_adverse_event || data.ai_urgency === 'Rojo',
                         sector: data.sector,
-                        originSector: data.origin_sector || '',
+                        originSector: data.origin_sector || data.reporter_sector || '',
                         reporterSector: data.reporter_sector || '',
                         contactNumber: data.contact_number,
                         isAnonymous: data.is_anonymous || false,
+                        assignmentId: null,
                         status: data.status,
                         notes: data.notes,
                         resolutionStep: data.resolution_step || 'step1_pending',
@@ -120,7 +121,7 @@ export const ResolutionPage = () => {
                         immediateAction: data.resolution_notes || '',
                         step1EvidenceUrls: data.step1_evidence_urls || [],
                         qualityObservations: data.quality_observations || '',
-                        managementType: 'simple',
+                        managementType: data.management_type || 'simple',
                     });
                 }
 

@@ -2702,9 +2702,16 @@ export const Dashboard = () => {
                                                     value={selectedReport.reporter_sector || selectedReport.origin_sector || ''}
                                                     onChange={async (e) => {
                                                         const newOrigin = e.target.value;
-                                                        const { error } = await supabase.from('reports').update({ reporter_sector: newOrigin }).eq('id', selectedReport.id);
+                                                        const { error } = await supabase.from('reports').update({ 
+                                                            reporter_sector: newOrigin,
+                                                            origin_sector: newOrigin 
+                                                        }).eq('id', selectedReport.id);
                                                         if (!error) {
-                                                            const updatedReport = { ...selectedReport, reporter_sector: newOrigin };
+                                                            const updatedReport = { 
+                                                                ...selectedReport, 
+                                                                reporter_sector: newOrigin,
+                                                                origin_sector: newOrigin 
+                                                            };
                                                             setReports(reports.map(r => r.id === selectedReport.id ? updatedReport : r));
                                                             setSelectedReport(updatedReport);
                                                         }

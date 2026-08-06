@@ -129,6 +129,7 @@ export const ReportingForm = () => {
                         tracking_id: trackingId,
                         sector: formData.sector,
                         reporter_sector: formData.reporterSector || null,
+                        origin_sector: formData.reporterSector || null,
                         content: formData.content,
                         is_anonymous: false,
                         contact_name: dbName,
@@ -162,7 +163,7 @@ export const ReportingForm = () => {
                     .insert({
                         tracking_id: trackingId,
                         sector: formData.sector,
-                        origin_sector: formData.originSector || null,
+                        origin_sector: formData.reporterSector || null,
                         reporter_sector: formData.reporterSector || null,
                         content: formData.content,
                         is_anonymous: isAnonymous === true,
