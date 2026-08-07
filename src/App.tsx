@@ -14,6 +14,7 @@ import { UserManagement } from './pages/UserManagement';
 import { ResolutionPage } from './pages/ResolutionPage';
 import { SupplementaryInfoPage } from './pages/SupplementaryInfoPage';
 import { MyCases } from './pages/MyCases';
+import { ProcessAuditPage } from './pages/ProcessAuditPage';
 import Presentation from './pages/Presentation';
 import ManualProcedimientos from './components/ManualProcedimientos';
 import ProfileSettings from './pages/ProfileSettings';
@@ -33,7 +34,8 @@ import {
   Users,
   Bell,
   Briefcase,
-  BookMarked
+  BookMarked,
+  ClipboardCheck
 } from 'lucide-react';
 import { supabase } from './utils/supabase';
 
@@ -108,6 +110,10 @@ function Navbar() {
 
                 <Link to="/mis-casos" className="hidden md:flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all">
                   <Briefcase className="w-4 h-4" /> Mis Casos
+                </Link>
+
+                <Link to="/auditoria-procesos" className="hidden md:flex items-center gap-2 px-4 py-2 text-emerald-700 font-bold text-sm hover:bg-emerald-50 rounded-xl transition-all" title="Auditoría de Procesos por Sector">
+                  <ClipboardCheck className="w-4 h-4 text-emerald-600" /> Aud. Procesos
                 </Link>
 
                 <Link to="/metrics" className="hidden md:flex items-center gap-2 px-4 py-2 text-sanatorio-primary font-bold text-sm hover:bg-sanatorio-primary/5 rounded-xl transition-all">
@@ -213,6 +219,10 @@ function Navbar() {
                     <Briefcase className="w-4 h-4" /> Mis Casos
                   </Link>
 
+                  <Link onClick={closeMobileMenu} to="/auditoria-procesos" className="flex items-center gap-3 px-4 py-3 text-emerald-700 font-bold text-sm hover:bg-emerald-50 rounded-xl transition-all">
+                    <ClipboardCheck className="w-4 h-4 text-emerald-600" /> Auditoría de Procesos
+                  </Link>
+
                   <Link onClick={closeMobileMenu} to="/metrics" className="flex items-center gap-3 px-4 py-3 text-sanatorio-primary font-bold text-sm hover:bg-sanatorio-primary/5 rounded-xl transition-all">
                     <BarChart3 className="w-4 h-4" /> Métricas
                   </Link>
@@ -303,6 +313,7 @@ function App() {
               {/* Métricas — Todos los roles autenticados */}
               <Route element={<ProtectedRoute allowedRoles={['admin', 'responsable', 'directivo']} />}>
                 <Route path="/metrics" element={<MetricsDashboard />} />
+                <Route path="/auditoria-procesos" element={<ProcessAuditPage />} />
               </Route>
 
               {/* Perfil y Manual — Cualquier rol autenticado */}
