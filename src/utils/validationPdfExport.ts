@@ -108,6 +108,7 @@ interface ReportData {
     evidence_urls?: string[];
     finding_type?: string;
     resolution_history?: any[];
+    quality_observations?: string;
 }
 
 interface ResponsableInfo {
@@ -351,6 +352,17 @@ export const generateValidationPDF = async (
 
         y += boxH + 4;
     };
+
+    // ─── Quality Observations ───
+    if (report.quality_observations && report.quality_observations.trim()) {
+        drawSection(
+            '💬 Observaciones de Calidad',
+            report.quality_observations.trim(),
+            [238, 242, 255],
+            [99, 102, 241],
+            [67, 56, 202]
+        );
+    }
 
     // For multi-sector: render each sector assignment
     if (isMultiSector) {

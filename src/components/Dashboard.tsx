@@ -37,7 +37,9 @@ import {
     ExternalLink,
     Copy,
     ImagePlus,
-    Reply
+    Reply,
+    Edit2,
+    Sparkles
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { CLASSIFICATION_CATEGORIES } from '../constants/classification_categories';
@@ -1187,11 +1189,18 @@ export const Dashboard = () => {
     const [isSavingObservation, setIsSavingObservation] = useState(false);
     const [observationSaved, setObservationSaved] = useState(false);
 
-    // Sync observation text when a report is selected
+    // AI Summary editing state
+    const [isEditingAiSummary, setIsEditingAiSummary] = useState(false);
+    const [editedAiSummary, setEditedAiSummary] = useState('');
+    const [isSavingAiSummary, setIsSavingAiSummary] = useState(false);
+
+    // Sync observation text & AI summary when a report is selected
     useEffect(() => {
         if (selectedReport) {
             setObservationText(selectedReport.quality_observations || '');
             setObservationSaved(false);
+            setEditedAiSummary(selectedReport.ai_summary || '');
+            setIsEditingAiSummary(false);
         }
     }, [selectedReport?.id]);
 
@@ -2608,8 +2617,79 @@ export const Dashboard = () => {
 
                             <div className="space-y-6">
                                 <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                                    <h3 className="text-xs font-bold text-blue-800 uppercase tracking-widest mb-1">Resumen IA</h3>
-                                    <p className="text-blue-900 leading-relaxed font-medium">{selectedReport.ai_summary}</p>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <h3 className="text-xs font-bold text-blue-800 uppercase tracking-widest flex items-center gap-1.5">
+                                            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                                            Resumen IA
+                                        </h3>
+                                        {isAdmin && !isEditingAiSummary && (
+                                            <button
+                                                onClick={() => {
+                                                    setEditedAiSummary(selectedReport.ai_summary || '');
+                                                    setIsEditingAiSummary(true);
+                                                }}
+                                                className="text-xs text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 opacity-90 hover:opacity-100 transition-all bg-white/80 hover:bg-white border border-blue-200 px-2 py-0.5 rounded-lg shadow-xs cursor-pointer"
+                                                title="Editar Resumen IA"
+                                            >
+                                                <Edit2 className="w-3 h-3" />
+                                                Editar
+                                            </button>
+                                        )}
+                                    </div>
+                                    {isEditingAiSummary ? (
+                                        <div className="space-y-2 mt-2">
+                                            <textarea
+                                                value={editedAiSummary}
+                                                onChange={(e) => setEditedAiSummary(e.target.value)}
+                                                className="w-full p-3 bg-white border border-blue-200 rounded-xl text-sm text-blue-900 leading-relaxed outline-none focus:ring-2 focus:ring-blue-400 font-medium"
+                                                rows={3}
+                                                placeholder="Escribí o modificá el resumen del caso..."
+                                            />
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        setIsEditingAiSummary(false);
+                                                        setEditedAiSummary(selectedReport.ai_summary || '');
+                                                    }}
+                                                    className="px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-blue-100/50 rounded-lg transition-colors cursor-pointer"
+                                                >
+                                                    Cancelar
+                                                </button>
+                                                <button
+                                                    onClick={async () => {
+                                                        if (!selectedReport) return;
+                                                        setIsSavingAiSummary(true);
+                                                        const { error } = await supabase
+                                                            .from('reports')
+                                                            .update({ ai_summary: editedAiSummary })
+                                                            .eq('id', selectedReport.id);
+                                                        if (!error) {
+                                                            const updated = { ...selectedReport, ai_summary: editedAiSummary };
+                                                            setReports(reports.map(r => r.id === selectedReport.id ? updated : r));
+                                                            setSelectedReport(updated);
+                                                            setIsEditingAiSummary(false);
+                                                        } else {
+                                                            console.error('Error saving AI summary:', error);
+                                                        }
+                                                        setIsSavingAiSummary(false);
+                                                    }}
+                                                    disabled={isSavingAiSummary}
+                                                    className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                                                >
+                                                    {isSavingAiSummary ? (
+                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    ) : (
+                                                        <CheckCircle className="w-3.5 h-3.5" />
+                                                    )}
+                                                    Guardar Resumen
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="text-blue-900 leading-relaxed font-medium">
+                                            {selectedReport.ai_summary || 'Sin resumen registrado'}
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div>

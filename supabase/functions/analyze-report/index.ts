@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       "${reportText}"
       
       Tareas:
-      1. Resume el problema (Máx 15 palabras).
+      1. Resume el problema (Máx 15 palabras). IMPORTANTE: Si la descripción es muy breve, vaga o dice simplemente "Adjunto", "Ver adjunto" o similar sin detallar los hechos, NO inventes o supongas errores ni situaciones no descritas. Resume como: "Reporte con archivo adjunto sin descripción textual".
       2. Clasifícalo en UNA de estas categorías operativas (elegir la más adecuada):
          "Calidez en la atención", "Capacitación", "Cirugía segura", "Comunicación con el paciente", "Comunicación efectiva interservicios", "Demora en la atención", "Gestión de turnos", "Identificación del paciente", "Mantenimiento e infraestructura", "Prácticas administrativas", "Prácticas asistenciales", "Recursos e insumos", "Riesgo de caídas", "Seguridad de los medicamentos", "Sistema informático".
          Si no encaja claramente en ninguna, usa "Sin clasificar".
