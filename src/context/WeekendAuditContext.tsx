@@ -34,9 +34,11 @@ type AuditMetadata = {
 
 interface WeekendAuditContextProps {
   answers: AnswersState;
+  sectorPersonal: Record<string, string>;
   patientExperience: PatientExperienceState;
   metadata: AuditMetadata;
   setAnswer: (sectorName: string, itemIndex: number, answer: SectorAnswer) => void;
+  setSectorPersonalData: (sectorName: string, personal: string) => void;
   setPatientExperience: (data: Partial<PatientExperienceState>) => void;
   setMetadata: (data: Partial<AuditMetadata>) => void;
   resetAudit: () => void;
@@ -68,6 +70,7 @@ export const WeekendAuditContext = createContext<WeekendAuditContextProps | unde
 
 export const WeekendAuditProvider = ({ children }: { children: ReactNode }) => {
   const [answers, setAnswersState] = useState<AnswersState>({});
+  const [sectorPersonal, setSectorPersonal] = useState<Record<string, string>>({});
   const [patientExperience, setPatientExperienceState] = useState<PatientExperienceState>(defaultPatientExperience);
   const [metadata, setMetadataState] = useState<AuditMetadata>(defaultMetadata);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -79,6 +82,7 @@ export const WeekendAuditProvider = ({ children }: { children: ReactNode }) => {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.answers) setAnswersState(parsed.answers);
+        if (parsed.sectorPersonal) setSectorPersonal(parsed.sectorPersonal);
         if (parsed.patientExperience) setPatientExperienceState(parsed.patientExperience);
         if (parsed.metadata) setMetadataState(parsed.metadata);
       }
@@ -91,9 +95,9 @@ export const WeekendAuditProvider = ({ children }: { children: ReactNode }) => {
   // Save to localStorage on change
   React.useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ answers, patientExperience, metadata }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ answers, sectorPersonal, patientExperience, metadata }));
     }
-  }, [answers, patientExperience, metadata, isLoaded]);
+  }, [answers, sectorPersonal, patientExperience, metadata, isLoaded]);
 
   const saveToHistory = () => {
     try {
@@ -104,6 +108,7 @@ export const WeekendAuditProvider = ({ children }: { children: ReactNode }) => {
         id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
         date: new Date().toISOString(),
         answers,
+        sectorPersonal,
         patientExperience,
         metadata
       };
@@ -113,6 +118,7 @@ export const WeekendAuditProvider = ({ children }: { children: ReactNode }) => {
       
       // Limpiar el actual
       setAnswersState({});
+      setSectorPersonal({});
       setPatientExperienceState(defaultPatientExperience);
       localStorage.removeItem(STORAGE_KEY);
     } catch (e) {
@@ -130,6 +136,13 @@ export const WeekendAuditProvider = ({ children }: { children: ReactNode }) => {
     }));
   };
 
+  const setSectorPersonalData = (sectorName: string, personal: string) => {
+    setSectorPersonal(prev => ({
+      ...prev,
+      [sectorName]: personal
+    }));
+  };
+
   const setPatientExperience = (data: Partial<PatientExperienceState>) => {
     setPatientExperienceState(prev => ({ ...prev, ...data }));
   };
@@ -140,6 +153,7 @@ export const WeekendAuditProvider = ({ children }: { children: ReactNode }) => {
 
   const resetAudit = () => {
     setAnswersState({});
+    setSectorPersonal({});
     setPatientExperienceState(defaultPatientExperience);
     // Keep metadata but you could reset it too if needed
     localStorage.removeItem(STORAGE_KEY);
@@ -150,9 +164,11 @@ export const WeekendAuditProvider = ({ children }: { children: ReactNode }) => {
   return (
     <WeekendAuditContext.Provider value={{
       answers,
+      sectorPersonal,
       patientExperience,
       metadata,
       setAnswer,
+      setSectorPersonalData,
       setPatientExperience,
       setMetadata,
       resetAudit,

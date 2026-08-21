@@ -110,7 +110,7 @@ export default function WeekendAuditHistory({ onBack }: WeekendAuditHistoryProps
                     Excel
                   </button>
                   <button
-                    onClick={() => exportWeekendAuditPPTX(record.answers, record.patientExperience, record.metadata)}
+                    onClick={() => exportWeekendAuditPPTX(record.answers, record.sectorPersonal || {}, record.patientExperience, record.metadata)}
                     className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-600 hover:text-blue-700 rounded-lg text-xs font-bold transition-colors"
                   >
                     <ClipboardCheck className="w-4 h-4" />

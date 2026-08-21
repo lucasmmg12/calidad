@@ -15,7 +15,7 @@ import type { AlertType } from '../components/AlertModal';
 const WeekendAuditContent = () => {
   const [activeView, setActiveView] = useState<'list' | 'sector' | 'patient' | 'history'>('list');
   const [selectedSectorIndex, setSelectedSectorIndex] = useState<number | null>(null);
-  const { answers, patientExperience, metadata, setMetadata, resetAudit, saveToHistory } = useWeekendAudit();
+  const { answers, sectorPersonal, patientExperience, metadata, setMetadata, resetAudit, saveToHistory } = useWeekendAudit();
   const { session, profile } = useAuth();
   const [isExporting, setIsExporting] = useState(false);
   const [alertConfig, setAlertConfig] = useState<{
@@ -58,7 +58,7 @@ const WeekendAuditContent = () => {
   const handleExportPPTX = async () => {
     setIsExporting(true);
     try {
-      await exportWeekendAuditPPTX(answers, patientExperience, metadata);
+      await exportWeekendAuditPPTX(answers, sectorPersonal || {}, patientExperience, metadata);
       showAlert('¡Éxito!', 'Presentación PPTX generada correctamente', 'success');
     } catch (error) {
       console.error(error);

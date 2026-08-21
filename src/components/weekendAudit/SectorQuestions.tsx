@@ -10,7 +10,7 @@ interface SectorQuestionsProps {
 }
 
 export default function SectorQuestions({ sectorIndex, onBack }: SectorQuestionsProps) {
-  const { answers, setAnswer } = useWeekendAudit();
+  const { answers, setAnswer, sectorPersonal, setSectorPersonalData } = useWeekendAudit();
   const sector = templateData.sectors[sectorIndex];
   
   const [activeRecorder, setActiveRecorder] = useState<number | null>(null);
@@ -34,6 +34,22 @@ export default function SectorQuestions({ sectorIndex, onBack }: SectorQuestions
       </div>
 
       <div className="p-4 max-w-2xl mx-auto space-y-6 pb-28 w-full">
+        {/* Personal Presente */}
+        <div className="rounded-2xl border border-blue-200 bg-blue-50/50 p-4 shadow-sm">
+          <label className="block text-xs font-bold text-blue-900 mb-2 uppercase tracking-wider">
+            Personal Presente
+          </label>
+          <p className="text-[13px] text-blue-700/80 mb-3 leading-relaxed">
+            Escriba los nombres del personal trabajando en este turno.
+          </p>
+          <textarea
+            value={sectorPersonal[sector.name] || ''}
+            onChange={(e) => setSectorPersonalData(sector.name, e.target.value)}
+            className="w-full text-[15px] p-3 border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none bg-white transition-shadow min-h-[80px]"
+            placeholder="Ej: Fabricio Mallea, Franco Montaña..."
+          />
+        </div>
+
         {sector.items.map((item, itemIndex) => {
           const currentAnswer = answers[sector.name]?.[itemIndex] || { cumple: null, demerito: null, observaciones: '' };
           const isAnswered = currentAnswer.cumple !== null;
