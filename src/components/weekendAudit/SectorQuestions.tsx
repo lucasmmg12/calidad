@@ -59,20 +59,22 @@ export default function SectorQuestions({ sectorIndex, onBack }: SectorQuestions
                   <div className="grid grid-cols-4 gap-2">
                     {[0, 1, 2, 3].map((val) => {
                       const isSelected = currentAnswer.demerito === val;
-                      let btnClass = 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100';
                       
-                      if (isSelected) {
-                        if (val === 0) btnClass = 'bg-blue-900 text-white border-blue-900 shadow-sm';
-                        else if (val === 1) btnClass = 'bg-blue-500 text-white border-blue-500 shadow-sm';
-                        else if (val === 2) btnClass = 'bg-blue-300 text-white border-blue-300 shadow-sm';
-                        else if (val === 3) btnClass = 'bg-blue-100 text-slate-800 border-blue-200 shadow-sm';
-                      }
+                      let baseClass = '';
+                      if (val === 0) baseClass = 'bg-blue-900 text-white border-blue-900';
+                      else if (val === 1) baseClass = 'bg-blue-500 text-white border-blue-500';
+                      else if (val === 2) baseClass = 'bg-blue-300 text-slate-900 border-blue-300';
+                      else if (val === 3) baseClass = 'bg-blue-100 text-slate-800 border-blue-200';
+                      
+                      const selectedClass = isSelected 
+                        ? 'ring-2 ring-offset-1 ring-slate-400 scale-[1.02] shadow-md z-10 border-slate-400 font-black opacity-100' 
+                        : 'opacity-50 hover:opacity-100 scale-100 hover:scale-[1.01]';
                       
                       return (
                         <button
                           key={val}
                           onClick={() => setAnswer(sector.name, itemIndex, { ...currentAnswer, demerito: val })}
-                          className={`py-2 rounded-lg text-sm font-bold border transition-all ${btnClass}`}
+                          className={`py-2 rounded-lg text-sm font-bold border transition-all duration-200 ${baseClass} ${selectedClass}`}
                         >
                           {val}
                         </button>
