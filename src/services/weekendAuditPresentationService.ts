@@ -71,8 +71,12 @@ export const exportWeekendAuditPPTX = async (
     const sectorAnswers = answers[sector.name] || {};
     
     Object.values(sectorAnswers).forEach((ans: any) => {
-      if (ans.demerito !== null) {
-        totalDemeritos += ans.demerito;
+      if (ans.cumple !== null || ans.demerito !== null) {
+        if (ans.cumple === false) {
+          totalDemeritos += (ans.demerito || 1);
+        } else if (ans.demerito !== null && ans.cumple !== true) {
+          totalDemeritos += ans.demerito;
+        }
         itemsEvaluados++;
       }
     });
@@ -117,7 +121,7 @@ export const exportWeekendAuditPPTX = async (
   // --- SLIDES 4+: Detalles por Sector (Sólo los evaluados) ---
   templateData.sectors.forEach(sector => {
     const sectorAnswers = answers[sector.name] || {};
-    const evaluados = Object.values(sectorAnswers).filter((a: any) => a && a.demerito !== null).length;
+    const evaluados = Object.values(sectorAnswers).filter((a: any) => a && (a.cumple !== null || a.demerito !== null)).length;
     
     // Solo mostramos sectores que fueron auditados
     if (evaluados === 0) return;
@@ -125,14 +129,14 @@ export const exportWeekendAuditPPTX = async (
     const itemsWithIssues = sector.items.map((item, index) => ({
       item: item.item,
       ans: sectorAnswers[index]
-    })).filter(x => x.ans && ((x.ans.demerito || 0) > 0 || (x.ans.observaciones && x.ans.observaciones.trim().length > 0)));
+    })).filter(x => x.ans && (x.ans.cumple === false || (x.ans.demerito || 0) > 0 || (x.ans.observaciones && x.ans.observaciones.trim().length > 0)));
 
     const slideSector = pres.addSlide();
     slideSector.addText(`Sector: ${sector.name}`, {
       x: 0.5, y: 0.3, w: 9, h: 0.6, fontSize: 24, bold: true, color: COLOR_PRIMARY
     });
 
-    const totalDemeritosSector = itemsWithIssues.reduce((acc, curr) => acc + (curr.ans.demerito || 0), 0);
+    const totalDemeritosSector = itemsWithIssues.reduce((acc, curr) => acc + (curr.ans.cumple === false ? (curr.ans.demerito || 1) : (curr.ans.demerito || 0)), 0);
 
     if (totalDemeritosSector === 0 && itemsWithIssues.length === 0) {
       slideSector.addText('✅ VEREDICTO: Cumplimiento satisfactorio en todos los ítems evaluados. No se encontraron desviaciones ni observaciones adicionales.', {
@@ -154,9 +158,11 @@ export const exportWeekendAuditPPTX = async (
       itemsWithIssues.forEach((issue, idx) => {
         const isEven = idx % 2 === 0;
         const rowFill = isEven ? COLOR_LIGHT_BLUE : 'FFFFFF';
+        const demeritoValue = issue.ans.cumple === false ? (issue.ans.demerito || 1) : (issue.ans.demerito || 0);
+        
         sectorTableData.push([
           { text: issue.item, options: { fill: { color: rowFill }, fontSize: 11 } },
-          { text: (issue.ans.demerito || 0).toString(), options: { fill: { color: rowFill }, fontSize: 12, bold: true, color: (issue.ans.demerito || 0) > 0 ? 'DC2626' : COLOR_SECONDARY, align: 'center' } },
+          { text: demeritoValue.toString(), options: { fill: { color: rowFill }, fontSize: 12, bold: true, color: demeritoValue > 0 ? 'DC2626' : COLOR_SECONDARY, align: 'center' } },
           { text: issue.ans.observaciones || 'N/A', options: { fill: { color: rowFill }, fontSize: 11 } }
         ]);
       });
@@ -190,3 +196,4 @@ export const exportWeekendAuditPPTX = async (
   const fileName = `Auditoria_Finde_${metadata.auditDate.replace(/-/g, '')}.pptx`;
   await pres.writeFile({ fileName });
 };
+

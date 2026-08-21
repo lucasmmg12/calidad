@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import React from 'react';
 
 export type SectorAnswer = {
+  cumple: boolean | null;
   demerito: number | null;
   observaciones: string;
 };
