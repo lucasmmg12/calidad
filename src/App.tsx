@@ -18,6 +18,7 @@ import { ProcessAuditPage } from './pages/ProcessAuditPage';
 import Presentation from './pages/Presentation';
 import ManualProcedimientos from './components/ManualProcedimientos';
 import ProfileSettings from './pages/ProfileSettings';
+import WeekendAuditPage from './pages/WeekendAuditPage';
 import Register from './pages/Register';
 import Onboarding from './pages/Onboarding';
 import PendingApproval from './pages/PendingApproval';
@@ -112,8 +113,14 @@ function Navbar() {
                   <Briefcase className="w-4 h-4" /> Mis Casos
                 </Link>
 
+                {/* 
                 <Link to="/auditoria-procesos" className="hidden md:flex items-center gap-2 px-4 py-2 text-emerald-700 font-bold text-sm hover:bg-emerald-50 rounded-xl transition-all" title="Auditoría de Procesos por Sector">
                   <ClipboardCheck className="w-4 h-4 text-emerald-600" /> Aud. Procesos
+                </Link>
+                */}
+
+                <Link to="/auditoria-fin-de-semana" className="hidden md:flex items-center gap-2 px-4 py-2 text-emerald-700 font-bold text-sm hover:bg-emerald-50 rounded-xl transition-all" title="Auditoría de Fin de Semana">
+                  <ClipboardCheck className="w-4 h-4 text-emerald-600" /> Aud. Finde
                 </Link>
 
                 <Link to="/metrics" className="hidden md:flex items-center gap-2 px-4 py-2 text-sanatorio-primary font-bold text-sm hover:bg-sanatorio-primary/5 rounded-xl transition-all">
@@ -130,7 +137,7 @@ function Navbar() {
                   </Link>
                 )}
 
-                {/* Role Badge */}
+                {/* Role Badge oculto a pedido del usuario
                 <div className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest ${role === 'admin' ? 'bg-purple-50 text-purple-600 border border-purple-200' :
                   role === 'directivo' ? 'bg-blue-50 text-blue-600 border border-blue-200' :
                     'bg-green-50 text-green-600 border border-green-200'
@@ -138,6 +145,7 @@ function Navbar() {
                   <Shield className="w-3 h-3" />
                   {role === 'admin' ? 'Admin' : role === 'directivo' ? 'Directivo' : 'Responsable'}
                 </div>
+                */}
 
                 <button
                   onClick={handleLogoutClick}
@@ -219,8 +227,14 @@ function Navbar() {
                     <Briefcase className="w-4 h-4" /> Mis Casos
                   </Link>
 
+                  {/*
                   <Link onClick={closeMobileMenu} to="/auditoria-procesos" className="flex items-center gap-3 px-4 py-3 text-emerald-700 font-bold text-sm hover:bg-emerald-50 rounded-xl transition-all">
                     <ClipboardCheck className="w-4 h-4 text-emerald-600" /> Auditoría de Procesos
+                  </Link>
+                  */}
+
+                  <Link onClick={closeMobileMenu} to="/auditoria-fin-de-semana" className="flex items-center gap-3 px-4 py-3 text-emerald-700 font-bold text-sm hover:bg-emerald-50 rounded-xl transition-all">
+                    <ClipboardCheck className="w-4 h-4 text-emerald-600" /> Auditoría Fin de Semana
                   </Link>
 
                   <Link onClick={closeMobileMenu} to="/metrics" className="flex items-center gap-3 px-4 py-3 text-sanatorio-primary font-bold text-sm hover:bg-sanatorio-primary/5 rounded-xl transition-all">
@@ -314,6 +328,7 @@ function App() {
               <Route element={<ProtectedRoute allowedRoles={['admin', 'responsable', 'directivo']} />}>
                 <Route path="/metrics" element={<MetricsDashboard />} />
                 <Route path="/auditoria-procesos" element={<ProcessAuditPage />} />
+                <Route path="/auditoria-fin-de-semana" element={<WeekendAuditPage />} />
               </Route>
 
               {/* Perfil y Manual — Cualquier rol autenticado */}
