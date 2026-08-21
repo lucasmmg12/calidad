@@ -9,6 +9,7 @@ import InstructionsPanel from '../components/weekendAudit/InstructionsPanel';
 import { exportWeekendAudit } from '../services/weekendAuditExportService';
 import { exportWeekendAuditPPTX } from '../services/weekendAuditPresentationService';
 import { useAuth } from '../contexts/AuthContext';
+import { AlertModal, AlertType } from '../components/AlertModal';
 
 const WeekendAuditContent = () => {
   const [activeView, setActiveView] = useState<'list' | 'sector' | 'patient' | 'history'>('list');
@@ -16,6 +17,22 @@ const WeekendAuditContent = () => {
   const { answers, patientExperience, metadata, setMetadata, resetAudit, saveToHistory } = useWeekendAudit();
   const { session, profile } = useAuth();
   const [isExporting, setIsExporting] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: AlertType;
+    showCancel?: boolean;
+    onConfirm?: () => void;
+  }>({ isOpen: false, title: '', message: '', type: 'info' });
+
+  const showAlert = (title: string, message: string, type: AlertType = 'info') => {
+    setAlertConfig({ isOpen: true, title, message, type, showCancel: false, onConfirm: undefined });
+  };
+
+  const showConfirm = (title: string, message: string, onConfirm: () => void) => {
+    setAlertConfig({ isOpen: true, title, message, type: 'info', showCancel: true, onConfirm });
+  };
 
   // Set default auditor name if empty
   React.useEffect(() => {
@@ -28,10 +45,10 @@ const WeekendAuditContent = () => {
     setIsExporting(true);
     try {
       await exportWeekendAudit(answers, patientExperience, metadata.auditorName || session?.user?.id || 'Desconocido');
-      alert('Auditoría exportada a Excel correctamente');
+      showAlert('¡Éxito!', 'Auditoría exportada a Excel correctamente', 'success');
     } catch (error) {
       console.error(error);
-      alert('Error al exportar la auditoría a Excel');
+      showAlert('Error', 'Error al exportar la auditoría a Excel', 'error');
     } finally {
       setIsExporting(false);
     }
@@ -41,10 +58,10 @@ const WeekendAuditContent = () => {
     setIsExporting(true);
     try {
       await exportWeekendAuditPPTX(answers, patientExperience, metadata);
-      alert('Presentación PPTX generada correctamente');
+      showAlert('¡Éxito!', 'Presentación PPTX generada correctamente', 'success');
     } catch (error) {
       console.error(error);
-      alert('Error al generar la presentación');
+      showAlert('Error', 'Error al generar la presentación', 'error');
     } finally {
       setIsExporting(false);
     }
@@ -85,6 +102,15 @@ const WeekendAuditContent = () => {
 
   return (
     <div className="p-4 max-w-2xl mx-auto pb-32">
+      <AlertModal 
+        isOpen={alertConfig.isOpen}
+        onClose={() => setAlertConfig(prev => ({ ...prev, isOpen: false }))}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        showCancel={alertConfig.showCancel}
+        onConfirm={alertConfig.onConfirm}
+      />
       <div className="mb-4 flex flex-col gap-2">
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -101,9 +127,11 @@ const WeekendAuditContent = () => {
             </button>
             <button 
               onClick={() => {
-                if (confirm('¿Estás seguro de que deseas limpiar la auditoría en curso? Todos los datos se perderán.')) {
-                  resetAudit();
-                }
+                showConfirm(
+                  'Limpiar Datos', 
+                  '¿Estás seguro de que deseas limpiar la auditoría en curso? Todos los datos se perderán.', 
+                  () => resetAudit()
+                );
               }}
               className="text-xs text-red-500 hover:text-red-700 font-semibold px-3 py-1.5 bg-red-50 rounded-lg"
             >
@@ -196,11 +224,15 @@ const WeekendAuditContent = () => {
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.05)] md:static md:bg-transparent md:border-t-0 md:shadow-none md:p-0 flex flex-col gap-3">
         <button
           onClick={() => {
-            if (confirm('¿Guardar esta auditoría en el historial y finalizar? Esto limpiará el formulario actual.')) {
-              saveToHistory();
-              alert('Auditoría guardada en el historial con éxito.');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
+            showConfirm(
+              'Finalizar Auditoría',
+              '¿Guardar esta auditoría en el historial y finalizar? Esto limpiará el formulario actual.',
+              () => {
+                saveToHistory();
+                showAlert('¡Guardado!', 'Auditoría guardada en el historial con éxito.', 'success');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            );
           }}
           className="w-full flex items-center justify-center gap-2 bg-blue-900 text-white font-bold py-3.5 px-4 rounded-xl shadow-sm hover:bg-blue-950 transition-all"
         >
