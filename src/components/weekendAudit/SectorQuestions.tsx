@@ -1,6 +1,8 @@
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, CheckCircle2, Mic } from 'lucide-react';
 import templateData from '../../data/weekendAuditTemplate.json';
 import { useWeekendAudit } from '../../context/WeekendAuditContext';
+import { VoiceRecorder } from '../VoiceRecorder';
 
 interface SectorQuestionsProps {
   sectorIndex: number;
@@ -10,6 +12,15 @@ interface SectorQuestionsProps {
 export default function SectorQuestions({ sectorIndex, onBack }: SectorQuestionsProps) {
   const { answers, setAnswer } = useWeekendAudit();
   const sector = templateData.sectors[sectorIndex];
+  
+  const [activeRecorder, setActiveRecorder] = useState<number | null>(null);
+
+  const handleTranscription = (itemIndex: number, text: string) => {
+    const currentAnswer = answers[sector.name]?.[itemIndex] || { demerito: null, observaciones: '' };
+    const newObs = currentAnswer.observaciones ? `${currentAnswer.observaciones} ${text}` : text;
+    setAnswer(sector.name, itemIndex, { ...currentAnswer, observaciones: newObs });
+    setActiveRecorder(null);
+  };
   
   if (!sector) return null;
 
@@ -67,7 +78,23 @@ export default function SectorQuestions({ sectorIndex, onBack }: SectorQuestions
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Observaciones</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-600">Observaciones</label>
+                    <button 
+                      onClick={() => setActiveRecorder(activeRecorder === itemIndex ? null : itemIndex)}
+                      className={`p-1.5 rounded-lg transition-colors ${activeRecorder === itemIndex ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                      title="Dictar por voz"
+                    >
+                      <Mic className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  {activeRecorder === itemIndex && (
+                    <div className="mb-2 p-3 border border-slate-200 rounded-lg bg-white shadow-inner">
+                      <VoiceRecorder onTranscription={(text) => handleTranscription(itemIndex, text)} maxDurationSeconds={120} />
+                    </div>
+                  )}
+
                   <textarea
                     value={currentAnswer.observaciones}
                     onChange={(e) => setAnswer(sector.name, itemIndex, { ...currentAnswer, observaciones: e.target.value })}
