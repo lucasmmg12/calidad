@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
-import { ClipboardCheck, Smile, FileSpreadsheet } from 'lucide-react';
+import { ClipboardCheck, Smile, FileSpreadsheet, Archive, Save } from 'lucide-react';
 import templateData from '../data/weekendAuditTemplate.json';
 import { WeekendAuditProvider, useWeekendAudit } from '../context/WeekendAuditContext';
 import SectorQuestions from '../components/weekendAudit/SectorQuestions';
 import PatientExperienceForm from '../components/weekendAudit/PatientExperienceForm';
+import WeekendAuditHistory from '../components/weekendAudit/WeekendAuditHistory';
+import InstructionsPanel from '../components/weekendAudit/InstructionsPanel';
 import { exportWeekendAudit } from '../services/weekendAuditExportService';
 import { exportWeekendAuditPPTX } from '../services/weekendAuditPresentationService';
 import { useAuth } from '../contexts/AuthContext';
 
 const WeekendAuditContent = () => {
-  const [activeView, setActiveView] = useState<'list' | 'sector' | 'patient'>('list');
+  const [activeView, setActiveView] = useState<'list' | 'sector' | 'patient' | 'history'>('list');
   const [selectedSectorIndex, setSelectedSectorIndex] = useState<number | null>(null);
-  const { answers, patientExperience, metadata, setMetadata, resetAudit } = useWeekendAudit();
+  const { answers, patientExperience, metadata, setMetadata, resetAudit, saveToHistory } = useWeekendAudit();
   const { session, profile } = useAuth();
   const [isExporting, setIsExporting] = useState(false);
 
@@ -72,26 +74,45 @@ const WeekendAuditContent = () => {
       </div>
     );
   }
+  
+  if (activeView === 'history') {
+    return (
+      <div className="min-h-screen bg-slate-50 pb-20">
+        <WeekendAuditHistory onBack={() => setActiveView('list')} />
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4 max-w-2xl mx-auto pb-24">
+    <div className="p-4 max-w-2xl mx-auto pb-32">
       <div className="mb-4 flex flex-col gap-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-2">
           <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
             <ClipboardCheck className="w-6 h-6 text-emerald-600" />
             Auditoría Fin de Semana
           </h1>
-          <button 
-            onClick={() => {
-              if (confirm('¿Estás seguro de que deseas limpiar la auditoría en curso? Todos los datos se perderán.')) {
-                resetAudit();
-              }
-            }}
-            className="text-xs text-red-500 hover:text-red-700 font-semibold px-2 py-1 bg-red-50 rounded"
-          >
-            Limpiar Datos
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setActiveView('history')}
+              className="text-xs text-blue-600 hover:text-blue-800 font-semibold px-3 py-1.5 bg-blue-50 hover:bg-blue-100 rounded-lg flex items-center gap-1 transition-colors"
+            >
+              <Archive className="w-3.5 h-3.5" />
+              Historial
+            </button>
+            <button 
+              onClick={() => {
+                if (confirm('¿Estás seguro de que deseas limpiar la auditoría en curso? Todos los datos se perderán.')) {
+                  resetAudit();
+                }
+              }}
+              className="text-xs text-red-500 hover:text-red-700 font-semibold px-3 py-1.5 bg-red-50 rounded-lg"
+            >
+              Limpiar
+            </button>
+          </div>
         </div>
+        
+        <InstructionsPanel />
         
         {/* Contexto de la Auditoría */}
         <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm grid grid-cols-2 gap-3 mb-2">
@@ -152,7 +173,7 @@ const WeekendAuditContent = () => {
         })}
       </div>
 
-      <div className="mt-6 border-t border-slate-200 pt-6">
+      <div className="mt-6 border-t border-slate-200 pt-6 mb-8">
         <h2 className="font-bold text-slate-800 mb-3 text-sm uppercase tracking-wider">Módulos Adicionales</h2>
         <button
           onClick={() => setActiveView('patient')}
@@ -172,24 +193,40 @@ const WeekendAuditContent = () => {
         </button>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.05)] md:static md:bg-transparent md:border-t-0 md:shadow-none md:mt-6 md:p-0 flex flex-col gap-3">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.05)] md:static md:bg-transparent md:border-t-0 md:shadow-none md:p-0 flex flex-col gap-3">
         <button
-          onClick={handleExport}
-          disabled={isExporting}
-          className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-3.5 px-4 rounded-xl shadow-sm hover:bg-emerald-700 transition-all disabled:opacity-50"
+          onClick={() => {
+            if (confirm('¿Guardar esta auditoría en el historial y finalizar? Esto limpiará el formulario actual.')) {
+              saveToHistory();
+              alert('Auditoría guardada en el historial con éxito.');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }}
+          className="w-full flex items-center justify-center gap-2 bg-blue-900 text-white font-bold py-3.5 px-4 rounded-xl shadow-sm hover:bg-blue-950 transition-all"
         >
-          <FileSpreadsheet className="w-5 h-5" />
-          {isExporting ? 'Generando Excel...' : 'Descargar Excel (Grilla)'}
+          <Save className="w-5 h-5" />
+          Guardar y Finalizar Auditoría
         </button>
 
-        <button
-          onClick={handleExportPPTX}
-          disabled={isExporting}
-          className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-bold py-3.5 px-4 rounded-xl shadow-sm hover:bg-blue-700 transition-all disabled:opacity-50"
-        >
-          <ClipboardCheck className="w-5 h-5" />
-          {isExporting ? 'Generando...' : 'Descargar PPTX (Presentación)'}
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={handleExport}
+            disabled={isExporting}
+            className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl shadow-sm hover:bg-emerald-700 transition-all disabled:opacity-50 text-sm"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Excel
+          </button>
+
+          <button
+            onClick={handleExportPPTX}
+            disabled={isExporting}
+            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white font-bold py-3 px-4 rounded-xl shadow-sm hover:bg-blue-700 transition-all disabled:opacity-50 text-sm"
+          >
+            <ClipboardCheck className="w-4 h-4" />
+            PPTX
+          </button>
+        </div>
       </div>
     </div>
   );

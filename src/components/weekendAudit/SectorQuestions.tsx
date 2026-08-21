@@ -57,19 +57,27 @@ export default function SectorQuestions({ sectorIndex, onBack }: SectorQuestions
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-2">Puntaje / Demérito</label>
                   <div className="grid grid-cols-4 gap-2">
-                    {[0, 1, 2, 3].map((val) => (
-                      <button
-                        key={val}
-                        onClick={() => setAnswer(sector.name, itemIndex, { ...currentAnswer, demerito: val })}
-                        className={`py-2 rounded-lg text-sm font-bold border transition-all ${
-                          currentAnswer.demerito === val 
-                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' 
-                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        {val}
-                      </button>
-                    ))}
+                    {[0, 1, 2, 3].map((val) => {
+                      const isSelected = currentAnswer.demerito === val;
+                      let btnClass = 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100';
+                      
+                      if (isSelected) {
+                        if (val === 0) btnClass = 'bg-blue-900 text-white border-blue-900 shadow-sm';
+                        else if (val === 1) btnClass = 'bg-blue-500 text-white border-blue-500 shadow-sm';
+                        else if (val === 2) btnClass = 'bg-blue-300 text-white border-blue-300 shadow-sm';
+                        else if (val === 3) btnClass = 'bg-blue-100 text-slate-800 border-blue-200 shadow-sm';
+                      }
+                      
+                      return (
+                        <button
+                          key={val}
+                          onClick={() => setAnswer(sector.name, itemIndex, { ...currentAnswer, demerito: val })}
+                          className={`py-2 rounded-lg text-sm font-bold border transition-all ${btnClass}`}
+                        >
+                          {val}
+                        </button>
+                      );
+                    })}
                   </div>
                   <div className="flex justify-between text-[10px] text-slate-400 mt-1 px-1">
                     <span>Satisfactorio (0)</span>

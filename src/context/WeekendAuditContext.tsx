@@ -39,6 +39,7 @@ interface WeekendAuditContextProps {
   setPatientExperience: (data: Partial<PatientExperienceState>) => void;
   setMetadata: (data: Partial<AuditMetadata>) => void;
   resetAudit: () => void;
+  saveToHistory: () => void;
   isAuditComplete: boolean;
 }
 
@@ -93,6 +94,31 @@ export const WeekendAuditProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [answers, patientExperience, metadata, isLoaded]);
 
+  const saveToHistory = () => {
+    try {
+      const historyStr = localStorage.getItem('weekend_audit_history');
+      let history = historyStr ? JSON.parse(historyStr) : [];
+      
+      const newEntry = {
+        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+        date: new Date().toISOString(),
+        answers,
+        patientExperience,
+        metadata
+      };
+      
+      history.push(newEntry);
+      localStorage.setItem('weekend_audit_history', JSON.stringify(history));
+      
+      // Limpiar el actual
+      setAnswersState({});
+      setPatientExperienceState(defaultPatientExperience);
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      console.error('Failed to save history', e);
+    }
+  };
+
   const setAnswer = (sectorName: string, itemIndex: number, answer: SectorAnswer) => {
     setAnswersState(prev => ({
       ...prev,
@@ -129,6 +155,7 @@ export const WeekendAuditProvider = ({ children }: { children: ReactNode }) => {
       setPatientExperience,
       setMetadata,
       resetAudit,
+      saveToHistory,
       isAuditComplete
     }}>
       {children}

@@ -16,7 +16,8 @@ export const exportWeekendAuditPPTX = async (
   
   // Theme colors based on Sanatorio's palette
   const COLOR_PRIMARY = '0F172A'; // slate-900
-  const COLOR_SECONDARY = '059669'; // emerald-600
+  const COLOR_SECONDARY = '1E3A8A'; // blue-900 (Sanatorio Blue)
+  const COLOR_LIGHT_BLUE = 'DBEAFE'; // blue-100
   
   pres.author = metadata.auditorName;
   pres.company = 'Sanatorio Argentino';
@@ -77,11 +78,13 @@ export const exportWeekendAuditPPTX = async (
     ]
   ];
 
-  sectorSummary.forEach(s => {
+  sectorSummary.forEach((s, index) => {
+    const isEven = index % 2 === 0;
+    const rowFill = isEven ? COLOR_LIGHT_BLUE : 'FFFFFF';
     tableData.push([
-      { text: s.sector, options: {} },
-      { text: `${s.evaluados} / ${s.total}`, options: {} },
-      { text: s.demeritos.toString(), options: { bold: true, color: s.demeritos > 0 ? 'DC2626' : '059669' } }
+      { text: s.sector, options: { fill: { color: rowFill } } },
+      { text: `${s.evaluados} / ${s.total}`, options: { fill: { color: rowFill }, align: 'center' } },
+      { text: s.demeritos.toString(), options: { bold: true, color: s.demeritos > 0 ? 'DC2626' : COLOR_SECONDARY, fill: { color: rowFill }, align: 'center' } }
     ]);
   });
 
