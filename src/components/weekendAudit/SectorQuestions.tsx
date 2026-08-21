@@ -39,7 +39,7 @@ export default function SectorQuestions({ sectorIndex, onBack }: SectorQuestions
           const isAnswered = currentAnswer.demerito !== null;
 
           return (
-            <div key={itemIndex} className={`bg-white rounded-xl border p-4 shadow-sm transition-all ${isAnswered ? 'border-emerald-200' : 'border-slate-200'}`}>
+            <div key={itemIndex} className={`rounded-xl border p-4 shadow-sm transition-all ${isAnswered ? 'border-emerald-200' : 'border-slate-200'} ${itemIndex % 2 === 0 ? 'bg-white' : 'bg-blue-50/40'}`}>
               <div className="flex items-start justify-between gap-2 mb-2">
                 <h3 className="font-bold text-slate-800 text-sm leading-tight">
                   {item.item}
