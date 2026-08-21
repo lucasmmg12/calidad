@@ -1,0 +1,372 @@
+{
+  "sectors": [
+    {
+      "name": "RECEPCIÓN (1)",
+      "items": [
+        {
+          "item": "1° META SEGURIDAD DE PACIENTE: \"IDENTIFICACIÓN DE PACIENTE\"",
+          "description": "*Se le solicita el DNI al paciente al momento de admisión.                                          *Se solicita que verifique sus datos en la pulsera.                                                           *Se identifica en la H.C (alergías alimenticia, medicamentosa, RH, paciente con riesgo de caída, patologías especiales)"
+        },
+        {
+          "item": "REGISTRO DE REIMPRESION DE PULSERAS DE IDENTIFICACION",
+          "description": "Revisar si se realizó re impresión de pulseras de identificación y si el registro está completo"
+        },
+        {
+          "item": "2° META SEGURIDAD DE PACIENTE: COMUNICACIÓN EFECTIVA",
+          "description": "*Comunicación interservicios, interconsultores,ambulancia,guardias pasivas."
+        },
+        {
+          "item": "CONSENTIMIENTO INFORMADO",
+          "description": "* Entregado por el paciente, firmado por el médico."
+        },
+        {
+          "item": "LIMPIEZA",
+          "description": "*Verificar que el lugar de trabajo esté limpio."
+        },
+        {
+          "item": "NOVEDADES",
+          "description": "*Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Verificar el normal funcionamiento de equipamiento médico y sistema salus."
+        }
+      ]
+    },
+    {
+      "name": "SEGURIDAD PATRIMONIAL (2)",
+      "items": [
+        {
+          "item": "1° META SEGURIDAD DE PACIENTE: \"IDENTIFICACIÓN DE PACIENTE\"",
+          "description": "*Que estén firmadas todas las altas con pulsera.                            \r\n*Admisión de paciente por guardia de seguridad (F1).                                \r\n*Identificación de visitante en habitaciones."
+        },
+        {
+          "item": "UNIFORME/PRESENCIA",
+          "description": "* Identificación de guardia mediante PIN."
+        },
+        {
+          "item": "CONTROL DE PROVEEDORES",
+          "description": "*Identificación y registro de ingreso y egreso. \r\n*Verificación del cierre de accesos (portón estacionamiento y pasillo de servicio)"
+        },
+        {
+          "item": "LLAVES",
+          "description": "*Que estén todas en el llavero, confome a registro de referencia.\r\n*Si falta alguna, que esté registrado en el cuaderno."
+        },
+        {
+          "item": "LIMPIEZA",
+          "description": "*Verificar que el lugar de trabajo esté limpio."
+        },
+        {
+          "item": "NOVEDADES",
+          "description": "*Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Verificar el normal funcionamiento de equipamiento médico y sistema salus."
+        }
+      ]
+    },
+    {
+      "name": "CONSULTORIO DE GUARDIA GINECO OBSTETRICIA (3)",
+      "items": [
+        {
+          "item": "1° META SEGURIDAD DE PACIENTE: \"IDENTIFICACIÓN DE PACIENTE\"",
+          "description": "*Admisión completa e identificación en H.C (alergías alimenticia, medicamentosa, RH, paciente con riesgo de caída, patologías especiales).\r\n* Identificación de internación por cirugía de bilateralidad. Marcación de Sitio Correcto. Verificación de estudios complementarios."
+        },
+        {
+          "item": "CANTIDAD DE PCTES. EN ESPERA",
+          "description": "*Que hayan sido todos recepcionados."
+        },
+        {
+          "item": "LIMPIEZA",
+          "description": "*Verificar que el lugar de trabajo esté limpio."
+        },
+        {
+          "item": "AGC",
+          "description": "*Controlar el funcionamiento normal de los equipos médicos"
+        },
+        {
+          "item": "NOVEDADES",
+          "description": "*Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Verificar el normal funcionamiento de equipamiento médico y sistema salus."
+        }
+      ]
+    },
+    {
+      "name": "INTERNADO (4)",
+      "items": [
+        {
+          "item": "1° META: IDENTIFICACIÓN DE PACIENTE \"HISTORIAS CLÍNICAS\"",
+          "description": "*Que estén consentimiento firmado/revocabilidad, firma medicos \r\n*Que tengan adjunta toda la documentación que se precisa"
+        },
+        {
+          "item": "3° META: CIRUGIA SEGURA - MARCACION DE SQ",
+          "description": "-Controlar el funcionamiento normal de los equipos y el Sistema Salus"
+        },
+        {
+          "item": "6° META DE SEGURIDAD DE PACIENTE: \"RIESGO DE CAÍDA\"",
+          "description": "* Se completo check list de valoración de Riesgo de caídas en las H.C auditadas. Se comunica a los pacientes las medidas preventivas para evitar evento adverso."
+        },
+        {
+          "item": "LIMPIEZA",
+          "description": "*Verificar que el lugar de trabajo esté limpio."
+        },
+        {
+          "item": "ENTREVISTA CON UN\r\nPACIENTE CON RIESGO ESPECIAL O COMPLEJO",
+          "description": "*Nombre y Apellido:\r\n*H.C.\r\n* Identificación de según tipo de riesgo (carteleria, pulsera rh) \r\n* Recibio información sobre medidas preventivas como por ej: riesgo de caída, administración de medicamentos\r\n*Favor califique su experiencia en Sanatorio Argentino:"
+        },
+        {
+          "item": "NOVEDADES",
+          "description": "*Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Verificar el normal funcionamiento de equipamiento médico y sistema salus."
+        }
+      ]
+    },
+    {
+      "name": "ALIMENTACION Y NUTRICION (5)",
+      "items": [
+        {
+          "item": "1° META: IDENTIFICACIÓN DE PACIENTE \r\nREGISTRO DE DIETAS",
+          "description": "*Que esté impreso y a disposición de todos los colaboradores del                                                                                                                                                                                                                                                               Servicio.\r\n*Platos identificados correctamente\r\n*Registro en H.C"
+        },
+        {
+          "item": "LIMPIEZA",
+          "description": "*Verificar que el lugar de trabajo esté limpio.\r\n*Heladeras, registros de temperatura"
+        },
+        {
+          "item": "NOVEDADES",
+          "description": "*Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Verificar el normal funcionamiento de equipamiento médico y sistema salus."
+        }
+      ]
+    },
+    {
+      "name": "AUXILIARES DE HOTELERÍA (6)",
+      "items": [
+        {
+          "item": "UN CARRO AL AZAR",
+          "description": ""
+        },
+        {
+          "item": "LIMPIEZA DE SUPERFICIE",
+          "description": "*Verificar técnica (en una sola direccion de limpieza)\r\n*Verificar dilucion de desinfectantes \"Surfanio 7 días, Hipoclorito a las 24 hs\" de su preparación"
+        },
+        {
+          "item": "PASE DE GUARDIA",
+          "description": "-Controlar que el registro este completo\r\n-Que sea coherente con el estado de limpieza del lugar."
+        },
+        {
+          "item": "UNIFORME/PRESENCIA",
+          "description": "-Completo y limpio."
+        },
+        {
+          "item": "NOVEDADES",
+          "description": "-Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Seguimento de hallazgos de auditorias anteriores."
+        }
+      ]
+    },
+    {
+      "name": "QUIRÓFANO (7)",
+      "items": [
+        {
+          "item": "3° META DE SEGURIDAD DE PACIENTE: CIRUGIA SEGURA",
+          "description": "-Verificar que el lugar de trabajo esté limpio."
+        },
+        {
+          "item": "LIMPIEZA DE SUPERFICIE",
+          "description": "*Evaluar tecnica (en una sola direccion de limpieza)\r\n*Verificar dilucion de desinfectantes: duración de Surfanio 7 días, Hipoclorito a las 24 hs. de su preparación"
+        },
+        {
+          "item": "NOVEDADES",
+          "description": "*Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Verificar el normal funcionamiento de equipamiento médico y sistema salus."
+        }
+      ]
+    },
+    {
+      "name": "CONSULTORIO DE GUARDIA PEDIÁTRICA (8)",
+      "items": [
+        {
+          "item": "CANTIDAD DE PCTES. EN ESPERA",
+          "description": "-Que hayan sido todos recepcionados.\r\n-Si son más de 5, que se haya solicitado otro médico."
+        },
+        {
+          "item": "RECEPCIONISTA",
+          "description": "*Se encuentra recepcionista en 1°piso."
+        },
+        {
+          "item": "LIMPIEZA",
+          "description": "*Que el lugar de trabajo esté limpio."
+        },
+        {
+          "item": "MANTENIMIENTO",
+          "description": "*Que se haya dado respuesta a todas las ordenes cargadas."
+        },
+        {
+          "item": "NOVEDADES",
+          "description": "*Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Verificar el normal funcionamiento de equipamiento médico y sistema salus."
+        }
+      ]
+    },
+    {
+      "name": "LABORATORIO (9)",
+      "items": [
+        {
+          "item": "ATENCIÓN A PCTES. INTERNADOS",
+          "description": "-Que se haya dado cumplimiento a todas las solicitudes del día.\r\n-Que se haya dado atención a pctes. de la guardia."
+        },
+        {
+          "item": "SISTEMAS",
+          "description": "-Controlar el funcionamiento normal de los equipos y el Sistema Salus"
+        },
+        {
+          "item": "NOVEDADES",
+          "description": "*Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Verificar el normal funcionamiento de equipamiento médico y sistema salus."
+        }
+      ]
+    },
+    {
+      "name": "UTI-NEONATAL (10)",
+      "items": [
+        {
+          "item": "1° META: IDENTIFICACIÓN DE PACIENTE \"HISTORIAS CLÍNICAS\"",
+          "description": "*Admisión completa e identificación en H.C. Pulsera de identificación binomio o contigencia (ingreso externo)\r\n*Consentimiento firmado/revocabilidad, foja de\r\nanestesia si aplica.\r\n*Que tengan adjunta toda la documentación que se precisa."
+        },
+        {
+          "item": "LIMPIEZA",
+          "description": "-Verificar que el lugar de trabajo esté limpio."
+        },
+        {
+          "item": "ENTREVISTA CON UN\r\nPACIENTE Y VALORACIÓN DE SU EXPERIENCIA",
+          "description": "-Nombre y Apellido:\r\n-H.C.\r\n-Favor califique su experiencia en Sanatorio Argentino (1-10):"
+        },
+        {
+          "item": "NOVEDADES",
+          "description": "*Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Contolar el correcto funcionamiento de equipos médicos y sistema Salus"
+        }
+      ]
+    },
+    {
+      "name": "UTI-PEDIÁTRICA (11)",
+      "items": [
+        {
+          "item": "1° META: IDENTIFICACIÓN DE PACIENTE \"HISTORIAS CLÍNICAS\"",
+          "description": "*Admisión completa e identificación en H.C. (check list de ingreso) \r\n*Pulsera de identificación de paciente. Identificación de según tipo de riesgo de caídas, medicamentos, alimentación, aislamiento.  \r\n*Consentimiento firmado/revocabilidad, foja de\r\nanestesia si aplica.\r\n*Que tengan adjunta toda la documentación que se precisa."
+        },
+        {
+          "item": "LIMPIEZA",
+          "description": "-Verificar que el lugar de trabajo esté limpio."
+        },
+        {
+          "item": "ENTREVISTA CON UN\r\nPACIENTE CON RIESGO ESPECIAL O COMPLEJO",
+          "description": "*Nombre y Apellido:\r\n*H.C.\r\n* Identificación de según tipo de riesgo (carteleria, pulsera rh) \r\n* Recibio información sobre medidas preventivas como por ej: riesgo de caída, administración de medicamentos\r\n*Favor califique su experiencia en Sanatorio Argentino:"
+        },
+        {
+          "item": "NOVEDADES",
+          "description": "*Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Verificar el normal funcionamiento de equipamiento médico y sistema salus."
+        }
+      ]
+    },
+    {
+      "name": "HOSPITAL DE DIA - dia lunes hasta las 15 hs (12)",
+      "items": [
+        {
+          "item": "1° META SEGURIDAD DE PACIENTE: \"IDENTIFICACIÓN DE PACIENTE\"",
+          "description": "*Admisión completa e identificación en H.C (alergías alimenticia, medicamentosa, RH, paciente con riesgo de caída, patologías especiales).\r\n* Identificación de internación por cirugía de bilateralidad. Marcación de Sitio Correcto. Verificación de estudios complementarios."
+        },
+        {
+          "item": "CANTIDAD DE PCTES. EN ESPERA",
+          "description": "*Que hayan sido todos recepcionados."
+        },
+        {
+          "item": "LIMPIEZA",
+          "description": "*Verificar que el lugar de trabajo esté limpio."
+        },
+        {
+          "item": "AGC",
+          "description": "*Controlar el funcionamiento normal de los equipos médicos"
+        },
+        {
+          "item": "NOVEDADES",
+          "description": "*Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Verificar el normal funcionamiento sistema salus."
+        }
+      ]
+    },
+    {
+      "name": "FERTILIDAD - dia lunes hasta las 15 hs (13)",
+      "items": [
+        {
+          "item": "1° META SEGURIDAD DE PACIENTE: \"IDENTIFICACIÓN DE PACIENTE\"",
+          "description": "*Admisión completa e identificación en H.C (alergías alimenticia, medicamentosa, RH, paciente con riesgo de caída, patologías especiales).\r\n* Identificación de internación por cirugía de bilateralidad. Marcación de Sitio Correcto. Verificación de estudios complementarios."
+        },
+        {
+          "item": "CANTIDAD DE PCTES. EN ESPERA",
+          "description": "*Que hayan sido todos recepcionados.\r\n*Tardanzas de procedimietos o profesionales."
+        },
+        {
+          "item": "LIMPIEZA",
+          "description": "*Verificar que el lugar de trabajo esté limpio."
+        },
+        {
+          "item": "NOVEDADES",
+          "description": "*Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Verificar el normal funcionamiento de equipamiento médico y sistema salus."
+        }
+      ]
+    },
+    {
+      "name": "CONSULTORIO DE GUARDIA CLINICA MEDICA",
+      "items": [
+        {
+          "item": "1° META SEGURIDAD DE PACIENTE: \"IDENTIFICACIÓN DE PACIENTE\"",
+          "description": "*Admisión completa e identificación en H.C (alergías alimenticia, medicamentosa, RH, paciente con riesgo de caída, patologías especiales).\r\n* Identificación de internación por cirugía de bilateralidad. Marcación de Sitio Correcto. Verificación de estudios complementarios."
+        },
+        {
+          "item": "CANTIDAD DE PCTES. EN ESPERA",
+          "description": "*Que hayan sido todos recepcionados."
+        },
+        {
+          "item": "LIMPIEZA",
+          "description": "*Verificar que el lugar de trabajo esté limpio."
+        },
+        {
+          "item": "AGC",
+          "description": "*Controlar el funcionamiento normal de los equipos médicos"
+        },
+        {
+          "item": "NOVEDADES",
+          "description": "*Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Verificar el normal funcionamiento de equipamiento médico y sistema salus."
+        }
+      ]
+    },
+    {
+      "name": "SHOCK ROOM",
+      "items": [
+        {
+          "item": "1° META: IDENTIFICACIÓN DE PACIENTE \"HISTORIAS CLÍNICAS\"",
+          "description": "*Admisión completa e identificación en H.C. Pulsera de identificación binomio o contigencia (ingreso externo)\r\n*Consentimiento firmado/revocabilidad, foja de\r\nanestesia si aplica.\r\n*Que tengan adjunta toda la documentación que se precisa."
+        },
+        {
+          "item": "LIMPIEZA",
+          "description": "-Verificar que el lugar de trabajo esté limpio."
+        },
+        {
+          "item": "ENTREVISTA CON UN\r\nPACIENTE Y VALORACIÓN DE SU EXPERIENCIA",
+          "description": "-Nombre y Apellido:\r\n-H.C.\r\n-Favor califique su experiencia en Sanatorio Argentino (1-10):"
+        },
+        {
+          "item": "NOVEDADES",
+          "description": "*Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Contolar el correcto funcionamiento de equipos médicos y sistema Salus"
+        }
+      ]
+    },
+    {
+      "name": "UCI - Cuidados intensivos e intermedios",
+      "items": [
+        {
+          "item": "1° META: IDENTIFICACIÓN DE PACIENTE \"HISTORIAS CLÍNICAS\"",
+          "description": "*Admisión completa e identificación en H.C. (check list de ingreso) \r\n*Pulsera de identificación de paciente. Identificación de según tipo de riesgo de caídas, medicamentos, alimentación, aislamiento.  \r\n*Consentimiento firmado/revocabilidad, foja de\r\nanestesia si aplica.\r\n*Que tengan adjunta toda la documentación que se precisa."
+        },
+        {
+          "item": "LIMPIEZA",
+          "description": "-Verificar que el lugar de trabajo esté limpio."
+        },
+        {
+          "item": "ENTREVISTA CON UN\r\nPACIENTE CON RIESGO ESPECIAL O COMPLEJO",
+          "description": "*Nombre y Apellido:\r\n*H.C.\r\n* Identificación de según tipo de riesgo (carteleria, pulsera rh) \r\n* Recibio información sobre medidas preventivas como por ej: riesgo de caída, administración de medicamentos\r\n*Favor califique su experiencia en Sanatorio Argentino:"
+        },
+        {
+          "item": "NOVEDADES",
+          "description": "*Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Verificar el normal funcionamiento de equipamiento médico y sistema salus."
+        }
+      ]
+    }
+  ]
+}
