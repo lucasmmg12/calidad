@@ -40,7 +40,7 @@ for (let i = 0; i < data.length; i++) {
     
     currentSector.items.push({
       item: col0,
-      description: desc ? desc.trim() : ''
+      description: desc ? desc.replace(/\s{3,}/g, '\n').trim() : ''
     });
   }
 }
