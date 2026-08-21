@@ -4,16 +4,8 @@
       "name": "RECEPCIÓN (1)",
       "items": [
         {
-          "item": "1° META SEGURIDAD DE PACIENTE: \"IDENTIFICACIÓN DE PACIENTE\"",
-          "description": "*Se le solicita el DNI al paciente al momento de admisión.\n*Se solicita que verifique sus datos en la pulsera.\n*Se identifica en la H.C (alergías alimenticia, medicamentosa, RH, paciente con riesgo de caída, patologías especiales)"
-        },
-        {
-          "item": "REGISTRO DE REIMPRESION DE PULSERAS DE IDENTIFICACION",
-          "description": "Revisar si se realizó re impresión de pulseras de identificación y si el registro está completo"
-        },
-        {
-          "item": "2° META SEGURIDAD DE PACIENTE: COMUNICACIÓN EFECTIVA",
-          "description": "*Comunicación interservicios, interconsultores,ambulancia,guardias pasivas."
+          "item": "1° META",
+          "description": "*Se le solicita el DNI al paciente al momento de admisión."
         },
         {
           "item": "CONSENTIMIENTO INFORMADO",
