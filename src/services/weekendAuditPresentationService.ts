@@ -43,7 +43,22 @@ export const exportWeekendAuditPPTX = async (
     fontSize: 18, color: '64748B', align: 'center'
   });
 
-  // --- SLIDE 2: Resumen Global ---
+  // --- SLIDE 2: Metodología y Alcance ---
+  const slideAlcance = pres.addSlide();
+  slideAlcance.addText('Metodología y Alcance', {
+    x: 0.5, y: 0.5, w: 9, h: 0.8, fontSize: 32, bold: true, color: COLOR_PRIMARY
+  });
+  slideAlcance.addText('NOTA IMPORTANTE:', {
+    x: 0.5, y: 1.8, w: 9, h: 0.5, fontSize: 20, bold: true, color: COLOR_SECONDARY
+  });
+  slideAlcance.addText(
+    'Esta auditoría es de carácter muestral. Durante el fin de semana solo se realiza la evaluación ' + 
+    'de los sectores seleccionados o que tuvieron actividad clínica y administrativa.\n\n' + 
+    'Los sectores que no figuran en este reporte no fueron auditados en esta oportunidad.', {
+    x: 0.5, y: 2.5, w: 9, h: 2, fontSize: 18, color: '334155', fill: { color: COLOR_LIGHT_BLUE }
+  });
+
+  // --- SLIDE 3: Resumen Global ---
   const slideResumen = pres.addSlide();
   slideResumen.addText('Resumen Global por Sector', {
     x: 0.5, y: 0.3, w: 9, h: 0.8, fontSize: 28, bold: true, color: COLOR_PRIMARY
@@ -99,39 +114,59 @@ export const exportWeekendAuditPPTX = async (
     slideResumen.addText('No hay datos evaluados para mostrar.', { x: 0.5, y: 2, w: 9, fontSize: 16, color: '64748B' });
   }
 
-  // --- SLIDES 3+: Detalles por Sector ---
+  // --- SLIDES 4+: Detalles por Sector (Sólo los evaluados) ---
   templateData.sectors.forEach(sector => {
     const sectorAnswers = answers[sector.name] || {};
+    const evaluados = Object.values(sectorAnswers).filter((a: any) => a && a.demerito !== null).length;
+    
+    // Solo mostramos sectores que fueron auditados
+    if (evaluados === 0) return;
+
     const itemsWithIssues = sector.items.map((item, index) => ({
       item: item.item,
       ans: sectorAnswers[index]
     })).filter(x => x.ans && ((x.ans.demerito || 0) > 0 || (x.ans.observaciones && x.ans.observaciones.trim().length > 0)));
 
-    if (itemsWithIssues.length > 0) {
-      const slideSector = pres.addSlide();
-      slideSector.addText(`Detalle: ${sector.name}`, {
-        x: 0.5, y: 0.3, w: 9, h: 0.6, fontSize: 24, bold: true, color: COLOR_PRIMARY
+    const slideSector = pres.addSlide();
+    slideSector.addText(`Sector: ${sector.name}`, {
+      x: 0.5, y: 0.3, w: 9, h: 0.6, fontSize: 24, bold: true, color: COLOR_PRIMARY
+    });
+
+    const totalDemeritosSector = itemsWithIssues.reduce((acc, curr) => acc + (curr.ans.demerito || 0), 0);
+
+    if (totalDemeritosSector === 0 && itemsWithIssues.length === 0) {
+      slideSector.addText('✅ VEREDICTO: Cumplimiento satisfactorio en todos los ítems evaluados. No se encontraron desviaciones ni observaciones adicionales.', {
+        x: 0.5, y: 1.2, w: 9, h: 1, fontSize: 16, bold: true, color: '059669', fill: { color: 'ECFDF5' }
+      });
+    } else {
+      slideSector.addText('⚠️ VEREDICTO: Se encontraron desviaciones u observaciones relevantes. A continuación se detalla el reporte:', {
+        x: 0.5, y: 1.2, w: 9, h: 0.8, fontSize: 16, bold: true, color: 'DC2626', fill: { color: 'FEF2F2' }
       });
 
-      let yPos = 1.2;
-      itemsWithIssues.forEach(issue => {
-        // Prevent overflowing slide (very basic logic, a real impl might chunk to multiple slides)
-        if (yPos > 4.5) return;
+      const sectorTableData: any[] = [
+        [
+          { text: 'Ítem Evaluado', options: { bold: true, fill: { color: COLOR_SECONDARY }, color: 'FFFFFF' } },
+          { text: 'Demérito', options: { bold: true, fill: { color: COLOR_SECONDARY }, color: 'FFFFFF' } },
+          { text: 'Observaciones', options: { bold: true, fill: { color: COLOR_SECONDARY }, color: 'FFFFFF' } }
+        ]
+      ];
 
-        slideSector.addText(`Ítem: ${issue.item}`, {
-          x: 0.5, y: yPos, w: 9, h: 0.3, fontSize: 12, bold: true, color: '334155'
-        });
-        yPos += 0.3;
-        
-        slideSector.addText(`Demérito: ${issue.ans.demerito || 0} | Observaciones: ${issue.ans.observaciones || 'N/A'}`, {
-          x: 0.8, y: yPos, w: 8.7, h: 0.3, fontSize: 11, color: (issue.ans.demerito || 0) > 0 ? 'DC2626' : '64748B'
-        });
-        yPos += 0.5;
+      itemsWithIssues.forEach((issue, idx) => {
+        const isEven = idx % 2 === 0;
+        const rowFill = isEven ? COLOR_LIGHT_BLUE : 'FFFFFF';
+        sectorTableData.push([
+          { text: issue.item, options: { fill: { color: rowFill }, fontSize: 11 } },
+          { text: (issue.ans.demerito || 0).toString(), options: { fill: { color: rowFill }, fontSize: 12, bold: true, color: (issue.ans.demerito || 0) > 0 ? 'DC2626' : COLOR_SECONDARY, align: 'center' } },
+          { text: issue.ans.observaciones || 'N/A', options: { fill: { color: rowFill }, fontSize: 11 } }
+        ]);
       });
-      
-      if (itemsWithIssues.length > 6) {
-         slideSector.addText('... (más ítems omitidos en esta vista)', { x: 0.8, y: 5.2, w: 8.7, fontSize: 10, italic: true });
-      }
+
+      slideSector.addTable(sectorTableData, {
+        x: 0.5, y: 2.2, w: 9, 
+        border: { pt: 1, color: 'E2E8F0' },
+        autoPage: true,
+        colW: [4, 1.5, 3.5]
+      });
     }
   });
 
