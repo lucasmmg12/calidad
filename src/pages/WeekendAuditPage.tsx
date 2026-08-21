@@ -9,7 +9,8 @@ import InstructionsPanel from '../components/weekendAudit/InstructionsPanel';
 import { exportWeekendAudit } from '../services/weekendAuditExportService';
 import { exportWeekendAuditPPTX } from '../services/weekendAuditPresentationService';
 import { useAuth } from '../contexts/AuthContext';
-import { AlertModal, AlertType } from '../components/AlertModal';
+import { AlertModal } from '../components/AlertModal';
+import type { AlertType } from '../components/AlertModal';
 
 const WeekendAuditContent = () => {
   const [activeView, setActiveView] = useState<'list' | 'sector' | 'patient' | 'history'>('list');
