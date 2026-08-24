@@ -57,6 +57,7 @@ interface Props {
         step1EvidenceUrls?: string[];
         qualityObservations?: string;
         managementType?: string;
+        evidenceUrls?: string[];
     };
     onSubmit: (data: ResolutionFormData) => Promise<void>;
     onReject?: () => void;
@@ -674,6 +675,21 @@ export const ResolutionForm = ({ reportData, onSubmit, onReject }: Props) => {
                     <div className="bg-gray-50 rounded-xl p-4 text-gray-700 text-sm leading-relaxed border border-gray-100 italic">
                         "{reportData.description}"
                     </div>
+
+                    {/* Original Reporter Evidence */}
+                    {reportData.evidenceUrls && reportData.evidenceUrls.length > 0 && (
+                        <div className="mt-4">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">📷 Fotos Adjuntas por el Reportante</p>
+                            <div className="flex gap-2 overflow-x-auto pb-2">
+                                {reportData.evidenceUrls.map((url, i) => (
+                                    <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                                        className="w-20 h-20 rounded-xl bg-gray-100 bg-cover bg-center border border-gray-200 flex-shrink-0 hover:ring-2 ring-blue-400 transition-all"
+                                        style={{ backgroundImage: `url(${url})` }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Sectores intervinientes */}
                     <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">

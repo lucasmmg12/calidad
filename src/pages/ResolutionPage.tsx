@@ -93,6 +93,7 @@ export const ResolutionPage = () => {
                         draftUpdatedAt: data.draft_updated_at || null,
                         immediateAction: assignment.immediate_action || data.resolution_notes || '',
                         step1EvidenceUrls: assignment.resolution_evidence_urls || data.step1_evidence_urls || [],
+                        evidenceUrls: data.evidence_urls || [],
                         qualityObservations: data.quality_observations || '',
                         managementType: assignment.management_type || 'simple',
                     });
@@ -120,6 +121,7 @@ export const ResolutionPage = () => {
                         draftUpdatedAt: data.draft_updated_at || null,
                         immediateAction: data.resolution_notes || '',
                         step1EvidenceUrls: data.step1_evidence_urls || [],
+                        evidenceUrls: data.evidence_urls || [],
                         qualityObservations: data.quality_observations || '',
                         managementType: data.management_type || 'simple',
                     });
