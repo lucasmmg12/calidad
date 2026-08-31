@@ -42,7 +42,6 @@ export const exportWeekendAudit = async (
     if (!row || row.length === 0 || !row[0]) continue;
     
     const col0 = String(row[0]).trim();
-    if (i < 30) continue;
     if (col0 === 'ÍTEM') continue;
 
     let isSector = false;

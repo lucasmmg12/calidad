@@ -26,7 +26,7 @@
       "items": [
         {
           "item": "1° META SEGURIDAD DE PACIENTE: \"IDENTIFICACIÓN DE PACIENTE\"",
-          "description": "*Que estén firmadas todas las altas con pulsera.\n*Admisión de paciente por guardia de seguridad (F1).\n*Identificación de visitante en habitaciones."
+          "description": "*Que estén firmadas todas las altas con pulsera.                            \r\n*Admisión de paciente por guardia de seguridad (F1).                                \r\n*Identificación de visitante en habitaciones."
         },
         {
           "item": "UNIFORME/PRESENCIA",
@@ -34,7 +34,7 @@
         },
         {
           "item": "CONTROL DE PROVEEDORES",
-          "description": "*Identificación y registro de ingreso y egreso.\n*Verificación del cierre de accesos (portón estacionamiento y pasillo de servicio)"
+          "description": "*Identificación y registro de ingreso y egreso. \r\n*Verificación del cierre de accesos (portón estacionamiento y pasillo de servicio)"
         },
         {
           "item": "LLAVES",
@@ -80,11 +80,11 @@
       "items": [
         {
           "item": "1° META: IDENTIFICACIÓN DE PACIENTE \"HISTORIAS CLÍNICAS\"",
-          "description": "*Que estén consentimiento firmado/revocabilidad, firma medicos\n*Que tengan adjunta toda la documentación que se precisa"
+          "description": "*Que estén consentimiento firmado/revocabilidad, firma medicos \r\n*Que tengan adjunta toda la documentación que se precisa"
         },
         {
           "item": "3° META: CIRUGIA SEGURA - MARCACION DE SQ",
-          "description": "-Controlar el funcionamiento normal de los equipos y el Sistema Salus"
+          "description": "-Controlar el funcionamiento normal de los equipos y el Sistema Salus\n* Registro de marcacion de SQ"
         },
         {
           "item": "6° META DE SEGURIDAD DE PACIENTE: \"RIESGO DE CAÍDA\"",
@@ -96,7 +96,7 @@
         },
         {
           "item": "ENTREVISTA CON UN\r\nPACIENTE CON RIESGO ESPECIAL O COMPLEJO",
-          "description": "*Nombre y Apellido:\r\n*H.C.\r\n* Identificación de según tipo de riesgo (carteleria, pulsera rh)\n* Recibio información sobre medidas preventivas como por ej: riesgo de caída, administración de medicamentos\r\n*Favor califique su experiencia en Sanatorio Argentino:"
+          "description": "*Nombre y Apellido:\r\n*H.C.\r\n* Identificación de según tipo de riesgo (carteleria, pulsera rh) \r\n* Recibio información sobre medidas preventivas como por ej: riesgo de caída, administración de medicamentos\r\n*Favor califique su experiencia en Sanatorio Argentino:"
         },
         {
           "item": "NOVEDADES",
@@ -109,7 +109,7 @@
       "items": [
         {
           "item": "1° META: IDENTIFICACIÓN DE PACIENTE \r\nREGISTRO DE DIETAS",
-          "description": "*Que esté impreso y a disposición de todos los colaboradores del\nServicio.\r\n*Platos identificados correctamente\r\n*Registro en H.C"
+          "description": "*Que esté impreso y a disposición de todos los colaboradores del                                                                                                                                                                                                                                                               Servicio.\r\n*Platos identificados correctamente\r\n*Registro en H.C"
         },
         {
           "item": "LIMPIEZA",
@@ -142,7 +142,7 @@
         },
         {
           "item": "NOVEDADES",
-          "description": "-Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Seguimento de hallazgos de auditorias anteriores."
+          "description": "-Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Seguimento de hallazgos de auditorias anteriores.\n*Si hubo reclamos,oportunidades de mejora, eventos adversos o\r\nproblemas de infraestructura que estén cargados en el sistema. Verificar el normal funcionamiento de equipamiento médico y sistema salus."
         }
       ]
     },
@@ -151,7 +151,7 @@
       "items": [
         {
           "item": "3° META DE SEGURIDAD DE PACIENTE: CIRUGIA SEGURA",
-          "description": "-Verificar que el lugar de trabajo esté limpio."
+          "description": "-Verificar que el lugar de trabajo esté limpio.\n* Verificar cumplimiento de checklist de cirugía segura."
         },
         {
           "item": "LIMPIEZA DE SUPERFICIE",
@@ -168,7 +168,7 @@
       "items": [
         {
           "item": "CANTIDAD DE PCTES. EN ESPERA",
-          "description": "-Que hayan sido todos recepcionados.\r\n-Si son más de 5, que se haya solicitado otro médico."
+          "description": "-Que hayan sido todos recepcionados.\r\n-Si son más de 5, que se haya solicitado otro médico.\n*Cantidad de paciente en espera. Refuerzo de guardia, cada 5 pacientes."
         },
         {
           "item": "RECEPCIONISTA",
@@ -231,7 +231,7 @@
       "items": [
         {
           "item": "1° META: IDENTIFICACIÓN DE PACIENTE \"HISTORIAS CLÍNICAS\"",
-          "description": "*Admisión completa e identificación en H.C. (check list de ingreso)\n*Pulsera de identificación de paciente. Identificación de según tipo de riesgo de caídas, medicamentos, alimentación, aislamiento.\n*Consentimiento firmado/revocabilidad, foja de\r\nanestesia si aplica.\r\n*Que tengan adjunta toda la documentación que se precisa."
+          "description": "*Admisión completa e identificación en H.C. (check list de ingreso) \r\n*Pulsera de identificación de paciente. Identificación de según tipo de riesgo de caídas, medicamentos, alimentación, aislamiento.  \r\n*Consentimiento firmado/revocabilidad, foja de\r\nanestesia si aplica.\r\n*Que tengan adjunta toda la documentación que se precisa."
         },
         {
           "item": "LIMPIEZA",
@@ -239,7 +239,7 @@
         },
         {
           "item": "ENTREVISTA CON UN\r\nPACIENTE CON RIESGO ESPECIAL O COMPLEJO",
-          "description": "*Nombre y Apellido:\r\n*H.C.\r\n* Identificación de según tipo de riesgo (carteleria, pulsera rh)\n* Recibio información sobre medidas preventivas como por ej: riesgo de caída, administración de medicamentos\r\n*Favor califique su experiencia en Sanatorio Argentino:"
+          "description": "*Nombre y Apellido:\r\n*H.C.\r\n* Identificación de según tipo de riesgo (carteleria, pulsera rh) \r\n* Recibio información sobre medidas preventivas como por ej: riesgo de caída, administración de medicamentos\r\n*Favor califique su experiencia en Sanatorio Argentino:"
         },
         {
           "item": "NOVEDADES",
@@ -344,7 +344,7 @@
       "items": [
         {
           "item": "1° META: IDENTIFICACIÓN DE PACIENTE \"HISTORIAS CLÍNICAS\"",
-          "description": "*Admisión completa e identificación en H.C. (check list de ingreso)\n*Pulsera de identificación de paciente. Identificación de según tipo de riesgo de caídas, medicamentos, alimentación, aislamiento.\n*Consentimiento firmado/revocabilidad, foja de\r\nanestesia si aplica.\r\n*Que tengan adjunta toda la documentación que se precisa."
+          "description": "*Admisión completa e identificación en H.C. (check list de ingreso) \r\n*Pulsera de identificación de paciente. Identificación de según tipo de riesgo de caídas, medicamentos, alimentación, aislamiento.  \r\n*Consentimiento firmado/revocabilidad, foja de\r\nanestesia si aplica.\r\n*Que tengan adjunta toda la documentación que se precisa."
         },
         {
           "item": "LIMPIEZA",
@@ -352,7 +352,7 @@
         },
         {
           "item": "ENTREVISTA CON UN\r\nPACIENTE CON RIESGO ESPECIAL O COMPLEJO",
-          "description": "*Nombre y Apellido:\r\n*H.C.\r\n* Identificación de según tipo de riesgo (carteleria, pulsera rh)\n* Recibio información sobre medidas preventivas como por ej: riesgo de caída, administración de medicamentos\r\n*Favor califique su experiencia en Sanatorio Argentino:"
+          "description": "*Nombre y Apellido:\r\n*H.C.\r\n* Identificación de según tipo de riesgo (carteleria, pulsera rh) \r\n* Recibio información sobre medidas preventivas como por ej: riesgo de caída, administración de medicamentos\r\n*Favor califique su experiencia en Sanatorio Argentino:"
         },
         {
           "item": "NOVEDADES",
