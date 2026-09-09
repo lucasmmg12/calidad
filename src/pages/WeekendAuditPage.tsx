@@ -116,7 +116,7 @@ const WeekendAuditContent = () => {
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
             <ClipboardCheck className="w-6 h-6 text-emerald-600" />
-            Auditoría Fin de Semana
+            Auditoría de Proceso
           </h1>
           <div className="flex gap-2">
             <button 

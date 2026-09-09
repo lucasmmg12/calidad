@@ -20,7 +20,7 @@ export const exportWeekendAuditPPTX = async (
   
   pres.author = metadata.auditorName;
   pres.company = 'Sanatorio Argentino';
-  pres.title = 'Auditoría de Fin de Semana';
+  pres.title = 'Auditoría de Proceso';
 
   // --- SLIDE MASTER ---
   // Define a master slide with the logos at the top and the banner at the bottom
@@ -46,7 +46,7 @@ export const exportWeekendAuditPPTX = async (
   // --- SLIDE 1: Portada ---
   const slidePortada = pres.addSlide({ masterName: 'MASTER_SLIDE' });
   
-  slidePortada.addText('AUDITORÍA FIN DE SEMANA', {
+  slidePortada.addText('AUDITORÍA DE PROCESO', {
     x: 0.5, y: 2, w: 9, h: 1, 
     fontSize: 44, bold: true, color: COLOR_TITLE, align: 'center', shadow: { type: 'outer', color: '000000', blur: 3, offset: 2, opacity: 0.3 }
   });
@@ -149,6 +149,6 @@ export const exportWeekendAuditPPTX = async (
   }
 
   // Save the presentation
-  const fileName = `Auditoria_Finde_${metadata.auditDate.replace(/-/g, '')}.pptx`;
+  const fileName = `Auditoria_Proceso_${metadata.auditDate.replace(/-/g, '')}.pptx`;
   await pres.writeFile({ fileName });
 };

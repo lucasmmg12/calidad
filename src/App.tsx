@@ -119,8 +119,8 @@ function Navbar() {
                 </Link>
                 */}
 
-                <Link to="/auditoria-fin-de-semana" className="hidden md:flex items-center gap-2 px-4 py-2 text-emerald-700 font-bold text-sm hover:bg-emerald-50 rounded-xl transition-all" title="Auditoría de Fin de Semana">
-                  <ClipboardCheck className="w-4 h-4 text-emerald-600" /> Aud. Finde
+                <Link to="/auditoria-fin-de-semana" className="hidden md:flex items-center gap-2 px-4 py-2 text-emerald-700 font-bold text-sm hover:bg-emerald-50 rounded-xl transition-all" title="Auditoría de Proceso">
+                  <ClipboardCheck className="w-4 h-4 text-emerald-600" /> Auditoría de Proceso
                 </Link>
 
                 <Link to="/metrics" className="hidden md:flex items-center gap-2 px-4 py-2 text-sanatorio-primary font-bold text-sm hover:bg-sanatorio-primary/5 rounded-xl transition-all">
@@ -234,7 +234,7 @@ function Navbar() {
                   */}
 
                   <Link onClick={closeMobileMenu} to="/auditoria-fin-de-semana" className="flex items-center gap-3 px-4 py-3 text-emerald-700 font-bold text-sm hover:bg-emerald-50 rounded-xl transition-all">
-                    <ClipboardCheck className="w-4 h-4 text-emerald-600" /> Auditoría Fin de Semana
+                    <ClipboardCheck className="w-4 h-4 text-emerald-600" /> Auditoría de Proceso
                   </Link>
 
                   <Link onClick={closeMobileMenu} to="/metrics" className="flex items-center gap-3 px-4 py-3 text-sanatorio-primary font-bold text-sm hover:bg-sanatorio-primary/5 rounded-xl transition-all">
@@ -329,6 +329,8 @@ function App() {
                 <Route path="/metrics" element={<MetricsDashboard />} />
                 <Route path="/auditoria-procesos" element={<ProcessAuditPage />} />
                 <Route path="/auditoria-fin-de-semana" element={<WeekendAuditPage />} />
+                <Route path="/auditoria-proceso" element={<WeekendAuditPage />} />
+                <Route path="/auditoria-de-proceso" element={<WeekendAuditPage />} />
               </Route>
 
               {/* Perfil y Manual — Cualquier rol autenticado */}

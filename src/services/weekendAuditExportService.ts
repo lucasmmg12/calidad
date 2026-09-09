@@ -105,5 +105,5 @@ export const exportWeekendAudit = async (
 
   // 5. Download the file
   const dateStr = new Date().toISOString().split('T')[0];
-  XLSX.writeFile(workbook, `Auditoria_Fin_De_Semana_${dateStr}.xlsx`);
+  XLSX.writeFile(workbook, `Auditoria_De_Proceso_${dateStr}.xlsx`);
 };
