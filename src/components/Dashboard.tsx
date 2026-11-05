@@ -1905,12 +1905,7 @@ export const Dashboard = () => {
         }).sort((a, b) => new Date(a.implementation_date).getTime() - new Date(b.implementation_date).getTime());
     }, [reports]);
 
-    // Auto-open notifications if urgency exists (initially)
-    useEffect(() => {
-        if (expirationAlerts.length > 0) {
-            setShowNotifications(true);
-        }
-    }, [expirationAlerts.length]);
+    // Notifications panel starts collapsed by default; user expands it on demand.
 
     return (
         <div className="max-w-7xl mx-auto p-3 sm:p-6">
@@ -1977,64 +1972,90 @@ export const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Notifications Panel */}
-            {showNotifications && (
-                <div className="mb-8 animate-in slide-in-from-top-4 duration-500">
-                    <div className="bg-white rounded-2xl shadow-sm border border-orange-100 overflow-hidden">
-                        <div className="bg-orange-50/50 p-4 border-b border-orange-100 flex items-center justify-between">
-                            <h3 className="text-sm font-bold text-orange-800 flex items-center gap-2">
-                                <Bell className="w-4 h-4" />
-                                Alertas de Vencimiento
-                            </h3>
-                            <button onClick={() => setShowNotifications(false)} className="text-orange-400 hover:text-orange-600">
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-
-                        {expirationAlerts.length > 0 ? (
-                            <div className="p-2 grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                                {expirationAlerts.map(alert => {
-                                    const implDate = new Date(alert.implementation_date);
-                                    const today = new Date();
-                                    const isOverdue = implDate < today;
-                                    const daysDiff = Math.ceil((implDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
-
-                                    return (
-                                        <button
-                                            key={alert.id}
-                                            onClick={() => setSelectedReport(alert)}
-                                            className={`text-left p-3 rounded-xl border transition-all hover:shadow-md flex items-start gap-3 group
-                                            ${isOverdue
-                                                    ? 'bg-red-50 border-red-100 hover:border-red-200'
-                                                    : 'bg-orange-50/30 border-orange-100 hover:border-orange-200'
-                                                }`}
-                                        >
-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isOverdue ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
-                                                <Clock className="w-4 h-4" />
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-0.5">
-                                                    <span className="font-bold text-gray-800 text-xs">#{alert.tracking_id}</span>
-                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isOverdue ? 'bg-red-200 text-red-800' : 'bg-orange-200 text-orange-800'}`}>
-                                                        {isOverdue ? 'Vencido' : `${daysDiff} días`}
-                                                    </span>
-                                                </div>
-                                                <p className="text-xs text-gray-600 line-clamp-1 mb-1">{alert.sector}</p>
-                                                <p className="text-[10px] text-gray-400 font-medium">
-                                                    Vence: {implDate.toLocaleDateString()}
-                                                </p>
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <div className="p-8 text-center flex flex-col items-center justify-center text-gray-400">
-                                <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-                                    <CheckCircle className="w-6 h-6 text-green-500/50" />
+            {/* Notifications Panel (Collapsible Accordion — collapsed by default) */}
+            {(expirationAlerts.length > 0 || showNotifications) && (
+                <div className="mb-5">
+                    <div className="bg-white rounded-2xl shadow-2xs border border-orange-200/80 overflow-hidden transition-all">
+                        <button
+                            type="button"
+                            onClick={() => setShowNotifications(!showNotifications)}
+                            className={`w-full bg-orange-50/60 hover:bg-orange-50 px-4 py-3 flex items-center justify-between transition-colors cursor-pointer ${
+                                showNotifications ? 'border-b border-orange-100' : ''
+                            }`}
+                        >
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-7 h-7 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center">
+                                    <Bell className="w-4 h-4" />
                                 </div>
-                                <p className="text-sm font-medium text-gray-600">Todo al día</p>
-                                <p className="text-xs">No hay acciones correctivas próximas a vencer.</p>
+                                <span className="text-sm font-bold text-orange-900">
+                                    Alertas de Vencimiento
+                                </span>
+                                {expirationAlerts.length > 0 && (
+                                    <span className="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-orange-200/80 text-orange-900">
+                                        {expirationAlerts.length} {expirationAlerts.length === 1 ? 'caso' : 'casos'}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs font-bold text-orange-700">
+                                <span className="hidden sm:inline">
+                                    {showNotifications ? 'Ocultar alertas' : 'Desplegar alertas'}
+                                </span>
+                                <ChevronDown
+                                    className={`w-4 h-4 text-orange-600 transition-transform duration-200 ${
+                                        showNotifications ? 'rotate-180' : ''
+                                    }`}
+                                />
+                            </div>
+                        </button>
+
+                        {showNotifications && (
+                            <div className="animate-in slide-in-from-top-2 duration-200">
+                                {expirationAlerts.length > 0 ? (
+                                    <div className="p-3 grid gap-2.5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-h-[320px] overflow-y-auto custom-scrollbar">
+                                        {expirationAlerts.map(alert => {
+                                            const implDate = new Date(alert.implementation_date);
+                                            const today = new Date();
+                                            const isOverdue = implDate < today;
+                                            const daysDiff = Math.ceil((implDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+
+                                            return (
+                                                <button
+                                                    key={alert.id}
+                                                    onClick={() => setSelectedReport(alert)}
+                                                    className={`text-left p-3 rounded-xl border transition-all hover:shadow-md flex items-start gap-3 group cursor-pointer
+                                                    ${isOverdue
+                                                            ? 'bg-red-50/70 border-red-100 hover:border-red-200'
+                                                            : 'bg-orange-50/30 border-orange-100 hover:border-orange-200'
+                                                        }`}
+                                                >
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isOverdue ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
+                                                        <Clock className="w-4 h-4" />
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-center gap-2 mb-0.5">
+                                                            <span className="font-bold text-slate-800 text-xs">#{alert.tracking_id}</span>
+                                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isOverdue ? 'bg-red-200 text-red-800' : 'bg-orange-200 text-orange-800'}`}>
+                                                                {isOverdue ? 'Vencido' : `${daysDiff} días`}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-slate-600 truncate mb-1">{alert.sector}</p>
+                                                        <p className="text-[10px] text-slate-400 font-medium">
+                                                            Vence: {implDate.toLocaleDateString()}
+                                                        </p>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="p-8 text-center flex flex-col items-center justify-center text-slate-400">
+                                        <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+                                            <CheckCircle className="w-6 h-6 text-emerald-500/50" />
+                                        </div>
+                                        <p className="text-sm font-medium text-slate-600">Todo al día</p>
+                                        <p className="text-xs">No hay acciones correctivas próximas a vencer.</p>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
