@@ -1908,7 +1908,7 @@ export const Dashboard = () => {
     // Notifications panel starts collapsed by default; user expands it on demand.
 
     return (
-        <div className="max-w-7xl mx-auto p-3 sm:p-6">
+        <div className="w-full py-2 sm:py-4">
 
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 sm:mb-8 gap-3 sm:gap-4">

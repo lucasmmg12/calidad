@@ -52,20 +52,20 @@ function Navbar() {
   const navLinkClass = (path: string, variant: 'default' | 'emerald' | 'red' = 'default') => {
     const active = isActive(path);
     if (variant === 'emerald') {
-      return `hidden md:flex items-center gap-1.5 px-3.5 py-2 font-bold text-xs rounded-xl transition-all ${
+      return `hidden md:flex items-center gap-1.5 px-3.5 py-2 font-bold text-xs rounded-xl transition-all whitespace-nowrap shrink-0 ${
         active
           ? 'bg-emerald-600 text-white shadow-xs'
           : 'text-emerald-700 hover:bg-emerald-50 border border-transparent hover:border-emerald-200/70'
       }`;
     }
     if (variant === 'red') {
-      return `hidden md:flex items-center gap-1.5 px-3.5 py-2 font-bold text-xs rounded-xl transition-all ${
+      return `hidden md:flex items-center gap-1.5 px-3.5 py-2 font-bold text-xs rounded-xl transition-all whitespace-nowrap shrink-0 ${
         active
           ? 'bg-red-600 text-white shadow-xs'
           : 'text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200/70'
       }`;
     }
-    return `flex items-center gap-1.5 px-3.5 py-2 font-bold text-xs rounded-xl transition-all ${
+    return `flex items-center gap-1.5 px-3.5 py-2 font-bold text-xs rounded-xl transition-all whitespace-nowrap shrink-0 ${
       active
         ? 'bg-sanatorio-primary text-white shadow-xs'
         : 'text-slate-600 hover:text-sanatorio-primary hover:bg-slate-100/80'
@@ -95,8 +95,8 @@ function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-[9999] w-full px-2 sm:px-4 py-2 sm:py-2.5">
-        <div className="max-w-7xl mx-auto glass-panel rounded-2xl px-3 sm:px-5 md:px-6 py-2.5 flex justify-between items-center transition-all duration-300">
+      <header className="sticky top-0 z-[9999] w-full px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5">
+        <div className="w-full max-w-[1920px] mx-auto glass-panel rounded-2xl px-3 sm:px-5 md:px-6 py-2.5 flex justify-between items-center transition-all duration-300">
           <Link to="/" className="flex items-center gap-2.5 sm:gap-3.5 group focus:outline-none" onClick={closeMobileMenu}>
             <div className="bg-white p-1 rounded-xl border border-slate-100 shadow-2xs transition-transform duration-300 group-hover:scale-[1.03]">
               <img
@@ -315,7 +315,7 @@ function App() {
           <Navbar />
 
           {/* Main Content */}
-          <main className="flex-grow py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+          <main className="flex-grow py-6 px-4 sm:px-6 lg:px-10 max-w-[1920px] mx-auto w-full">
             <Routes>
               {/* Rutas Públicas */}
               <Route path="/" element={<ReportingForm />} />
