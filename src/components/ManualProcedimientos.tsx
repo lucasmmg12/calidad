@@ -70,9 +70,13 @@ function drawHeader(doc: jsPDF, pageNum: number, totalPages: number, logoUrl: st
   doc.setFillColor(...C.primary);
   doc.rect(0, 0, W, 18, 'F');
 
-  // Logo pequeño
+  // Logo pequeño con contenedor blanco para legibilidad sobre fondo azul
   if (logoUrl) {
-    try { doc.addImage(logoUrl, 'PNG', ML, 2, 20, 14); } catch { /* fallback */ }
+    try {
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(ML, 2, 22, 14, 1.8, 1.8, 'F');
+      doc.addImage(logoUrl, 'PNG', ML + 1.5, 3, 19, 12);
+    } catch { /* fallback */ }
   }
 
   // Texto header
@@ -259,10 +263,12 @@ export async function generateManualPDF() {
   doc.setFillColor(...C.primaryLight);
   doc.rect(0, 73, W, 3, 'F');
 
-  // Logo institucional
+  // Logo institucional con contenedor blanco redondeado
   if (logoUrl) {
     try {
-      doc.addImage(logoUrl, 'PNG', W / 2 - 25, 10, 50, 35);
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(W / 2 - 28, 9, 56, 36, 4, 4, 'F');
+      doc.addImage(logoUrl, 'PNG', W / 2 - 24, 12, 48, 30);
     } catch {
       // Monograma fallback
       doc.setFont('helvetica', 'bold');

@@ -16,7 +16,9 @@
 
 @layer base {
   body {
-    @apply bg-white text-slate-800 font-sans antialiased;
+    @apply bg-[#F8FAFC] text-slate-800 font-sans antialiased;
+    background-image: radial-gradient(circle at 20% 0%, rgba(0, 84, 139, 0.035) 0%, transparent 45%),
+                      radial-gradient(circle at 80% 10%, rgba(0, 169, 157, 0.03) 0%, transparent 40%);
     min-height: 100vh;
     position: relative;
   }
@@ -31,31 +33,31 @@
 
 @layer utilities {
   .glass-panel {
-    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-glass;
+    @apply bg-white/90 backdrop-blur-xl border border-slate-200/80 shadow-glass;
   }
 
   .glass-card {
-    @apply bg-white/80 backdrop-blur-md border border-white/50 shadow-premium transition-all duration-300;
+    @apply bg-white border border-slate-200/80 shadow-premium transition-all duration-300;
   }
 
   .glass-card:hover {
-    @apply shadow-xl -translate-y-1 border-white/80;
+    @apply shadow-xl border-slate-300/80;
   }
 
   .input-field {
-    @apply w-full p-4 border border-slate-200 rounded-2xl bg-white/50 backdrop-blur-sm focus:bg-white focus:ring-4 focus:ring-sanatorio-primary/10 focus:border-sanatorio-primary transition-all duration-300 outline-none text-slate-700 font-medium;
+    @apply w-full p-3.5 border border-slate-200/90 rounded-xl bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-sanatorio-primary/10 focus:border-sanatorio-primary transition-all duration-200 outline-none text-slate-700 font-medium;
   }
 
   .label-text {
-    @apply block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1;
+    @apply block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-0.5;
   }
 
   .btn-primary {
-    @apply px-6 py-4 bg-sanatorio-primary text-white rounded-2xl font-bold font-display shadow-lg shadow-sanatorio-primary/25 hover:bg-[#004270] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2;
+    @apply px-6 py-3.5 bg-sanatorio-primary text-white rounded-xl font-bold font-display shadow-md shadow-sanatorio-primary/20 hover:bg-[#004270] hover:shadow-lg hover:shadow-sanatorio-primary/25 active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2;
   }
 
   .btn-secondary {
-    @apply px-6 py-4 bg-white text-sanatorio-primary border border-sanatorio-primary/10 rounded-2xl font-bold font-display shadow-sm hover:bg-slate-50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2;
+    @apply px-6 py-3.5 bg-white text-sanatorio-primary border border-slate-200 rounded-xl font-bold font-display shadow-xs hover:bg-slate-50 hover:border-sanatorio-primary/30 active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2;
   }
 }
 

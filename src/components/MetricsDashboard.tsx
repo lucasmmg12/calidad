@@ -29,6 +29,7 @@ import { SlaAlertBanner } from './SlaAlerts';
 import { PdcaPanel } from './PdcaPanel';
 import { MetricsFilters, type MetricsFilterState } from './MetricsFilters';
 import { SECTOR_OPTIONS } from '../constants/sectors';
+import { PDF_COLORS, loadLogoImage, drawLogoBadge, sanitizePdfText, cleanMarkdownForPdf, applyInstitutionalFooters } from '../utils/pdfTheme';
 
 Chart.register(...registerables);
 
@@ -347,23 +348,6 @@ export const MetricsDashboard = () => {
         });
     };
 
-    const loadImageAsBase64 = (url: string): Promise<string> => {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = 'Anonymous';
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                ctx?.drawImage(img, 0, 0);
-                resolve(canvas.toDataURL('image/png'));
-            };
-            img.onerror = () => resolve('');
-            img.src = url;
-        });
-    };
-
     const handleExportIntelligenceReport = async () => {
         if (rawReports.length === 0) return;
         setIsExporting(true);
@@ -380,8 +364,8 @@ export const MetricsDashboard = () => {
                 directivo: 'Genera un executive brief estratégico. El tono debe ser conciso, ejecutivo, orientado a KPIs y decisiones de alto nivel. Usa bullet points. Evita detalles operativos, enfócate en tendencias, riesgos institucionales y recomendaciones estratégicas.'
             };
 
-            // 1. Get AI Analysis and Logo
-            const [{ data: aiAnalysis, error: aiError }, logoBase64] = await Promise.all([
+            // 1. Get AI Analysis and Proportional Logo
+            const [{ data: aiAnalysis, error: aiError }, logoObj] = await Promise.all([
                 supabase.functions.invoke('generate-intelligence-report', {
                     body: {
                         reports: rawReports,
@@ -390,7 +374,7 @@ export const MetricsDashboard = () => {
                         roleContext: roleContextMap[userRole] || roleContextMap.admin
                     }
                 }),
-                loadImageAsBase64('/logosanatorio.png')
+                loadLogoImage('/logosanatorio.png')
             ]);
 
             if (aiError) throw aiError;
@@ -444,89 +428,141 @@ export const MetricsDashboard = () => {
             }) : null;
 
             // 3. Initialize PDF
-            const doc = new jsPDF();
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
-            const primaryColor: [number, number, number] = [0, 84, 139];
-            const secondaryColor: [number, number, number] = [0, 169, 157];
-
-            // ─── HELPER: Add footer to every page ───
-            const addFooter = (pageNum: number, totalPages: number) => {
-                doc.setFontSize(7);
-                doc.setTextColor(180, 180, 180);
-                doc.text(`Sanatorio Argentino - Gestión de Calidad bajo Normas ITAES | Documento Confidencial`, 20, pageHeight - 8);
-                doc.text(`Pág. ${pageNum} / ${totalPages}`, pageWidth - 20, pageHeight - 8, { align: 'right' });
-            };
+            const primaryColor: [number, number, number] = PDF_COLORS.primary;
+            const secondaryColor: [number, number, number] = PDF_COLORS.secondary;
 
             // ─── HELPER: Cover page ───
             const buildCover = (title: string, subtitle: string, roleBadge: string, badgeColor: [number, number, number]) => {
                 // Full-width header band
-                doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-                doc.rect(0, 0, pageWidth, 60, 'F');
+                doc.setFillColor(...primaryColor);
+                doc.rect(0, 0, pageWidth, 56, 'F');
 
                 // Accent bar
-                doc.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-                doc.rect(0, 60, pageWidth, 3, 'F');
+                doc.setFillColor(...secondaryColor);
+                doc.rect(0, 56, pageWidth, 2.8, 'F');
 
-                if (logoBase64) {
-                    doc.addImage(logoBase64, 'PNG', 15, 12, 30, 30);
-                }
+                // Proportional Logo in crisp white badge
+                drawLogoBadge(doc, logoObj, 16, 11, 38, 32, 3);
+
+                const tx = 60;
+                doc.setTextColor(186, 230, 253);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(7.5);
+                doc.text('DEPARTAMENTO DE GESTIÓN DE CALIDAD · SANATORIO ARGENTINO', tx, 17);
 
                 doc.setTextColor(255, 255, 255);
                 doc.setFont('helvetica', 'bold');
-                doc.setFontSize(22);
-                doc.text(title, logoBase64 ? 52 : 20, 28);
+                doc.setFontSize(17.5);
+                doc.text(sanitizePdfText(title), tx, 26);
 
-                doc.setFontSize(11);
+                doc.setFontSize(10.5);
                 doc.setFont('helvetica', 'normal');
-                doc.text(subtitle, logoBase64 ? 52 : 20, 38);
+                doc.setTextColor(224, 242, 254);
+                doc.text(sanitizePdfText(subtitle), tx, 34);
 
-                const periodStart = new Date(Math.min(...rawReports.map(r => new Date(r.created_at).getTime()))).toLocaleDateString();
-                doc.text(`Periodo: ${periodStart} - ${new Date().toLocaleDateString()}`, logoBase64 ? 52 : 20, 48);
+                const periodStart = rawReports.length > 0
+                    ? new Date(Math.min(...rawReports.map(r => new Date(r.created_at).getTime()))).toLocaleDateString('es-AR')
+                    : new Date().toLocaleDateString('es-AR');
+                doc.setFontSize(9);
+                doc.text(`Período Analizado: ${periodStart} al ${new Date().toLocaleDateString('es-AR')}`, tx, 42);
+
+                // Metadata strip below header
+                doc.setFillColor(...PDF_COLORS.slate50);
+                doc.setDrawColor(...PDF_COLORS.slate200);
+                doc.setLineWidth(0.35);
+                doc.roundedRect(16, 65, pageWidth - 32, 20, 3, 3, 'FD');
 
                 // Role badge
-                doc.setFillColor(badgeColor[0], badgeColor[1], badgeColor[2]);
-                doc.roundedRect(pageWidth - 65, 70, 50, 12, 3, 3, 'F');
+                doc.setFillColor(...badgeColor);
+                doc.roundedRect(pageWidth - 64, 69, 44, 12, 2.5, 2.5, 'F');
                 doc.setTextColor(255, 255, 255);
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(8);
-                doc.text(roleBadge, pageWidth - 40, 78, { align: 'center' });
+                doc.text(sanitizePdfText(roleBadge), pageWidth - 42, 76.5, { align: 'center' });
 
                 // User info
-                doc.setTextColor(80, 80, 80);
+                doc.setTextColor(...PDF_COLORS.slate800);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(9.5);
+                doc.text(`Generado por: ${sanitizePdfText(userName)}`, 22, 73);
                 doc.setFont('helvetica', 'normal');
-                doc.setFontSize(10);
-                doc.text(`Generado por: ${userName}`, 20, 78);
-                doc.text(`Fecha: ${new Date().toLocaleString()}`, 20, 85);
+                doc.setFontSize(8.5);
+                doc.setTextColor(...PDF_COLORS.slate500);
+                doc.text(`Emisión: ${new Date().toLocaleString('es-AR')}`, 22, 79.5);
 
                 if (userRole === 'responsable' && userSectors.length > 0) {
                     doc.setFont('helvetica', 'bold');
-                    doc.setFontSize(9);
-                    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-                    doc.text(`Sectores Asignados: ${userSectors.join(', ')}`, 20, 95);
+                    doc.setFontSize(8.5);
+                    doc.setTextColor(...primaryColor);
+                    doc.text(sanitizePdfText(`Sectores Asignados: ${userSectors.join(', ')}`), 20, 93);
                 }
             };
 
             // ─── HELPER: Section title  ───
             const sectionTitle = (text: string, y: number, num?: number) => {
-                doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+                doc.setTextColor(...primaryColor);
                 doc.setFont('helvetica', 'bold');
-                doc.setFontSize(16);
-                doc.text(num ? `${num}. ${text}` : text, 20, y);
-                // underline
-                doc.setDrawColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-                doc.setLineWidth(0.8);
-                doc.line(20, y + 2, 100, y + 2);
+                doc.setFontSize(13.5);
+                doc.text(sanitizePdfText(num ? `${num}. ${text}` : text), 16, y);
+                doc.setDrawColor(...secondaryColor);
+                doc.setLineWidth(0.7);
+                doc.line(16, y + 2.2, 105, y + 2.2);
             };
 
-            // ─── HELPER: AI text block ───
+            // ─── HELPER: AI text block (Clean Markdown + Clinical Card) ───
             const aiTextBlock = (text: string, y: number) => {
+                const cleaned = cleanMarkdownForPdf(text || 'Análisis no disponible.');
                 doc.setFont('helvetica', 'normal');
-                doc.setFontSize(10);
-                doc.setTextColor(50, 50, 50);
-                const lines = doc.splitTextToSize(text || 'Análisis no disponible.', pageWidth - 40);
-                doc.text(lines, 20, y);
-                return y + (lines.length * 5);
+                doc.setFontSize(9.5);
+                const maxW = pageWidth - 44;
+                const lines = doc.splitTextToSize(cleaned, maxW);
+                const lineH = 4.8;
+                const boxH = lines.length * lineH + 10;
+
+                if (y + boxH > pageHeight - 20) {
+                    doc.addPage();
+                    y = 22;
+                }
+
+                doc.setFillColor(...PDF_COLORS.slate50);
+                doc.setDrawColor(...PDF_COLORS.slate200);
+                doc.setLineWidth(0.3);
+                doc.roundedRect(16, y - 4, pageWidth - 32, boxH, 2.5, 2.5, 'FD');
+
+                doc.setFillColor(...primaryColor);
+                doc.roundedRect(16, y - 4, 2.5, boxH, 1, 1, 'F');
+
+                doc.setTextColor(...PDF_COLORS.slate800);
+                lines.forEach((line: string, idx: number) => {
+                    doc.text(line, 22, y + 2.5 + idx * lineH);
+                });
+                return y + boxH + 4;
+            };
+
+            const styleKpiIndicatorCell = (hookData: any) => {
+                if (hookData.section === 'body' && hookData.column.index === 2) {
+                    const val = hookData.cell.raw;
+                    hookData.cell.styles.fontStyle = 'bold';
+                    if (val === 'ÓPTIMO' || val === 'COMPLETADO') {
+                        hookData.cell.styles.textColor = PDF_COLORS.emerald;
+                        hookData.cell.styles.fillColor = PDF_COLORS.emeraldBg;
+                    } else if (val === 'ATENCIÓN') {
+                        hookData.cell.styles.textColor = PDF_COLORS.amber;
+                        hookData.cell.styles.fillColor = PDF_COLORS.amberBg;
+                    } else if (val === 'CRÍTICO') {
+                        hookData.cell.styles.textColor = PDF_COLORS.red;
+                        hookData.cell.styles.fillColor = PDF_COLORS.redBg;
+                    } else if (val === 'DESTACADO') {
+                        hookData.cell.styles.textColor = PDF_COLORS.gold;
+                        hookData.cell.styles.fillColor = PDF_COLORS.goldBg;
+                    } else {
+                        hookData.cell.styles.textColor = PDF_COLORS.primary;
+                        hookData.cell.styles.fillColor = PDF_COLORS.primaryLight;
+                    }
+                }
             };
 
             // ════════════════════════════════════════════
@@ -534,103 +570,111 @@ export const MetricsDashboard = () => {
             // ════════════════════════════════════════════
             if (userRole === 'admin') {
                 // PAGE 1: COVER + KPIs
-                buildCover('INFORME DE INTELIGENCIA INSTITUCIONAL', 'Análisis integral de Gestión de Calidad', 'ADMINISTRADOR', [106, 27, 154]);
+                buildCover('INFORME DE INTELIGENCIA INSTITUCIONAL', 'Análisis Integral de Gestión de Calidad y Trazabilidad', 'ADMINISTRADOR', [109, 40, 217]);
 
-                sectionTitle('RESUMEN EJECUTIVO', 110, 1);
+                sectionTitle('RESUMEN EJECUTIVO DE INDICADORES', 98, 1);
 
                 autoTable(doc, {
-                    startY: 118,
-                    head: [['Métrica', 'Valor', 'Indicador']],
+                    startY: 105,
+                    head: [['Métrica Institucional', 'Valor Registrado', 'Estado / Nivel']],
                     body: [
-                        ['Total Hallazgos', stats.total.toString(), '📊'],
-                        ['Casos Resueltos', stats.resolved.toString(), '✅'],
-                        ['Tasa de Resolución', `${stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}%`, stats.total > 0 && (stats.resolved / stats.total) >= 0.7 ? '🟢' : '🟡'],
-                        ['Alertas Críticas (Rojo)', stats.urgentCount.toString(), stats.urgentCount > 0 ? '🔴' : '🟢'],
-                        ['Tiempo Promedio Resolución', `${stats.avgResolutionTimeDays} días`, Number(stats.avgResolutionTimeDays) <= 2 ? '🟢' : '🟡'],
-                        ['Casos Pendientes', stats.pending.toString(), stats.pending > 5 ? '🟡' : '🟢'],
+                        ['Total Hallazgos Operativos', stats.total.toString(), 'REGISTRO'],
+                        ['Casos Resueltos y Cerrados', stats.resolved.toString(), 'COMPLETADO'],
+                        ['Tasa de Resolución Efectiva', `${stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}%`, stats.total > 0 && (stats.resolved / stats.total) >= 0.7 ? 'ÓPTIMO' : 'ATENCIÓN'],
+                        ['Alertas Críticas (Riesgo Rojo)', stats.urgentCount.toString(), stats.urgentCount > 0 ? 'CRÍTICO' : 'ÓPTIMO'],
+                        ['Tiempo Promedio de Resolución', `${stats.avgResolutionTimeDays} días`, Number(stats.avgResolutionTimeDays) <= 2 ? 'ÓPTIMO' : 'ATENCIÓN'],
+                        ['Casos Pendientes en Gestión', stats.pending.toString(), stats.pending > 5 ? 'ATENCIÓN' : 'ÓPTIMO'],
+                        ['Felicitaciones y Reconocimientos al Personal', (stats.felicitaciones || 0).toString(), 'DESTACADO'],
                     ],
                     theme: 'striped',
-                    headStyles: { fillColor: primaryColor, fontSize: 10, fontStyle: 'bold' },
-                    styles: { fontSize: 9, cellPadding: 4 },
-                    columnStyles: { 2: { halign: 'center' } }
+                    headStyles: { fillColor: primaryColor, fontSize: 9.5, fontStyle: 'bold', cellPadding: 3.5 },
+                    styles: { fontSize: 9, cellPadding: 3.5, textColor: PDF_COLORS.slate800 },
+                    columnStyles: {
+                        0: { fontStyle: 'bold' },
+                        1: { halign: 'center', fontStyle: 'bold' },
+                        2: { halign: 'center', cellWidth: 38 }
+                    },
+                    didParseCell: styleKpiIndicatorCell,
+                    margin: { left: 16, right: 16 },
                 });
 
                 // Sector chart on page 1
                 if (sectorChartImg) {
-                    const chartY = (doc as any).lastAutoTable.finalY + 10;
-                    doc.addImage(sectorChartImg, 'PNG', 20, chartY, pageWidth - 40, 75);
+                    const chartY = (doc as any).lastAutoTable.finalY + 8;
+                    doc.addImage(sectorChartImg, 'PNG', 16, chartY, pageWidth - 32, 74);
                 }
 
                 // PAGE 2: ANALYSIS
                 doc.addPage();
-                if (urgencyChartImg) doc.addImage(urgencyChartImg, 'PNG', 20, 15, pageWidth - 40, 75);
+                if (urgencyChartImg) doc.addImage(urgencyChartImg, 'PNG', 16, 15, pageWidth - 32, 74);
 
-                sectionTitle('ANÁLISIS DESCRIPTIVO', 105, 2);
-                let nextY = aiTextBlock(aiAnalysis.descriptive, 115);
+                sectionTitle('ANÁLISIS DESCRIPTIVO', 102, 2);
+                let nextY = aiTextBlock(aiAnalysis.descriptive, 112);
 
-                nextY = Math.max(nextY + 10, 180);
+                nextY = Math.max(nextY + 8, 175);
                 sectionTitle('ANÁLISIS DIAGNÓSTICO', nextY, 3);
                 aiTextBlock(aiAnalysis.diagnostic, nextY + 10);
 
                 // PAGE 3: PREDICTIVE + PRESCRIPTIVE
                 doc.addPage();
-                sectionTitle('ANÁLISIS PREDICTIVO', 25, 4);
+                sectionTitle('ANÁLISIS PREDICTIVO Y TENDENCIAS', 25, 4);
                 let presY = aiTextBlock(aiAnalysis.predictive, 35);
 
-                presY = Math.max(presY + 10, 120);
-                sectionTitle('ANÁLISIS PRESCRIPTIVO', presY, 5);
+                presY = Math.max(presY + 10, 115);
+                sectionTitle('ANÁLISIS PRESCRIPTIVO Y PLAN DE MEJORA', presY, 5);
                 aiTextBlock(aiAnalysis.prescriptive, presY + 10);
 
                 // PAGE 4: CLASSIFICATION + PERSONNEL
                 doc.addPage();
                 if (classificationChartImg) {
-                    doc.addImage(classificationChartImg, 'PNG', 20, 15, pageWidth - 40, 75);
+                    doc.addImage(classificationChartImg, 'PNG', 16, 15, pageWidth - 32, 74);
                 }
 
-                sectionTitle('PERSONAL Y GESTIÓN', classificationChartImg ? 105 : 25, 6);
+                sectionTitle('EQUIPO Y GESTIÓN POR SECTOR', classificationChartImg ? 102 : 25, 6);
 
-                // Fetch all user profiles for admin report
                 const { data: allProfiles } = await supabase.from('user_profiles').select('display_name, role, assigned_sectors');
                 if (allProfiles && allProfiles.length > 0) {
                     autoTable(doc, {
-                        startY: classificationChartImg ? 115 : 35,
-                        head: [['Nombre', 'Rol', 'Sectores Asignados']],
+                        startY: classificationChartImg ? 110 : 33,
+                        head: [['Nombre del Profesional', 'Rol en Sistema', 'Sectores Asignados']],
                         body: allProfiles.map(p => [
-                            p.display_name || 'Sin nombre',
+                            sanitizePdfText(p.display_name || 'Sin nombre'),
                             p.role === 'admin' ? 'Administrador' : p.role === 'directivo' ? 'Directivo' : 'Responsable',
-                            (p.assigned_sectors || []).join(', ') || '-'
+                            sanitizePdfText((p.assigned_sectors || []).join(', ') || '-')
                         ]),
                         theme: 'striped',
-                        headStyles: { fillColor: secondaryColor, fontSize: 9 },
-                        styles: { fontSize: 8, cellPadding: 3 }
+                        headStyles: { fillColor: secondaryColor, fontSize: 9, fontStyle: 'bold' },
+                        styles: { fontSize: 8, cellPadding: 3, textColor: PDF_COLORS.slate800 },
+                        margin: { left: 16, right: 16 },
                     });
                 }
 
                 // PAGE 5: CRITICAL CASES ANNEX
                 doc.addPage();
-                sectionTitle('ANEXO: CASOS CRÍTICOS', 25);
+                sectionTitle('ANEXO: CASOS CRÍTICOS Y FELICITACIONES DESTACADAS', 25);
 
                 const criticalCases = rawReports.filter(r => r.ai_urgency === 'Rojo').slice(0, 15);
                 if (criticalCases.length > 0) {
                     autoTable(doc, {
-                        startY: 35,
-                        head: [['ID', 'Sector', 'Clasificación', 'Resumen', 'Estado']],
+                        startY: 33,
+                        head: [['Ticket ID', 'Sector', 'Clasificación', 'Resumen del Caso Crítico', 'Estado']],
                         body: criticalCases.map(r => [
-                            r.tracking_id,
-                            r.sector || '-',
-                            r.ai_category || '-',
-                            (r.ai_summary || r.content || '').substring(0, 60),
-                            r.status === 'resolved' ? '✅ Resuelto' : r.status === 'cancelled' ? '❌ Cancelado' : '⏳ Pendiente'
+                            sanitizePdfText(r.tracking_id),
+                            sanitizePdfText(r.sector || '-'),
+                            sanitizePdfText(r.ai_category || '-'),
+                            sanitizePdfText(r.ai_summary || r.content || '').substring(0, 68),
+                            r.status === 'resolved' ? 'Resuelto' : r.status === 'cancelled' ? 'Cancelado' : 'Pendiente'
                         ]),
                         theme: 'grid',
-                        headStyles: { fillColor: [239, 68, 68], fontSize: 8 },
-                        styles: { fontSize: 7, cellPadding: 3 }
+                        headStyles: { fillColor: PDF_COLORS.red, fontSize: 8, fontStyle: 'bold' },
+                        styles: { fontSize: 7.5, cellPadding: 3, textColor: PDF_COLORS.slate800 },
+                        margin: { left: 16, right: 16 },
                     });
                 } else {
-                    doc.setFont('helvetica', 'normal');
-                    doc.setFontSize(10);
-                    doc.setTextColor(100, 100, 100);
-                    doc.text('No se registraron casos críticos en el periodo analizado.', 20, 40);
+                    doc.setFont('helvetica', 'italic');
+                    doc.setFontSize(9.5);
+                    doc.setTextColor(...PDF_COLORS.slate500);
+                    doc.text('No se registraron alertas de riesgo crítico (Rojo) en el período analizado.', 16, 38);
                 }
 
                 // ════════════════════════════════════════════
@@ -638,50 +682,54 @@ export const MetricsDashboard = () => {
                 // ════════════════════════════════════════════
             } else if (userRole === 'responsable') {
                 // PAGE 1: COVER
-                buildCover('INFORME DE GESTIÓN SECTORIAL', `Responsable: ${userName}`, 'RESPONSABLE', [22, 163, 74]);
+                buildCover('INFORME DE GESTIÓN SECTORIAL', `Responsable: ${userName}`, 'RESPONSABLE', [21, 128, 61]);
 
-                sectionTitle('MIS INDICADORES', 110, 1);
+                sectionTitle('MIS INDICADORES DE SECTOR', 102, 1);
 
                 autoTable(doc, {
-                    startY: 118,
+                    startY: 110,
                     head: [['Métrica de Mi Gestión', 'Valor']],
                     body: [
-                        ['Total Casos en Mis Sectores', stats.total.toString()],
+                        ['Total Casos Operativos en Mis Sectores', stats.total.toString()],
                         ['Casos Resueltos', stats.resolved.toString()],
                         ['Tasa de Resolución', `${stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}%`],
                         ['Casos Pendientes de Resolución', stats.pending.toString()],
                         ['Alertas Críticas', stats.urgentCount.toString()],
                         ['Tiempo Promedio de Respuesta', `${stats.avgResolutionTimeDays} días`],
-                        ['Sectores Asignados', userSectors.join(', ') || 'Ninguno'],
+                        ['Felicitaciones Recibidas', (stats.felicitaciones || 0).toString()],
+                        ['Sectores Asignados', sanitizePdfText(userSectors.join(', ') || 'Ninguno')],
                     ],
                     theme: 'striped',
-                    headStyles: { fillColor: [22, 163, 74], fontSize: 10 },
-                    styles: { fontSize: 9, cellPadding: 4 }
+                    headStyles: { fillColor: PDF_COLORS.emerald, fontSize: 9.5, fontStyle: 'bold' },
+                    styles: { fontSize: 9, cellPadding: 3.5, textColor: PDF_COLORS.slate800 },
+                    columnStyles: { 0: { fontStyle: 'bold' } },
+                    margin: { left: 16, right: 16 },
                 });
 
                 // PAGE 2: CHARTS
                 doc.addPage();
-                if (sectorChartImg) doc.addImage(sectorChartImg, 'PNG', 20, 15, pageWidth - 40, 75);
-                if (urgencyChartImg) doc.addImage(urgencyChartImg, 'PNG', 20, 105, pageWidth - 40, 75);
+                if (sectorChartImg) doc.addImage(sectorChartImg, 'PNG', 16, 15, pageWidth - 32, 74);
+                if (urgencyChartImg) doc.addImage(urgencyChartImg, 'PNG', 16, 102, pageWidth - 32, 74);
 
                 // PAGE 3: MY CASES TABLE
                 doc.addPage();
                 sectionTitle('MIS CASOS DETALLADOS', 25, 2);
 
                 autoTable(doc, {
-                    startY: 35,
+                    startY: 33,
                     head: [['Ticket', 'Sector', 'Clasificación', 'Urgencia', 'Estado', 'Fecha']],
                     body: rawReports.slice(0, 30).map(r => [
-                        r.tracking_id,
-                        r.sector || '-',
-                        r.ai_category || '-',
-                        r.ai_urgency || '-',
-                        r.status === 'resolved' ? 'Resuelto' : r.status === 'cancelled' ? 'Cancelado' : r.status === 'pending_resolution' ? 'Pendiente Resolución' : r.status === 'quality_validation' ? 'Validación Calidad' : 'Pendiente',
-                        new Date(r.created_at).toLocaleDateString()
+                        sanitizePdfText(r.tracking_id),
+                        sanitizePdfText(r.sector || '-'),
+                        sanitizePdfText(r.ai_category || r.finding_type || '-'),
+                        sanitizePdfText(r.ai_urgency || '-'),
+                        r.status === 'resolved' ? 'Resuelto' : r.status === 'cancelled' ? 'Cancelado' : r.status === 'pending_resolution' ? 'En Gestión' : r.status === 'quality_validation' ? 'Validación Calidad' : 'Pendiente',
+                        new Date(r.created_at).toLocaleDateString('es-AR')
                     ]),
                     theme: 'striped',
-                    headStyles: { fillColor: primaryColor, fontSize: 8 },
-                    styles: { fontSize: 7, cellPadding: 3 }
+                    headStyles: { fillColor: primaryColor, fontSize: 8, fontStyle: 'bold' },
+                    styles: { fontSize: 7.5, cellPadding: 3, textColor: PDF_COLORS.slate800 },
+                    margin: { left: 16, right: 16 },
                 });
 
                 // PAGE 4: AI ANALYSIS (Focused)
@@ -689,7 +737,7 @@ export const MetricsDashboard = () => {
                 sectionTitle('ANÁLISIS DE MI GESTIÓN', 25, 3);
                 let rNextY = aiTextBlock(aiAnalysis.descriptive, 35);
 
-                rNextY = Math.max(rNextY + 10, 100);
+                rNextY = Math.max(rNextY + 10, 105);
                 sectionTitle('DIAGNÓSTICO SECTORIAL', rNextY, 4);
                 rNextY = aiTextBlock(aiAnalysis.diagnostic, rNextY + 10);
 
@@ -707,37 +755,39 @@ export const MetricsDashboard = () => {
                 // ════════════════════════════════════════════
             } else {
                 // PAGE 1: COVER
-                buildCover('EXECUTIVE INTELLIGENCE BRIEF', 'Resumen Estratégico de Gestión de Calidad', 'DIRECCIÓN', [0, 84, 139]);
+                buildCover('EXECUTIVE INTELLIGENCE BRIEF', 'Resumen Estratégico de Gestión de Calidad Institucional', 'DIRECCIÓN', primaryColor);
 
-                // Big KPI blocks
-                const kpiStartY = 105;
-                const kpiBoxW = (pageWidth - 50) / 2;
-                const kpiBoxH = 35;
+                // Big KPI blocks (2x3 grid including Felicitaciones)
+                const kpiStartY = 98;
+                const kpiBoxW = (pageWidth - 42) / 2;
+                const kpiBoxH = 30;
 
                 const kpis = [
                     { label: 'TOTAL HALLAZGOS', value: stats.total.toString(), color: primaryColor },
                     { label: 'TASA DE RESOLUCIÓN', value: `${stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}%`, color: secondaryColor },
-                    { label: 'ALERTAS CRÍTICAS', value: stats.urgentCount.toString(), color: [239, 68, 68] as [number, number, number] },
-                    { label: 'TIEMPO PROMEDIO', value: `${stats.avgResolutionTimeDays}d`, color: [99, 102, 241] as [number, number, number] },
+                    { label: 'ALERTAS CRÍTICAS', value: stats.urgentCount.toString(), color: PDF_COLORS.red },
+                    { label: 'TIEMPO PROMEDIO', value: `${stats.avgResolutionTimeDays}d`, color: PDF_COLORS.purple },
+                    { label: 'FELICITACIONES RECIBIDAS', value: (stats.felicitaciones || 0).toString(), color: PDF_COLORS.gold },
+                    { label: 'CASOS PENDIENTES', value: stats.pending.toString(), color: PDF_COLORS.slate700 },
                 ];
 
                 kpis.forEach((kpi, i) => {
                     const col = i % 2;
                     const row = Math.floor(i / 2);
-                    const x = 20 + col * (kpiBoxW + 10);
-                    const y = kpiStartY + row * (kpiBoxH + 8);
+                    const x = 16 + col * (kpiBoxW + 10);
+                    const y = kpiStartY + row * (kpiBoxH + 7);
 
-                    doc.setFillColor(kpi.color[0], kpi.color[1], kpi.color[2]);
-                    doc.roundedRect(x, y, kpiBoxW, kpiBoxH, 4, 4, 'F');
+                    doc.setFillColor(...kpi.color);
+                    doc.roundedRect(x, y, kpiBoxW, kpiBoxH, 3.5, 3.5, 'F');
 
                     doc.setTextColor(255, 255, 255);
-                    doc.setFont('helvetica', 'normal');
-                    doc.setFontSize(8);
-                    doc.text(kpi.label, x + 10, y + 12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(7.5);
+                    doc.text(kpi.label, x + 8, y + 10);
 
                     doc.setFont('helvetica', 'bold');
-                    doc.setFontSize(24);
-                    doc.text(kpi.value, x + 10, y + 28);
+                    doc.setFontSize(21);
+                    doc.text(kpi.value, x + 8, y + 23.5);
                 });
 
                 // PAGE 2: STRATEGIC ANALYSIS
@@ -745,35 +795,37 @@ export const MetricsDashboard = () => {
                 sectionTitle('VISIÓN ESTRATÉGICA', 25, 1);
                 let dNextY = aiTextBlock(aiAnalysis.descriptive, 35);
 
-                dNextY = Math.max(dNextY + 10, 120);
+                dNextY = Math.max(dNextY + 10, 115);
                 sectionTitle('DIAGNÓSTICO INSTITUCIONAL', dNextY, 2);
                 aiTextBlock(aiAnalysis.diagnostic, dNextY + 10);
 
                 // PAGE 3: CHARTS
                 doc.addPage();
                 sectionTitle('INDICADORES VISUALES', 25, 3);
-                if (sectorChartImg) doc.addImage(sectorChartImg, 'PNG', 20, 35, pageWidth - 40, 75);
-                if (urgencyChartImg) doc.addImage(urgencyChartImg, 'PNG', 20, 120, pageWidth - 40, 75);
+                if (sectorChartImg) doc.addImage(sectorChartImg, 'PNG', 16, 35, pageWidth - 32, 74);
+                if (urgencyChartImg) doc.addImage(urgencyChartImg, 'PNG', 16, 120, pageWidth - 32, 74);
 
                 // PAGE 4: CLASSIFICATION + STATUS
                 doc.addPage();
                 if (classificationChartImg) {
-                    doc.addImage(classificationChartImg, 'PNG', 20, 15, pageWidth - 40, 75);
+                    doc.addImage(classificationChartImg, 'PNG', 16, 15, pageWidth - 32, 74);
                 }
 
-                sectionTitle('ESTADO DE GESTIÓN', classificationChartImg ? 105 : 25, 4);
+                sectionTitle('ESTADO DE GESTIÓN', classificationChartImg ? 102 : 25, 4);
                 autoTable(doc, {
-                    startY: classificationChartImg ? 115 : 35,
-                    head: [['Estado', 'Cantidad', 'Porcentaje']],
+                    startY: classificationChartImg ? 110 : 33,
+                    head: [['Estado de Casos', 'Cantidad', 'Participación']],
                     body: [
                         ['Resueltos', stats.byStatus.resolved.toString(), `${stats.total > 0 ? Math.round((stats.byStatus.resolved / stats.total) * 100) : 0}%`],
                         ['Pendientes', stats.byStatus.pending.toString(), `${stats.total > 0 ? Math.round((stats.byStatus.pending / stats.total) * 100) : 0}%`],
                         ['En Proceso', stats.byStatus.waiting.toString(), `${stats.total > 0 ? Math.round((stats.byStatus.waiting / stats.total) * 100) : 0}%`],
-                        ['Cancelados', stats.byStatus.cancelled.toString(), `${stats.total > 0 ? Math.round((stats.byStatus.cancelled / stats.total) * 100) : 0}%`],
+                        ['Cancelados / Descartados', stats.byStatus.cancelled.toString(), `${stats.total > 0 ? Math.round((stats.byStatus.cancelled / stats.total) * 100) : 0}%`],
+                        ['Felicitaciones / Reconocimientos', (stats.felicitaciones || 0).toString(), 'Destacado Positivo'],
                     ],
                     theme: 'striped',
-                    headStyles: { fillColor: primaryColor, fontSize: 10 },
-                    styles: { fontSize: 9, cellPadding: 5 }
+                    headStyles: { fillColor: primaryColor, fontSize: 9.5, fontStyle: 'bold' },
+                    styles: { fontSize: 9, cellPadding: 4, textColor: PDF_COLORS.slate800 },
+                    margin: { left: 16, right: 16 },
                 });
 
                 // PAGE 5: STRATEGIC RECOMMENDATIONS
@@ -781,17 +833,13 @@ export const MetricsDashboard = () => {
                 sectionTitle('PROYECCIÓN Y TENDENCIAS', 25, 5);
                 let stratY = aiTextBlock(aiAnalysis.predictive, 35);
 
-                stratY = Math.max(stratY + 10, 120);
+                stratY = Math.max(stratY + 10, 115);
                 sectionTitle('RECOMENDACIONES ESTRATÉGICAS', stratY, 6);
                 aiTextBlock(aiAnalysis.prescriptive, stratY + 10);
             }
 
-            // Add page numbers to all pages
-            const totalPages = doc.getNumberOfPages();
-            for (let i = 1; i <= totalPages; i++) {
-                doc.setPage(i);
-                addFooter(i, totalPages);
-            }
+            // Add institutional footers to all pages
+            applyInstitutionalFooters(doc, { margin: 16 });
 
             // Role-based filename
             const roleNames: Record<string, string> = {

@@ -4,6 +4,7 @@ import {
     CheckCircle2,
     AlertCircle,
     Printer,
+    Download,
     ArrowLeft,
     Sparkles,
     ShieldAlert,
@@ -13,6 +14,9 @@ import {
     Building2,
     FileCheck
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { PDF_COLORS, loadLogoImage, drawLogoBadge, sanitizePdfText, applyInstitutionalFooters } from '../../utils/pdfTheme';
 
 interface ProcessAuditReportProps {
     report: ReportType;
@@ -27,6 +31,261 @@ export const ProcessAuditReportView: React.FC<ProcessAuditReportProps> = ({
 }) => {
     const handlePrint = () => {
         window.print();
+    };
+
+    const handleExportPdf = async () => {
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const logo = await loadLogoImage('/logosanatorio.png');
+        const pageW = doc.internal.pageSize.getWidth();
+        const pageH = doc.internal.pageSize.getHeight();
+        const M = 16;
+        const CW = pageW - 2 * M;
+        let y = 0;
+
+        const setF = (style: 'normal' | 'bold' | 'italic', size: number, color: [number, number, number] = PDF_COLORS.slate800) => {
+            doc.setFont('helvetica', style);
+            doc.setFontSize(size);
+            doc.setTextColor(color[0], color[1], color[2]);
+        };
+
+        const checkBreak = (needed: number) => {
+            if (y + needed > pageH - 22) {
+                doc.addPage();
+                doc.setFillColor(...PDF_COLORS.primary);
+                doc.rect(0, 0, pageW, 13, 'F');
+                doc.setFillColor(...PDF_COLORS.secondary);
+                doc.rect(0, 13, pageW, 1.2, 'F');
+                setF('bold', 8, PDF_COLORS.white);
+                doc.text('SANATORIO ARGENTINO · INFORME DE AUDITORÍA DE PROCESOS', M, 8.5);
+                doc.text(sanitizePdfText(report.auditNumber), pageW - M, 8.5, { align: 'right' });
+                y = 21;
+            }
+        };
+
+        // Header Page 1
+        doc.setFillColor(...PDF_COLORS.primary);
+        doc.rect(0, 0, pageW, 40, 'F');
+        doc.setFillColor(...PDF_COLORS.secondary);
+        doc.rect(0, 40, pageW, 2.2, 'F');
+
+        drawLogoBadge(doc, logo, M, 7, 36, 26, 3);
+
+        const tx = M + 41;
+        setF('bold', 7.5, [186, 230, 253]);
+        doc.text('DEPARTAMENTO DE GESTIÓN DE CALIDAD · SISTEMA INTEGRAL DORA', tx, 13);
+        setF('bold', 16.5, PDF_COLORS.white);
+        doc.text('INFORME DE AUDITORÍA DE PROCESOS', tx, 21);
+        setF('normal', 9, [224, 242, 254]);
+        doc.text(`Auditoría #${sanitizePdfText(report.auditNumber)} · Fecha: ${new Date(report.auditDate).toLocaleDateString('es-AR')}`, tx, 28);
+
+        // Score Pill on Right
+        const scoreColor = report.scorePercent >= 85 ? PDF_COLORS.emerald : report.scorePercent >= 70 ? PDF_COLORS.amber : PDF_COLORS.red;
+        doc.setFillColor(...PDF_COLORS.white);
+        doc.roundedRect(pageW - M - 34, 9, 34, 22, 3, 3, 'F');
+        setF('bold', 6.5, PDF_COLORS.slate500);
+        doc.text('CUMPLIMIENTO', pageW - M - 17, 14.5, { align: 'center' });
+        setF('bold', 15, scoreColor);
+        doc.text(`${report.scorePercent}%`, pageW - M - 17, 23, { align: 'center' });
+        setF('bold', 6, scoreColor);
+        doc.text(
+            report.scorePercent >= 85 ? 'ÓPTIMO' : report.scorePercent >= 70 ? 'ACEPTABLE' : 'DESVÍO',
+            pageW - M - 17,
+            28,
+            { align: 'center' }
+        );
+
+        y = 49;
+
+        // Metadata Grid
+        doc.setFillColor(...PDF_COLORS.slate50);
+        doc.setDrawColor(...PDF_COLORS.slate200);
+        doc.setLineWidth(0.35);
+        doc.roundedRect(M, y, CW, 18, 2.5, 2.5, 'FD');
+
+        const colW = CW / 3;
+        setF('bold', 6.8, PDF_COLORS.slate500);
+        doc.text('SECTOR AUDITADO', M + 5, y + 6);
+        doc.text('AUDITOR RESPONSABLE', M + colW + 5, y + 6);
+        doc.text('ESTADO GENERAL', M + colW * 2 + 5, y + 6);
+
+        setF('bold', 9.5, PDF_COLORS.slate900);
+        doc.text(sanitizePdfText(report.sectorName).substring(0, 32), M + 5, y + 12.5);
+        doc.text(sanitizePdfText(`${report.auditorName} (${report.auditorRole})`).substring(0, 34), M + colW + 5, y + 12.5);
+        setF('bold', 9.5, scoreColor);
+        doc.text(
+            report.scorePercent >= 85 ? 'Cumplimiento Óptimo' : report.scorePercent >= 70 ? 'Cumplimiento Aceptable' : 'Desvío Significativo',
+            M + colW * 2 + 5,
+            y + 12.5
+        );
+
+        y += 24;
+
+        // Resumen Ejecutivo
+        if (report.generalSummary) {
+            setF('italic', 9.5, PDF_COLORS.slate800);
+            const sumLines = doc.splitTextToSize(`"${sanitizePdfText(report.generalSummary)}"`, CW - 18);
+            const sumH = sumLines.length * 4.8 + 14;
+            checkBreak(sumH);
+
+            doc.setFillColor(...PDF_COLORS.primaryLight);
+            doc.setDrawColor(191, 219, 254);
+            doc.roundedRect(M, y, CW, sumH, 2.5, 2.5, 'FD');
+            doc.setFillColor(...PDF_COLORS.primary);
+            doc.roundedRect(M, y, 2.8, sumH, 1.2, 1.2, 'F');
+
+            setF('bold', 7.8, PDF_COLORS.primary);
+            doc.text('CONCLUSIÓN Y RESUMEN EJECUTIVO', M + 7, y + 6.5);
+            setF('italic', 9.5, PDF_COLORS.slate800);
+            sumLines.forEach((l: string, idx: number) => {
+                doc.text(l, M + 7, y + 12.2 + idx * 4.8);
+            });
+            y += sumH + 6;
+        }
+
+        // Helper for Finding Blocks
+        const drawFindingCategory = (
+            title: string,
+            items: { heading: string; desc: string; extra?: string }[],
+            bg: [number, number, number],
+            border: [number, number, number],
+            accent: [number, number, number]
+        ) => {
+            if (items.length === 0) return;
+            checkBreak(18);
+            doc.setFillColor(...accent);
+            doc.roundedRect(M, y, CW, 8.5, 2, 2, 'F');
+            setF('bold', 8.5, PDF_COLORS.white);
+            doc.text(`${sanitizePdfText(title).toUpperCase()} (${items.length})`, M + 4, y + 5.7);
+            y += 11;
+
+            items.forEach((it) => {
+                setF('normal', 9);
+                const descLines = doc.splitTextToSize(sanitizePdfText(it.desc), CW - 16);
+                const extraH = it.extra ? 5.5 : 0;
+                const boxH = descLines.length * 4.5 + 13 + extraH;
+                checkBreak(boxH + 3);
+
+                doc.setFillColor(...bg);
+                doc.setDrawColor(...border);
+                doc.setLineWidth(0.3);
+                doc.roundedRect(M, y, CW, boxH, 2, 2, 'FD');
+                doc.setFillColor(...accent);
+                doc.roundedRect(M, y, 2.2, boxH, 1, 1, 'F');
+
+                setF('bold', 8.8, accent);
+                doc.text(sanitizePdfText(it.heading), M + 6, y + 6);
+                setF('normal', 8.8, PDF_COLORS.slate800);
+                descLines.forEach((dl: string, idx: number) => {
+                    doc.text(dl, M + 6, y + 11.2 + idx * 4.5);
+                });
+                if (it.extra) {
+                    setF('bold', 7.8, PDF_COLORS.slate600);
+                    doc.text(sanitizePdfText(it.extra), M + 6, y + boxH - 3.2);
+                }
+                y += boxH + 3;
+            });
+            y += 3;
+        };
+
+        drawFindingCategory(
+            'Fortalezas Destacadas del Servicio',
+            report.fortalezas.map(f => ({
+                heading: `[${f.processName}]`,
+                desc: f.description,
+                extra: f.highlight ? `Destacado: ${f.highlight}` : undefined,
+            })),
+            PDF_COLORS.emeraldBg,
+            PDF_COLORS.emeraldBorder,
+            PDF_COLORS.emerald
+        );
+
+        drawFindingCategory(
+            'Observaciones de Campo',
+            report.observaciones.map(o => ({
+                heading: `[${o.processName}]`,
+                desc: o.description,
+                extra: o.recommendation ? `Recomendación: ${o.recommendation}` : undefined,
+            })),
+            PDF_COLORS.primaryLight,
+            [191, 219, 254],
+            PDF_COLORS.primary
+        );
+
+        drawFindingCategory(
+            'Oportunidades de Mejora (OM)',
+            report.oportunidadesMejora.map(om => ({
+                heading: `${om.title} (${om.processName})`,
+                desc: om.description,
+                extra: om.doraTicketId ? `Ticket DORA Vinculado: #${om.doraTicketId}` : 'Pendiente vinculación DORA',
+            })),
+            PDF_COLORS.amberBg,
+            PDF_COLORS.amberBorder,
+            PDF_COLORS.amber
+        );
+
+        drawFindingCategory(
+            'Desvíos e Incumplimientos Detectados',
+            report.desvios.map(d => ({
+                heading: `${d.title} — Riesgo ${d.riskLevel.toUpperCase()} (${d.processName})`,
+                desc: d.description,
+                extra: `Plan: ${d.actionPlan}  |  Resp: ${d.responsiblePerson}  |  Vence: ${d.deadline}`,
+            })),
+            PDF_COLORS.redBg,
+            PDF_COLORS.redBorder,
+            PDF_COLORS.red
+        );
+
+        // Checklist Table
+        checkBreak(25);
+        setF('bold', 10, PDF_COLORS.primary);
+        doc.text('DESGLOSE ÍTEM POR ÍTEM DEL CHECKLIST', M, y + 4);
+        y += 7;
+
+        autoTable(doc, {
+            startY: y,
+            head: [['#', 'Proceso / Categoría', 'Ítem Evaluado', 'Resultado', 'Observación']],
+            body: report.items.map((item, idx) => [
+                (idx + 1).toString(),
+                sanitizePdfText(`${item.processName} (${item.category})`),
+                sanitizePdfText(item.itemText),
+                item.answer === 'cumple' ? 'Cumple (100%)' : item.answer === 'parcial' ? 'Parcial (50%)' : item.answer === 'no_cumple' ? 'No Cumple (0%)' : 'N/A',
+                sanitizePdfText(item.observation || '-')
+            ]),
+            theme: 'striped',
+            headStyles: { fillColor: PDF_COLORS.primary, fontSize: 8, fontStyle: 'bold' },
+            styles: { fontSize: 7.5, cellPadding: 2.8, textColor: PDF_COLORS.slate800 },
+            columnStyles: {
+                0: { cellWidth: 10, halign: 'center', fontStyle: 'bold' },
+                1: { cellWidth: 38, fontStyle: 'bold' },
+                2: { cellWidth: 62 },
+                3: { cellWidth: 28, halign: 'center', fontStyle: 'bold' },
+                4: { cellWidth: 40 },
+            },
+            didParseCell: (hookData: any) => {
+                if (hookData.section === 'body' && hookData.column.index === 3) {
+                    const v = hookData.cell.raw;
+                    if (v.startsWith('Cumple')) hookData.cell.styles.textColor = PDF_COLORS.emerald;
+                    else if (v.startsWith('Parcial')) hookData.cell.styles.textColor = PDF_COLORS.amber;
+                    else if (v.startsWith('No Cumple')) hookData.cell.styles.textColor = PDF_COLORS.red;
+                }
+            },
+            margin: { left: M, right: M },
+        });
+
+        y = (doc as any).lastAutoTable.finalY + 18;
+        checkBreak(22);
+
+        // Signatures
+        doc.setDrawColor(...PDF_COLORS.slate400);
+        doc.setLineWidth(0.35);
+        doc.line(M + 10, y + 8, M + 70, y + 8);
+        doc.line(pageW - M - 70, y + 8, pageW - M - 10, y + 8);
+        setF('bold', 8, PDF_COLORS.slate700);
+        doc.text(sanitizePdfText(`Firma Auditor: ${report.auditorName}`), M + 40, y + 13, { align: 'center' });
+        doc.text('Revisión Sistema DORA Calidad', pageW - M - 40, y + 13, { align: 'center' });
+
+        applyInstitutionalFooters(doc, { margin: M });
+        doc.save(`Auditoria_Procesos_${sanitizePdfText(report.auditNumber)}.pdf`);
     };
 
     return (
@@ -44,10 +303,17 @@ export const ProcessAuditReportView: React.FC<ProcessAuditReportProps> = ({
                 <div className="flex items-center gap-2">
                     <button
                         onClick={handlePrint}
-                        className="px-4 py-2 bg-sanatorio-primary hover:bg-[#00385c] text-white font-bold text-xs rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+                        className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-sm"
                     >
                         <Printer className="w-4 h-4" />
-                        <span>Imprimir / Exportar PDF</span>
+                        <span>Imprimir</span>
+                    </button>
+                    <button
+                        onClick={handleExportPdf}
+                        className="px-4 py-2 bg-sanatorio-primary hover:bg-[#00385c] text-white font-bold text-xs rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+                    >
+                        <Download className="w-4 h-4" />
+                        <span>Descargar PDF</span>
                     </button>
                 </div>
             </div>

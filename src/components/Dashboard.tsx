@@ -51,7 +51,8 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { ChatWindow } from './ChatWindow';
-import { generateValidationPDF } from '../utils/validationPdfExport';
+import { generateValidationPDF, isFelicitacionReport } from '../utils/validationPdfExport';
+import { PDF_COLORS, loadLogoImage, drawLogoBadge, sanitizePdfText, applyInstitutionalFooters } from '../utils/pdfTheme';
 
 // Discard Confirmation Modal Component
 const DiscardConfirmationModal = ({
@@ -1917,22 +1918,41 @@ export const Dashboard = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 sm:mb-8 gap-3 sm:gap-4">
                 <div>
-                    <h1 className="text-xl sm:text-3xl font-bold text-gray-800 flex items-center gap-2">
-                        <LayoutDashboard className="text-sanatorio-primary w-5 h-5 sm:w-6 sm:h-6" />
-                        Tablero de Control
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sanatorio-primary/8 text-sanatorio-primary text-[10px] font-bold uppercase tracking-widest mb-1.5">
+                        Auditoría Clínica & Trazabilidad
+                    </div>
+                    <h1 className="text-xl sm:text-3xl font-display font-extrabold text-slate-800 flex items-center gap-2.5">
+                        <div className="p-2 rounded-xl bg-sanatorio-primary text-white shadow-xs">
+                            <LayoutDashboard className="w-5 h-5" />
+                        </div>
+                        Tablero de Control de Casos
                     </h1>
-                    <p className="text-gray-500 text-sm sm:text-base">Gestión de Calidad y Seguridad del Paciente</p>
                 </div>
                 {/* Stats Summary */}
-                <div className="flex gap-2 sm:gap-3 w-full md:w-auto">
+                <div className="flex flex-wrap gap-2 sm:gap-2.5 w-full md:w-auto">
+                    <button
+                        type="button"
+                        onClick={() => setListCategoryFilter(listCategoryFilter === 'Felicitación' ? null : 'Felicitación')}
+                        className={`px-3 sm:px-3.5 py-2 rounded-xl border flex items-center gap-1.5 text-xs sm:text-sm font-bold shadow-2xs transition-all cursor-pointer ${
+                            listCategoryFilter === 'Felicitación'
+                                ? 'bg-amber-500 text-white border-amber-500 shadow-amber-200'
+                                : 'bg-amber-50/70 text-amber-700 border-amber-200 hover:bg-amber-100/80'
+                        }`}
+                        title="Filtrar reconocimientos y felicitaciones"
+                    >
+                        <span>🌟</span>
+                        <span>{reports.filter(r => isFelicitacionReport(r)).length}</span>
+                        <span className="hidden sm:inline">Felicitaciones</span>
+                    </button>
+
                     <button
                         onClick={() => setShowNotifications(!showNotifications)}
-                        className={`bg-white px-3 sm:px-4 py-2 rounded-lg border border-gray-200 flex items-center gap-2 text-xs sm:text-sm font-medium shadow-sm transition-all hover:bg-gray-50 flex-1 md:flex-initial justify-center
-                            ${showNotifications ? 'ring-2 ring-orange-100 border-orange-200' : ''}
+                        className={`bg-white px-3 sm:px-3.5 py-2 rounded-xl border border-slate-200 flex items-center gap-2 text-xs sm:text-sm font-bold shadow-2xs transition-all hover:bg-slate-50 flex-1 md:flex-initial justify-center cursor-pointer
+                            ${showNotifications ? 'ring-2 ring-orange-100 border-orange-300 bg-orange-50/30' : ''}
                         `}
                     >
-                        <Bell className={`w-4 h-4 ${expirationAlerts.length > 0 ? 'text-orange-600 animate-pulse' : 'text-gray-400'}`} />
-                        <span className="text-gray-700 hidden xs:inline">Notificaciones</span>
+                        <Bell className={`w-4 h-4 ${expirationAlerts.length > 0 ? 'text-orange-600 animate-pulse' : 'text-slate-400'}`} />
+                        <span className="text-slate-700 hidden xs:inline">Vencimientos</span>
                         {expirationAlerts.length > 0 && (
                             <span className="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
                                 {expirationAlerts.length}
@@ -1940,12 +1960,20 @@ export const Dashboard = () => {
                         )}
                     </button>
 
-                    <div className="bg-white px-3 sm:px-4 py-2 rounded-lg border border-gray-200 flex items-center gap-2 sm:gap-4 text-xs sm:text-sm font-medium shadow-sm">
-                        <span className="flex items-center gap-1 text-red-600 font-bold">
-                            <ShieldAlert className="w-4 h-4" />
-                            {reports.filter(r => r.ai_urgency === 'Rojo').length} <span className="hidden sm:inline">Críticos</span>
-                        </span>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setListUrgencyFilter(listUrgencyFilter === 'Rojo' ? null : 'Rojo')}
+                        className={`px-3 sm:px-3.5 py-2 rounded-xl border flex items-center gap-1.5 text-xs sm:text-sm font-bold shadow-2xs transition-all cursor-pointer ${
+                            listUrgencyFilter === 'Rojo'
+                                ? 'bg-red-600 text-white border-red-600'
+                                : 'bg-white border-slate-200 text-red-600 hover:bg-red-50/60'
+                        }`}
+                        title="Filtrar casos críticos"
+                    >
+                        <ShieldAlert className="w-4 h-4" />
+                        <span>{reports.filter(r => r.ai_urgency === 'Rojo' && r.status !== 'discarded').length}</span>
+                        <span className="hidden sm:inline">Críticos</span>
+                    </button>
                 </div>
             </div>
 
@@ -2014,47 +2042,89 @@ export const Dashboard = () => {
             )}
 
             {/* Barra de Filtros */}
-            <div className="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-100 mb-4 sm:mb-6 flex flex-col md:flex-row gap-3 sm:gap-4 justify-between items-stretch md:items-center">
+            <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-xs border border-slate-200/80 mb-4 sm:mb-5 flex flex-col md:flex-row gap-3 sm:gap-4 justify-between items-stretch md:items-center">
 
                 {/* Tabs de Estado */}
-                <div className="flex bg-gray-100 p-1 rounded-lg w-full md:w-auto overflow-x-auto scrollbar-hide gap-0.5 sm:gap-0 sm:flex-wrap">
+                <div className="flex bg-slate-100/90 p-1 rounded-xl w-full md:w-auto overflow-x-auto scrollbar-hide gap-1 sm:flex-wrap">
                     {[
-                        { id: 'all', label: 'Todos', tooltip: 'Vista general de todos los casos activos (excluye descartados y rechazados).' },
-                        { id: 'pending', label: 'Pendientes', tooltip: 'Hallazgos nuevos que aún no fueron derivados a ningún responsable. Calidad todavía no les envió WhatsApp.' },
-                        { id: 'in_progress', label: 'En Gestión', tooltip: 'Ya se envió el mensaje al responsable (o múltiples sectores) pero todavía no respondieron. Están "en curso".' },
-                        { id: 'quality_validation', label: 'Por Validar', tooltip: 'El responsable ya envió su resolución, pero Calidad aún debe revisar y aprobar la respuesta.' },
-                        { id: 'resolved', label: 'Resueltos', tooltip: 'Calidad aprobó la resolución. Caso cerrado ✅' },
-                        { id: 'assignment_rejected', label: '⚡ Rechazados', tooltip: 'El responsable rechazó la asignación (no le correspondía, etc.). Requiere reasignación por Calidad.' },
-                        { id: 'discarded', label: 'Descartados', tooltip: 'Calidad decidió descartar el hallazgo (no procede, duplicado, etc.).' }
+                        {
+                            id: 'all',
+                            label: 'Todos',
+                            count: reports.filter(r => r.status !== 'discarded' && r.status !== 'assignment_rejected').length,
+                            tooltip: 'Vista general de todos los casos activos (excluye descartados y rechazados).'
+                        },
+                        {
+                            id: 'pending',
+                            label: 'Pendientes',
+                            count: reports.filter(r => r.status === 'pending' || r.status === 'analyzed').length,
+                            tooltip: 'Hallazgos nuevos que aún no fueron derivados a ningún responsable. Calidad todavía no les envió WhatsApp.'
+                        },
+                        {
+                            id: 'in_progress',
+                            label: 'En Gestión',
+                            count: reports.filter(r => r.status === 'pending_resolution' || r.status === 'multi_sector_pending').length,
+                            tooltip: 'Ya se envió el mensaje al responsable (o múltiples sectores) pero todavía no respondieron. Están "en curso".'
+                        },
+                        {
+                            id: 'quality_validation',
+                            label: 'Por Validar',
+                            count: reports.filter(r => r.status === 'quality_validation').length,
+                            tooltip: 'El responsable ya envió su resolución, pero Calidad aún debe revisar y aprobar la respuesta.'
+                        },
+                        {
+                            id: 'resolved',
+                            label: 'Resueltos',
+                            count: reports.filter(r => r.status === 'resolved').length,
+                            tooltip: 'Calidad aprobó la resolución. Caso cerrado ✅'
+                        },
+                        {
+                            id: 'assignment_rejected',
+                            label: '⚡ Rechazados',
+                            count: reports.filter(r => r.status === 'assignment_rejected').length,
+                            tooltip: 'El responsable rechazó la asignación (no le correspondía, etc.). Requiere reasignación por Calidad.'
+                        },
+                        {
+                            id: 'discarded',
+                            label: 'Descartados',
+                            count: reports.filter(r => r.status === 'discarded').length,
+                            tooltip: 'Calidad decidió descartar el hallazgo (no procede, duplicado, etc.).'
+                        }
                     ].map(tab => (
                         <div key={tab.id} className="group relative">
                             <button
                                 onClick={() => setStatusFilter(tab.id as 'pending' | 'resolved' | 'all' | 'in_progress' | 'quality_validation' | 'discarded' | 'assignment_rejected')}
-                                className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md text-[11px] sm:text-sm font-bold transition-all whitespace-nowrap ${statusFilter === tab.id
-                                    ? 'bg-white text-sanatorio-primary shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-700'
+                                className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${statusFilter === tab.id
+                                    ? 'bg-white text-sanatorio-primary shadow-xs border border-slate-200/60'
+                                    : 'text-slate-500 hover:text-slate-800'
                                     }`}
                             >
-                                {tab.label}
+                                <span>{tab.label}</span>
+                                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                                    statusFilter === tab.id
+                                        ? 'bg-sanatorio-primary/10 text-sanatorio-primary'
+                                        : 'bg-slate-200/70 text-slate-500'
+                                }`}>
+                                    {tab.count}
+                                </span>
                             </button>
-                            <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 p-2.5 bg-gray-800 text-white text-[11px] leading-snug rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center z-50 shadow-lg">
+                            <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 p-2.5 bg-slate-800 text-white text-[11px] leading-snug rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center z-50 shadow-lg">
                                 {tab.tooltip}
-                                <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+                                <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-800"></div>
                             </div>
                         </div>
                     ))}
                 </div>
 
                 {/* Buscador */}
-                <div className="relative w-full md:w-80 lg:w-96">
+                <div className="relative w-full md:w-72 lg:w-88">
                     <input
                         type="text"
-                        placeholder="Buscar por ID, sector o problema..."
-                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary transition-all outline-none text-sm"
+                        placeholder="Buscar por ticket, sector o detalle..."
+                        className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-sanatorio-primary/15 focus:border-sanatorio-primary transition-all outline-none text-xs sm:text-sm"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
                 </div>
@@ -2246,74 +2316,136 @@ export const Dashboard = () => {
                                 type="button"
                                 onClick={async () => {
                                     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-                                    // Logo
-                                    try {
-                                        const logoImg = new Image();
-                                        logoImg.crossOrigin = 'Anonymous';
-                                        logoImg.src = '/logosanatorio.png';
-                                        await new Promise<void>((resolve) => {
-                                            logoImg.onload = () => resolve();
-                                            logoImg.onerror = () => resolve();
-                                        });
-                                        const canvas = document.createElement('canvas');
-                                        canvas.width = logoImg.naturalWidth;
-                                        canvas.height = logoImg.naturalHeight;
-                                        const ctx = canvas.getContext('2d');
-                                        ctx?.drawImage(logoImg, 0, 0);
-                                        const logoData = canvas.toDataURL('image/png');
-                                        doc.addImage(logoData, 'PNG', 14, 8, 30, 12);
-                                    } catch { /* skip logo */ }
+                                    const logo = await loadLogoImage('/logosanatorio.png');
+                                    const pageW = doc.internal.pageSize.getWidth(); // 297
+                                    const M = 14;
 
-                                    doc.setFontSize(16);
+                                    // Header Institucional
+                                    doc.setFillColor(...PDF_COLORS.primary);
+                                    doc.rect(0, 0, pageW, 28, 'F');
+                                    doc.setFillColor(...PDF_COLORS.secondary);
+                                    doc.rect(0, 28, pageW, 1.8, 'F');
+
+                                    drawLogoBadge(doc, logo, M, 4, 32, 20, 2.5);
+
                                     doc.setFont('helvetica', 'bold');
-                                    doc.setTextColor(0, 43, 77);
-                                    doc.text('Listado de Casos — Gestión de Calidad', 50, 16);
-                                    doc.setFontSize(9);
-                                    doc.setFont('helvetica', 'normal');
-                                    doc.setTextColor(120, 120, 120);
-                                    doc.text(`Generado: ${new Date().toLocaleString('es-AR')} | Total: ${filteredReports.length} casos`, 50, 22);
-                                    doc.setDrawColor(0, 43, 77);
-                                    doc.setLineWidth(0.5);
-                                    doc.line(14, 25, 283, 25);
+                                    doc.setFontSize(7);
+                                    doc.setTextColor(186, 230, 253);
+                                    doc.text('DEPARTAMENTO DE GESTIÓN DE CALIDAD Y SEGURIDAD DEL PACIENTE', M + 36, 9.5);
 
-                                    const statusLabel = (s: string) =>
-                                        s === 'pending' || s === 'analyzed' ? 'Pendiente' :
-                                            s === 'pending_resolution' ? 'En Gestión' :
+                                    doc.setFont('helvetica', 'bold');
+                                    doc.setFontSize(15);
+                                    doc.setTextColor(255, 255, 255);
+                                    doc.text('LISTADO DE CASOS Y TRAZABILIDAD', M + 36, 16.5);
+
+                                    doc.setFont('helvetica', 'normal');
+                                    doc.setFontSize(8.5);
+                                    doc.setTextColor(224, 242, 254);
+                                    doc.text(
+                                        sanitizePdfText(`Emitido: ${new Date().toLocaleString('es-AR')}  ·  Total en vista: ${filteredReports.length} registros`),
+                                        M + 36,
+                                        22.5
+                                    );
+
+                                    // Mini KPI summary pills on right side of header
+                                    const felicCount = filteredReports.filter(r => isFelicitacionReport(r)).length;
+                                    const resCount = filteredReports.filter(r => r.status === 'resolved' && !isFelicitacionReport(r)).length;
+                                    const pendCount = filteredReports.filter(r => r.status !== 'resolved' && r.status !== 'discarded').length;
+
+                                    const kpiSummary = `Resueltos: ${resCount}   |   En Gestión/Pendientes: ${pendCount}   |   Felicitaciones: ${felicCount}`;
+                                    doc.setFont('helvetica', 'bold');
+                                    doc.setFontSize(8);
+                                    const kpiW = doc.getTextWidth(kpiSummary) + 10;
+                                    doc.setFillColor(...PDF_COLORS.primaryDark);
+                                    doc.roundedRect(pageW - M - kpiW, 10, kpiW, 8, 2, 2, 'F');
+                                    doc.setTextColor(255, 255, 255);
+                                    doc.text(kpiSummary, pageW - M - kpiW + 5, 15.2);
+
+                                    const statusLabel = (r: any) => {
+                                        if (isFelicitacionReport(r)) return 'Felicitación';
+                                        const s = r.status;
+                                        return s === 'pending' || s === 'analyzed' ? 'Pendiente' :
+                                            s === 'pending_resolution' || s === 'multi_sector_pending' ? 'En Gestión' :
                                                 s === 'quality_validation' ? 'Validación' :
                                                     s === 'resolved' ? 'Resuelto' :
                                                         s === 'discarded' ? 'Descartado' : s;
+                                    };
+
                                     autoTable(doc, {
-                                        startY: 28,
-                                        head: [['ID', 'Fecha', 'Sector', 'Problema', 'Prioridad', 'Estado', 'Clasificación']],
-                                        body: filteredReports.map(r => [
-                                            r.tracking_id || '',
-                                            r.created_at ? new Date(r.created_at).toLocaleDateString('es-AR') : '',
-                                            r.sector || '',
-                                            (r.ai_summary || r.content?.substring(0, 80) || '').substring(0, 60),
-                                            r.ai_urgency || 'Normal',
-                                            statusLabel(r.status),
-                                            r.ai_category || 'Sin clasificar'
-                                        ]),
-                                        styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
-                                        headStyles: { fillColor: [0, 43, 77], textColor: 255, fontStyle: 'bold', fontSize: 8 },
-                                        alternateRowStyles: { fillColor: [245, 247, 250] },
+                                        startY: 34,
+                                        head: [['Ticket ID', 'Fecha', 'Sector Destino', 'Resumen / Descripción del Caso', 'Prioridad', 'Estado', 'Clasificación']],
+                                        body: filteredReports.map(r => {
+                                            const sectorLabel = SECTOR_OPTIONS.find(s => s.value === r.sector)?.label || r.sector || '-';
+                                            const summaryRaw = r.ai_summary || r.content || '';
+                                            return [
+                                                sanitizePdfText(r.tracking_id || ''),
+                                                r.created_at ? new Date(r.created_at).toLocaleDateString('es-AR') : '',
+                                                sanitizePdfText(sectorLabel),
+                                                sanitizePdfText(summaryRaw).substring(0, 95),
+                                                isFelicitacionReport(r) ? 'Reconocimiento' : sanitizePdfText(r.ai_urgency || 'Normal'),
+                                                statusLabel(r),
+                                                sanitizePdfText(r.ai_category || r.finding_type || 'Sin clasificar')
+                                            ];
+                                        }),
+                                        styles: {
+                                            fontSize: 8,
+                                            cellPadding: 3,
+                                            font: 'helvetica',
+                                            textColor: PDF_COLORS.slate800,
+                                            lineColor: PDF_COLORS.slate200,
+                                            lineWidth: 0.2,
+                                        },
+                                        headStyles: {
+                                            fillColor: PDF_COLORS.primary,
+                                            textColor: 255,
+                                            fontStyle: 'bold',
+                                            fontSize: 8,
+                                            cellPadding: 3.5,
+                                        },
+                                        alternateRowStyles: { fillColor: PDF_COLORS.slate50 },
                                         columnStyles: {
-                                            0: { cellWidth: 28 },
-                                            1: { cellWidth: 24, halign: 'center' as const },
-                                            2: { cellWidth: 35 },
-                                            3: { cellWidth: 75 },
-                                            4: { cellWidth: 22, halign: 'center' as const },
-                                            5: { cellWidth: 25, halign: 'center' as const },
+                                            0: { cellWidth: 28, fontStyle: 'bold', textColor: PDF_COLORS.primary },
+                                            1: { cellWidth: 22, halign: 'center' as const },
+                                            2: { cellWidth: 38, fontStyle: 'bold' },
+                                            3: { cellWidth: 96 },
+                                            4: { cellWidth: 26, halign: 'center' as const, fontStyle: 'bold' },
+                                            5: { cellWidth: 24, halign: 'center' as const, fontStyle: 'bold' },
                                             6: { cellWidth: 35 }
                                         },
-                                        margin: { left: 14, right: 14, top: 28 },
-                                        didDrawPage: (data: any) => {
-                                            doc.setFontSize(7);
-                                            doc.setTextColor(160, 160, 160);
-                                            doc.text('Sanatorio Argentino — Sistema de Gestión de Calidad', 14, doc.internal.pageSize.height - 8);
-                                            doc.text(`Página ${data.pageNumber}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 8);
-                                        }
+                                        didParseCell: (hookData: any) => {
+                                            if (hookData.section === 'body') {
+                                                const prio = hookData.row.raw[4];
+                                                const estado = hookData.row.raw[5];
+                                                if (hookData.column.index === 4) {
+                                                    if (prio === 'Rojo') {
+                                                        hookData.cell.styles.textColor = PDF_COLORS.red;
+                                                        hookData.cell.styles.fillColor = PDF_COLORS.redBg;
+                                                    } else if (prio === 'Amarillo') {
+                                                        hookData.cell.styles.textColor = PDF_COLORS.amber;
+                                                        hookData.cell.styles.fillColor = PDF_COLORS.amberBg;
+                                                    } else if (prio === 'Reconocimiento') {
+                                                        hookData.cell.styles.textColor = PDF_COLORS.gold;
+                                                        hookData.cell.styles.fillColor = PDF_COLORS.goldBg;
+                                                    } else {
+                                                        hookData.cell.styles.textColor = PDF_COLORS.emerald;
+                                                    }
+                                                }
+                                                if (hookData.column.index === 5) {
+                                                    if (estado === 'Felicitación') {
+                                                        hookData.cell.styles.textColor = PDF_COLORS.gold;
+                                                        hookData.cell.styles.fillColor = PDF_COLORS.goldBg;
+                                                    } else if (estado === 'Resuelto') {
+                                                        hookData.cell.styles.textColor = PDF_COLORS.emerald;
+                                                    } else if (estado === 'Validación') {
+                                                        hookData.cell.styles.textColor = PDF_COLORS.purple;
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        margin: { left: M, right: M, top: 20, bottom: 16 },
                                     });
+
+                                    applyInstitutionalFooters(doc, { margin: M });
                                     doc.save(`reportes_calidad_${new Date().toISOString().slice(0, 10)}.pdf`);
                                 }}
                                 className="flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors"
@@ -2425,97 +2557,120 @@ export const Dashboard = () => {
                         <div className="hidden lg:block overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-gray-50/50 border-b border-gray-100 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                                        <th className="px-6 py-4">Estado</th>
-                                        <th className="px-6 py-4">ID</th>
-                                        <th className="px-6 py-4">Fecha</th>
-                                        <th className="px-6 py-4">Destino / Origen</th>
-                                        <th className="px-6 py-4">Problema</th>
-                                        <th className="px-6 py-4">Prioridad</th>
-                                        <th className="px-6 py-4 text-center">Notif.</th>
-                                        <th className="px-6 py-4">Clasificación</th>
+                                    <tr className="bg-slate-50/90 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3.5">Estado</th>
+                                        <th className="px-6 py-3.5">Ticket ID</th>
+                                        <th className="px-6 py-3.5">Fecha</th>
+                                        <th className="px-6 py-3.5">Destino / Origen</th>
+                                        <th className="px-6 py-3.5">Detalle / Resumen</th>
+                                        <th className="px-6 py-3.5">Prioridad</th>
+                                        <th className="px-6 py-3.5 text-center">Notif.</th>
+                                        <th className="px-6 py-3.5">Clasificación</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-50">
+                                <tbody className="divide-y divide-slate-100">
                                     {filteredReports.length > 0 ? (
-                                        filteredReports.map((report) => (
-                                            <tr key={report.id} onClick={() => setSelectedReport(report)} className="hover:bg-blue-50/40 cursor-pointer transition-colors group">
-                                                <td className="px-6 py-4">
-                                                    {(report.finding_type === 'Felicitación' || report.ai_category === 'Felicitación') ? (
-                                                        <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center" title="Felicitación">⭐</div>
-                                                    ) : report.status === 'resolved' ? (
-                                                        <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><CheckCircle className="w-3 h-3" /></div>
-                                                    ) : report.status === 'multi_sector_pending' ? (
-                                                        <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center animate-pulse" title="Multi-Sector">
-                                                            <span className="text-[9px] font-black">MS</span>
+                                        filteredReports.map((report) => {
+                                            const isFelic = isFelicitacionReport(report);
+                                            return (
+                                                <tr
+                                                    key={report.id}
+                                                    onClick={() => setSelectedReport(report)}
+                                                    className={`cursor-pointer transition-colors group ${
+                                                        isFelic
+                                                            ? 'bg-amber-50/20 hover:bg-amber-50/60'
+                                                            : 'hover:bg-blue-50/40'
+                                                    }`}
+                                                >
+                                                    <td className="px-6 py-4">
+                                                        {isFelic ? (
+                                                            <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 text-white shadow-xs flex items-center justify-center" title="Felicitación">⭐</div>
+                                                        ) : report.status === 'resolved' ? (
+                                                            <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center"><CheckCircle className="w-3.5 h-3.5" /></div>
+                                                        ) : report.status === 'multi_sector_pending' ? (
+                                                            <div className="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center animate-pulse" title="Multi-Sector">
+                                                                <span className="text-[9px] font-black">MS</span>
+                                                            </div>
+                                                        ) : report.status === 'pending_resolution' ? (
+                                                            <div className="w-7 h-7 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center animate-pulse"><Clock className="w-3.5 h-3.5" /></div>
+                                                        ) : report.status === 'quality_validation' ? (
+                                                            <div className="w-7 h-7 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-xs">Q</div>
+                                                        ) : report.status === 'assignment_rejected' ? (
+                                                            <div className="w-7 h-7 rounded-xl bg-red-100 text-red-600 flex items-center justify-center"><XCircle className="w-3.5 h-3.5" /></div>
+                                                        ) : report.status === 'discarded' ? (
+                                                            <div className="w-7 h-7 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center"><Archive className="w-3.5 h-3.5" /></div>
+                                                        ) : (
+                                                            <div className="w-7 h-7 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><AlertCircle className="w-3.5 h-3.5" /></div>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-2 text-sm font-bold text-slate-700 group-hover:text-sanatorio-primary transition-colors">
+                                                            {report.tracking_id}
+                                                            {report.claimant_feedback === 'no_conforme' && (
+                                                                <span title="Usuario reportó Solución Insuficiente" className="bg-red-100 text-red-600 rounded-full p-0.5 animate-pulse">
+                                                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                                                </span>
+                                                            )}
                                                         </div>
-                                                    ) : report.status === 'pending_resolution' ? (
-                                                        <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center animate-pulse"><Clock className="w-3 h-3" /></div>
-                                                    ) : report.status === 'quality_validation' ? (
-                                                        <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-xs">Q</div>
-                                                    ) : report.status === 'assignment_rejected' ? (
-                                                        <div className="w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center"><XCircle className="w-3 h-3" /></div>
-                                                    ) : report.status === 'discarded' ? (
-                                                        <div className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"><Archive className="w-3 h-3" /></div>
-                                                    ) : (
-                                                        <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center"><AlertCircle className="w-3 h-3" /></div>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-2 text-sm font-bold text-gray-700 group-hover:text-sanatorio-primary transition-colors">
-                                                        {report.tracking_id}
-                                                        {report.claimant_feedback === 'no_conforme' && (
-                                                            <span title="Usuario reportó Solución Insuficiente" className="bg-red-100 text-red-600 rounded-full p-0.5 animate-pulse">
-                                                                <AlertTriangle className="w-3.5 h-3.5" />
+                                                    </td>
+                                                    <td className="px-6 py-4 text-xs text-slate-400 font-medium whitespace-nowrap">{report.created_at ? new Date(report.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
+                                                    <td className="px-6 py-4 text-sm text-slate-700">
+                                                        <div className="font-bold">{report.sector || '-'}</div>
+                                                        {(report.reporter_sector || report.origin_sector) && (
+                                                            <div className="text-[10px] text-slate-400 mt-0.5">
+                                                                Origen: {report.reporter_sector || report.origin_sector}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-slate-600 line-clamp-1 max-w-xs">{report.ai_summary || report.content}</td>
+                                                    <td className="px-6 py-4">
+                                                        {isFelic ? (
+                                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200">
+                                                                🌟 Reconocimiento
+                                                            </span>
+                                                        ) : (
+                                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase
+                                                            ${report.ai_urgency === 'Rojo' ? 'bg-red-100 text-red-700 border border-red-200/60' :
+                                                                    report.ai_urgency === 'Amarillo' ? 'bg-amber-100 text-amber-800 border border-amber-200/60' : 'bg-emerald-100 text-emerald-700 border border-emerald-200/60'
+                                                                } `}>
+                                                                {report.ai_urgency || 'Normal'}
                                                             </span>
                                                         )}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-xs text-gray-400 whitespace-nowrap">{report.created_at ? new Date(report.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
-                                                <td className="px-6 py-4 text-sm text-gray-600">
-                                                    <div className="font-bold">{report.sector || '-'}</div>
-                                                    {(report.reporter_sector || report.origin_sector) && (
-                                                        <div className="text-[10px] text-gray-400 mt-0.5">
-                                                            Origen: {report.reporter_sector || report.origin_sector}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-gray-600 line-clamp-1 max-w-xs">{report.ai_summary || report.content}</td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase
-                                                    ${report.ai_urgency === 'Rojo' ? 'bg-red-100 text-red-700' :
-                                                            report.ai_urgency === 'Amarillo' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-700'
-                                                        } `}>
-                                                        {report.ai_urgency || 'Normal'}
-                                                    </span>
-                                                    {/* Expiration Alert */}
-                                                    {(report.implementation_date && new Date(report.implementation_date) < new Date() && report.status !== 'resolved') && (
-                                                        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-red-50 text-red-600 border border-red-100 animate-pulse" title={`Vencido el ${new Date(report.implementation_date).toLocaleDateString()}`}>
-                                                            <Clock className="w-3 h-3 mr-1" /> Vencido
+                                                        {/* Expiration Alert */}
+                                                        {(report.implementation_date && new Date(report.implementation_date) < new Date() && report.status !== 'resolved') && (
+                                                            <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-red-50 text-red-600 border border-red-100 animate-pulse" title={`Vencido el ${new Date(report.implementation_date).toLocaleDateString()}`}>
+                                                                <Clock className="w-3 h-3 mr-1" /> Vencido
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        {report.last_whatsapp_status === 'sent' && (
+                                                            <div title={`Enviado: ${new Date(report.last_whatsapp_sent_at).toLocaleString()}`} className="w-3 h-3 rounded-full bg-emerald-500 mx-auto shadow-sm shadow-emerald-200"></div>
+                                                        )}
+                                                        {report.last_whatsapp_status === 'failed' && (
+                                                            <div title="Fallo en envío" className="w-3 h-3 rounded-full bg-red-500 mx-auto animate-pulse shadow-sm shadow-red-200"></div>
+                                                        )}
+                                                        {!report.last_whatsapp_status && (
+                                                            <div className="w-2 h-2 rounded-full bg-slate-200 mx-auto"></div>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg ${
+                                                            isFelic
+                                                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                                                : (!report.ai_category || report.ai_category === 'Sin clasificar')
+                                                                    ? 'bg-amber-50 text-amber-600 border border-amber-100'
+                                                                    : 'bg-slate-50 text-slate-600 border border-slate-200/80'
+                                                        }`}>
+                                                            {isFelic ? 'Felicitación' : (report.ai_category || 'Sin clasificar')}
                                                         </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    {report.last_whatsapp_status === 'sent' && (
-                                                        <div title={`Enviado: ${new Date(report.last_whatsapp_sent_at).toLocaleString()}`} className="w-3 h-3 rounded-full bg-green-500 mx-auto shadow-sm shadow-green-200"></div>
-                                                    )}
-                                                    {report.last_whatsapp_status === 'failed' && (
-                                                        <div title="Fallo en envío" className="w-3 h-3 rounded-full bg-red-500 mx-auto animate-pulse shadow-sm shadow-red-200"></div>
-                                                    )}
-                                                    {!report.last_whatsapp_status && (
-                                                        <div className="w-2 h-2 rounded-full bg-gray-200 mx-auto"></div>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`text-xs font-medium px-2 py-1 rounded-lg ${(!report.ai_category || report.ai_category === 'Sin clasificar') ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-gray-50 text-gray-600 border border-gray-100'}`}>
-                                                        {report.ai_category || 'Sin clasificar'}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
                                     ) : (
                                         <tr>
-                                            <td colSpan={8} className="px-6 py-12 text-center text-gray-400">
+                                            <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
                                                 No se encontraron reportes con los criterios seleccionados.
                                             </td>
                                         </tr>
@@ -2850,6 +3005,7 @@ export const Dashboard = () => {
                                                     <option value="Evento Adverso">Evento Adverso</option>
                                                     <option value="Evento Cuasi Adverso">Evento Cuasi Adverso</option>
                                                     <option value="Desvío">Desvío</option>
+                                                    <option value="Felicitación">🌟 Felicitación</option>
                                                 </select>
                                                 {!selectedReport.finding_type && (
                                                     <p className="text-[10px] text-amber-600 mt-1 font-medium">⚠ Este ticket necesita clasificación de hallazgo</p>
@@ -3429,7 +3585,20 @@ export const Dashboard = () => {
                         <div className="flex-1 lg:w-1/2 bg-gray-50 border-t lg:border-t-0 lg:border-l border-gray-200 p-4 sm:p-6 lg:p-8 flex flex-col">
                             <div className="flex justify-between items-center mb-4 sm:mb-6">
                                 <h3 className="text-base sm:text-lg font-bold text-gray-800">{isAdmin ? 'Centro de Gestión' : 'Detalle del Caso'}</h3>
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => generateValidationPDF(selectedReport, sectorAssignmentsData, SECTOR_OPTIONS, responsables)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer shadow-sm border ${
+                                            isFelicitacionReport(selectedReport)
+                                                ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200'
+                                                : 'bg-white hover:bg-blue-50 text-sanatorio-primary border-gray-200 hover:border-blue-200'
+                                        }`}
+                                        title={isFelicitacionReport(selectedReport) ? 'Descargar Certificado de Felicitación en PDF' : 'Descargar Informe en PDF'}
+                                    >
+                                        <Download className="w-3.5 h-3.5" />
+                                        <span>{isFelicitacionReport(selectedReport) ? 'Certificado PDF' : 'PDF'}</span>
+                                    </button>
                                     {isAdmin && (
                                         <button
                                             onClick={() => setShowDeleteModal(true)}
@@ -3445,22 +3614,31 @@ export const Dashboard = () => {
 
                             <div className="flex-1 overflow-y-auto pr-2">
                                 {selectedReport.status === 'resolved' ? (
-                                    // VISTA RESOLUCIÓN COMPLETADA
-                                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-green-100 flex flex-col h-full">
-                                        <div className="flex items-center gap-3 mb-6 bg-green-50 p-4 rounded-xl border border-green-100">
-                                            <div className="w-12 h-12 rounded-full bg-white text-green-600 flex items-center justify-center shadow-sm">
-                                                <CheckCircle className="w-6 h-6" />
+                                    // VISTA RESOLUCIÓN COMPLETADA / FELICITACIÓN
+                                    <div className={`bg-white p-6 rounded-2xl shadow-sm border flex flex-col h-full ${isFelicitacionReport(selectedReport) ? 'border-amber-200' : 'border-green-100'}`}>
+                                        <div className={`flex items-center gap-3 mb-6 p-4 rounded-xl border ${isFelicitacionReport(selectedReport) ? 'bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200' : 'bg-green-50 border-green-100'}`}>
+                                            <div className={`w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm ${isFelicitacionReport(selectedReport) ? 'text-amber-500' : 'text-green-600'}`}>
+                                                {isFelicitacionReport(selectedReport) ? <span className="text-xl">🌟</span> : <CheckCircle className="w-6 h-6" />}
                                             </div>
                                             <div className="flex-1">
-                                                <h4 className="font-bold text-gray-900 text-lg">Caso Cerrado</h4>
-                                                <p className="text-sm text-green-700 font-medium">Gestión completada exitosamente</p>
+                                                <h4 className="font-bold text-gray-900 text-lg">
+                                                    {isFelicitacionReport(selectedReport) ? 'Felicitación Registrada' : 'Caso Cerrado'}
+                                                </h4>
+                                                <p className={`text-sm font-medium ${isFelicitacionReport(selectedReport) ? 'text-amber-700' : 'text-green-700'}`}>
+                                                    {isFelicitacionReport(selectedReport) ? 'Reconocimiento enviado al sector destacado' : 'Gestión completada exitosamente'}
+                                                </p>
                                             </div>
                                             <button
                                                 onClick={() => generateValidationPDF(selectedReport, sectorAssignmentsData, SECTOR_OPTIONS, responsables)}
-                                                className="w-9 h-9 rounded-lg bg-white border border-green-200 text-green-600 flex items-center justify-center hover:bg-green-100 hover:border-green-300 transition-all active:scale-95 shadow-sm"
-                                                title="Descargar PDF"
+                                                className={`px-3 py-2 rounded-lg bg-white border flex items-center gap-1.5 font-bold text-xs transition-all active:scale-95 shadow-sm cursor-pointer ${
+                                                    isFelicitacionReport(selectedReport)
+                                                        ? 'border-amber-300 text-amber-700 hover:bg-amber-100'
+                                                        : 'border-green-200 text-green-600 hover:bg-green-100 hover:border-green-300'
+                                                }`}
+                                                title={isFelicitacionReport(selectedReport) ? 'Descargar Certificado de Felicitación' : 'Descargar PDF'}
                                             >
                                                 <Download className="w-4 h-4" />
+                                                <span>{isFelicitacionReport(selectedReport) ? 'Certificado' : 'PDF'}</span>
                                             </button>
                                         </div>
 

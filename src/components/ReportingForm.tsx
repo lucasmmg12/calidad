@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../utils/supabase';
-import { Send, ShieldAlert, Loader2, User, Lock, Info, AlertTriangle, Lightbulb, Paperclip, X, Phone, Star, Trophy } from 'lucide-react';
+import { Send, ShieldAlert, Loader2, User, Lock, Info, AlertTriangle, Lightbulb, Paperclip, X, Phone, Star, Trophy, Download } from 'lucide-react';
 import { DoraAssistant } from './DoraAssistant';
 import { SearchableSelect } from './SearchableSelect';
 import { SECTOR_OPTIONS } from '../constants/sectors';
 import { VoiceRecorder } from './VoiceRecorder';
+import { generateValidationPDF } from '../utils/validationPdfExport';
 
 type ReportMode = 'hallazgo' | 'felicitacion';
 
@@ -259,12 +260,46 @@ export const ReportingForm = () => {
                         )}
                     </button>
                 </div>
-                <button
-                    onClick={() => { setSuccessId(null); setFormData({ originSector: '', reporterSector: '', sector: '', content: '', contactName: '', contactNumber: '' }); setFiles([]); setPreviewUrls([]); setIsAnonymous(false); setReportMode('hallazgo'); }}
-                    className="btn-primary w-full"
-                >
-                    {isFelicitacion ? 'Enviar Otra' : 'Enviar Nuevo Reporte'}
-                </button>
+                <div className="space-y-3">
+                    <button
+                        type="button"
+                        onClick={() =>
+                            generateValidationPDF(
+                                {
+                                    tracking_id: successId,
+                                    content: formData.content,
+                                    sector: formData.sector,
+                                    origin_sector: formData.reporterSector || formData.originSector,
+                                    reporter_sector: formData.reporterSector,
+                                    status: isFelicitacion ? 'resolved' : 'pending',
+                                    created_at: new Date().toISOString(),
+                                    finding_type: isFelicitacion ? 'Felicitación' : 'Observación',
+                                    ai_category: isFelicitacion ? 'Felicitación' : 'En Análisis',
+                                    ai_urgency: isFelicitacion ? 'Verde' : undefined,
+                                    contact_name: formData.contactName || null,
+                                    contact_number: formData.contactNumber || null,
+                                    is_anonymous: isAnonymous === true,
+                                },
+                                [],
+                                SECTOR_OPTIONS
+                            )
+                        }
+                        className={`w-full py-3.5 px-6 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm ${isFelicitacion
+                                ? 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white shadow-amber-200/50'
+                                : 'bg-white border-2 border-sanatorio-primary text-sanatorio-primary hover:bg-blue-50'
+                            }`}
+                    >
+                        <Download className="w-4 h-4" />
+                        {isFelicitacion ? 'Descargar Certificado de Felicitación (PDF)' : 'Descargar Comprobante en PDF'}
+                    </button>
+
+                    <button
+                        onClick={() => { setSuccessId(null); setFormData({ originSector: '', reporterSector: '', sector: '', content: '', contactName: '', contactNumber: '' }); setFiles([]); setPreviewUrls([]); setIsAnonymous(false); setReportMode('hallazgo'); }}
+                        className="btn-primary w-full"
+                    >
+                        {isFelicitacion ? 'Enviar Otra' : 'Enviar Nuevo Reporte'}
+                    </button>
+                </div>
                 <div className="mt-6">
                     <DoraAssistant
                         variant="inline"
@@ -277,85 +312,111 @@ export const ReportingForm = () => {
 
     return (
         <div className="max-w-3xl mx-auto p-4 md:p-6 mb-20 relative">
-            <div className="mb-12 text-center space-y-3">
-                <h1 className="text-4xl md:text-5xl font-display font-black text-sanatorio-primary tracking-tight">Gestión de Calidad</h1>
-                <p className="text-slate-500 text-lg font-medium">Tu voz es el motor de nuestra mejora continua.</p>
+            <div className="mb-9 text-center space-y-3">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sanatorio-primary/8 border border-sanatorio-primary/15 text-sanatorio-primary text-[11px] font-bold uppercase tracking-widest">
+                    <span className="w-2 h-2 rounded-full bg-sanatorio-secondary animate-pulse" />
+                    Sistema de Gestión de Calidad · Normas ITAES
+                </div>
+                <h1 className="text-3xl md:text-5xl font-display font-black text-sanatorio-primary tracking-tight">
+                    Canal de Calidad y Reconocimiento
+                </h1>
+                <p className="text-slate-500 text-base md:text-lg font-medium max-w-xl mx-auto">
+                    Tu voz impulsa la seguridad del paciente y reconoce la excelencia de nuestros equipos.
+                </p>
             </div>
 
             {/* ── Mode Selector: Hallazgo vs Felicitación ── */}
-            <div className="flex gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                 <button
                     type="button"
                     onClick={() => setReportMode('hallazgo')}
-                    className={`flex-1 p-5 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-3 group ${reportMode === 'hallazgo'
-                        ? 'border-sanatorio-primary bg-sanatorio-primary/5 shadow-lg shadow-sanatorio-primary/10'
-                        : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+                    className={`relative p-5 rounded-2xl border-2 transition-all duration-200 flex items-center sm:flex-col sm:items-center gap-4 sm:gap-3 text-left sm:text-center group cursor-pointer ${reportMode === 'hallazgo'
+                        ? 'border-sanatorio-primary bg-gradient-to-b from-blue-50/70 to-white shadow-md shadow-sanatorio-primary/10'
+                        : 'border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50/50'
                         }`}
                 >
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${reportMode === 'hallazgo' ? 'bg-sanatorio-primary text-white shadow-lg' : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'
+                    {reportMode === 'hallazgo' && (
+                        <span className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-sanatorio-primary text-white text-[10px] font-bold uppercase tracking-wider">
+                            Activo
+                        </span>
+                    )}
+                    <div className={`w-13 h-13 shrink-0 rounded-2xl flex items-center justify-center transition-all ${reportMode === 'hallazgo' ? 'bg-sanatorio-primary text-white shadow-md shadow-sanatorio-primary/25' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200/80'
                         }`}>
-                        <ShieldAlert className="w-7 h-7" />
+                        <ShieldAlert className="w-6 h-6" />
                     </div>
-                    <div className="text-center">
-                        <p className={`font-bold text-lg ${reportMode === 'hallazgo' ? 'text-sanatorio-primary' : 'text-gray-600'}`}>Hallazgo</p>
-                        <p className="text-xs text-slate-400 mt-0.5">Reportar un problema u observación</p>
+                    <div>
+                        <p className={`font-display font-bold text-lg ${reportMode === 'hallazgo' ? 'text-sanatorio-primary' : 'text-slate-700'}`}>Reportar Hallazgo</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Oportunidad de mejora, incidente u observación clínica</p>
                     </div>
                 </button>
                 <button
                     type="button"
                     onClick={() => { setReportMode('felicitacion'); setIsAnonymous(false); }}
-                    className={`flex-1 p-5 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-3 group ${reportMode === 'felicitacion'
-                        ? 'border-amber-400 bg-amber-50/50 shadow-lg shadow-amber-400/10'
-                        : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+                    className={`relative p-5 rounded-2xl border-2 transition-all duration-200 flex items-center sm:flex-col sm:items-center gap-4 sm:gap-3 text-left sm:text-center group cursor-pointer ${reportMode === 'felicitacion'
+                        ? 'border-amber-400 bg-gradient-to-b from-amber-50/80 to-white shadow-md shadow-amber-400/15'
+                        : 'border-slate-200/90 bg-white hover:border-amber-200 hover:bg-amber-50/20'
                         }`}
                 >
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${reportMode === 'felicitacion' ? 'bg-gradient-to-br from-amber-400 to-yellow-500 text-white shadow-lg' : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'
+                    {reportMode === 'felicitacion' && (
+                        <span className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wider">
+                            Activo
+                        </span>
+                    )}
+                    <div className={`w-13 h-13 shrink-0 rounded-2xl flex items-center justify-center transition-all ${reportMode === 'felicitacion' ? 'bg-gradient-to-br from-amber-400 to-yellow-500 text-white shadow-md shadow-amber-400/30' : 'bg-amber-50 text-amber-500 group-hover:bg-amber-100'
                         }`}>
-                        <Star className="w-7 h-7" />
+                        <Star className="w-6 h-6" />
                     </div>
-                    <div className="text-center">
-                        <p className={`font-bold text-lg ${reportMode === 'felicitacion' ? 'text-amber-600' : 'text-gray-600'}`}>Felicitación</p>
-                        <p className="text-xs text-slate-400 mt-0.5">Reconocer el trabajo de un sector</p>
+                    <div>
+                        <p className={`font-display font-bold text-lg ${reportMode === 'felicitacion' ? 'text-amber-700' : 'text-slate-700'}`}>Enviar Felicitación</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Reconocer la calidez y excelencia de un sector o equipo</p>
                     </div>
                 </button>
             </div>
 
             {/* Quick Guide Card — only for hallazgo */}
             {reportMode === 'hallazgo' && (
-                <div className="glass-panel rounded-3xl p-8 mb-10 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-sanatorio-primary/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
-                    <h3 className="text-xs font-bold text-sanatorio-primary uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                        <Info className="w-4 h-4" />
-                        Guía Rápida de Reporte
-                    </h3>
-                    <div className="grid md:grid-cols-3 gap-8">
-                        <div className="space-y-3">
-                            <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
-                                <AlertTriangle className="w-5 h-5 text-orange-600" />
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 md:p-6 mb-8 shadow-xs relative overflow-hidden">
+                    <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                        <h3 className="text-[11px] font-bold text-sanatorio-primary uppercase tracking-widest flex items-center gap-2">
+                            <Info className="w-4 h-4 text-sanatorio-secondary" />
+                            Guía Rápida para un Reporte Efectivo
+                        </h3>
+                        <span className="text-[10px] font-semibold text-slate-400 hidden sm:inline">3 pilares de trazabilidad</span>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-4 md:gap-6">
+                        <div className="flex items-start gap-3">
+                            <div className="w-9 h-9 shrink-0 bg-orange-50 border border-orange-100 rounded-xl flex items-center justify-center">
+                                <AlertTriangle className="w-4 h-4 text-orange-600" />
                             </div>
-                            <p className="font-bold text-slate-800 text-sm">Sé Específico</p>
-                            <p className="text-xs text-slate-500 leading-relaxed">Detalla el Qué, Dónde y Cuándo con precisión.</p>
+                            <div>
+                                <p className="font-bold text-slate-800 text-xs">1. Sé Específico</p>
+                                <p className="text-xs text-slate-500 leading-relaxed mt-0.5">Detalla qué ocurrió, dónde y en qué momento.</p>
+                            </div>
                         </div>
-                        <div className="space-y-3">
-                            <div className="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center">
-                                <Lightbulb className="w-5 h-5 text-yellow-600" />
+                        <div className="flex items-start gap-3">
+                            <div className="w-9 h-9 shrink-0 bg-amber-50 border border-amber-100 rounded-xl flex items-center justify-center">
+                                <Lightbulb className="w-4 h-4 text-amber-600" />
                             </div>
-                            <p className="font-bold text-slate-800 text-sm">Aporta Ideas</p>
-                            <p className="text-xs text-slate-500 leading-relaxed">Tus sugerencias de solución son muy valiosas.</p>
+                            <div>
+                                <p className="font-bold text-slate-800 text-xs">2. Aporta Ideas</p>
+                                <p className="text-xs text-slate-500 leading-relaxed mt-0.5">Tus propuestas de mejora enriquecen la solución.</p>
+                            </div>
                         </div>
-                        <div className="space-y-3">
-                            <div className="w-10 h-10 bg-sanatorio-secondary/10 rounded-xl flex items-center justify-center">
-                                <ShieldAlert className="w-5 h-5 text-sanatorio-secondary" />
+                        <div className="flex items-start gap-3">
+                            <div className="w-9 h-9 shrink-0 bg-teal-50 border border-teal-100 rounded-xl flex items-center justify-center">
+                                <ShieldAlert className="w-4 h-4 text-sanatorio-secondary" />
                             </div>
-                            <p className="font-bold text-slate-800 text-sm">Identificación</p>
-                            <p className="text-xs text-slate-500 leading-relaxed">Identificarte nos permite darte feedback directo y hacer seguimiento.</p>
+                            <div>
+                                <p className="font-bold text-slate-800 text-xs">3. Seguimiento</p>
+                                <p className="text-xs text-slate-500 leading-relaxed mt-0.5">Identificarte permite enviarte avances por WhatsApp.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            <div className="glass-card rounded-[2.5rem] p-6 md:p-12">
-                <form onSubmit={handleSubmit} className="space-y-10">
+            <div className="glass-card rounded-3xl p-6 md:p-10">
+                <form onSubmit={handleSubmit} className="space-y-8">
 
                     {/* Identified Mode Header — only for hallazgo */}
                     {reportMode === 'hallazgo' && (<>

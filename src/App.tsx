@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { ReportingForm } from './components/ReportingForm';
 import { Dashboard } from './components/Dashboard';
@@ -42,8 +42,35 @@ import { supabase } from './utils/supabase';
 
 function Navbar() {
   const { session, role, isAdmin, isDirectivo } = useAuth();
+  const location = useLocation();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isActive = (path: string) =>
+    path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
+
+  const navLinkClass = (path: string, variant: 'default' | 'emerald' | 'red' = 'default') => {
+    const active = isActive(path);
+    if (variant === 'emerald') {
+      return `hidden md:flex items-center gap-1.5 px-3.5 py-2 font-bold text-xs rounded-xl transition-all ${
+        active
+          ? 'bg-emerald-600 text-white shadow-xs'
+          : 'text-emerald-700 hover:bg-emerald-50 border border-transparent hover:border-emerald-200/70'
+      }`;
+    }
+    if (variant === 'red') {
+      return `hidden md:flex items-center gap-1.5 px-3.5 py-2 font-bold text-xs rounded-xl transition-all ${
+        active
+          ? 'bg-red-600 text-white shadow-xs'
+          : 'text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200/70'
+      }`;
+    }
+    return `flex items-center gap-1.5 px-3.5 py-2 font-bold text-xs rounded-xl transition-all ${
+      active
+        ? 'bg-sanatorio-primary text-white shadow-xs'
+        : 'text-slate-600 hover:text-sanatorio-primary hover:bg-slate-100/80'
+    }`;
+  };
 
   const handleLogoutClick = () => {
     setShowLogoutModal(true);
@@ -68,101 +95,94 @@ function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-[9999] w-full px-2 sm:px-4 py-2 sm:py-3">
-        <div className="max-w-7xl mx-auto glass-panel rounded-2xl md:rounded-3xl px-3 sm:px-4 md:px-8 py-2.5 sm:py-3 flex justify-between items-center transition-all duration-300">
-          <Link to="/" className="flex items-center gap-2 sm:gap-3 group focus:outline-none" onClick={closeMobileMenu}>
-            <img
-              src="/logosanatorio.png"
-              alt="Sanatorio Argentino"
-              className="h-8 sm:h-10 md:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
-            />
-            <span className="font-display font-bold text-slate-700 text-lg group-hover:text-sanatorio-primary transition-colors hidden sm:block">Inicio</span>
+      <header className="sticky top-0 z-[9999] w-full px-2 sm:px-4 py-2 sm:py-2.5">
+        <div className="max-w-7xl mx-auto glass-panel rounded-2xl px-3 sm:px-5 md:px-6 py-2.5 flex justify-between items-center transition-all duration-300">
+          <Link to="/" className="flex items-center gap-2.5 sm:gap-3.5 group focus:outline-none" onClick={closeMobileMenu}>
+            <div className="bg-white p-1 rounded-xl border border-slate-100 shadow-2xs transition-transform duration-300 group-hover:scale-[1.03]">
+              <img
+                src="/logosanatorio.png"
+                alt="Sanatorio Argentino"
+                className="h-7 sm:h-9 md:h-10 w-auto object-contain"
+              />
+            </div>
+            <div className="hidden sm:flex flex-col">
+              <span className="font-display font-extrabold text-sanatorio-primary text-sm md:text-base leading-tight tracking-tight group-hover:text-[#003E6B] transition-colors">
+                Calidad & Seguridad
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                Sanatorio Argentino
+              </span>
+            </div>
           </Link>
 
           {/* Desktop Nav */}
           <nav className="hidden sm:flex items-center gap-1">
-            <Link to="/track" className="flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all" title="Seguimiento">
-              <LayoutDashboard className="w-4 h-4" /> <span className="hidden md:inline">Seguimiento</span>
+            <Link to="/track" className={navLinkClass('/track')} title="Seguimiento">
+              <LayoutDashboard className="w-3.5 h-3.5" /> <span className="hidden md:inline">Seguimiento</span>
             </Link>
-            <Link to="/guia" className="flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all" title="Guía">
-              <HelpCircle className="w-4 h-4" /> <span className="hidden md:inline">Guía</span>
+            <Link to="/guia" className={navLinkClass('/guia')} title="Guía">
+              <HelpCircle className="w-3.5 h-3.5" /> <span className="hidden md:inline">Guía</span>
             </Link>
 
-            <div className="w-px h-6 bg-slate-200 mx-2 hidden md:block"></div>
+            <div className="w-px h-5 bg-slate-200 mx-1.5 hidden md:block"></div>
 
             {session ? (
               <>
                 {isAdmin && (
                   <>
-                    <Link to="/admin/users" className="hidden md:flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all">
-                      <Users className="w-4 h-4" /> Usuarios
+                    <Link to="/admin/users" className={`hidden md:flex ${navLinkClass('/admin/users')}`}>
+                      <Users className="w-3.5 h-3.5" /> Usuarios
                     </Link>
-                    <Link to="/admin/alertas" className="hidden md:flex items-center gap-2 px-4 py-2 text-red-500 font-bold text-sm hover:text-red-600 hover:bg-red-50 rounded-xl transition-all">
-                      <Bell className="w-4 h-4" /> Alertas
+                    <Link to="/admin/alertas" className={navLinkClass('/admin/alertas', 'red')}>
+                      <Bell className="w-3.5 h-3.5" /> Alertas
                     </Link>
                   </>
                 )}
 
                 {!isDirectivo && (
-                  <Link to="/dashboard" className="hidden md:flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all">
-                    <LayoutDashboard className="w-4 h-4" /> Casos
+                  <Link to="/dashboard" className={`hidden md:flex ${navLinkClass('/dashboard')}`}>
+                    <LayoutDashboard className="w-3.5 h-3.5" /> Casos
                   </Link>
                 )}
 
-                <Link to="/mis-casos" className="hidden md:flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all">
-                  <Briefcase className="w-4 h-4" /> Mis Casos
+                <Link to="/mis-casos" className={`hidden md:flex ${navLinkClass('/mis-casos')}`}>
+                  <Briefcase className="w-3.5 h-3.5" /> Mis Casos
                 </Link>
 
-                {/* 
-                <Link to="/auditoria-procesos" className="hidden md:flex items-center gap-2 px-4 py-2 text-emerald-700 font-bold text-sm hover:bg-emerald-50 rounded-xl transition-all" title="Auditoría de Procesos por Sector">
-                  <ClipboardCheck className="w-4 h-4 text-emerald-600" /> Aud. Procesos
-                </Link>
-                */}
-
-                <Link to="/auditoria-fin-de-semana" className="hidden md:flex items-center gap-2 px-4 py-2 text-emerald-700 font-bold text-sm hover:bg-emerald-50 rounded-xl transition-all" title="Auditoría de Proceso">
-                  <ClipboardCheck className="w-4 h-4 text-emerald-600" /> Auditoría de Proceso
+                <Link to="/auditoria-fin-de-semana" className={navLinkClass('/auditoria-fin-de-semana', 'emerald')} title="Auditoría de Proceso">
+                  <ClipboardCheck className="w-3.5 h-3.5" /> Auditoría de Proceso
                 </Link>
 
-                <Link to="/metrics" className="hidden md:flex items-center gap-2 px-4 py-2 text-sanatorio-primary font-bold text-sm hover:bg-sanatorio-primary/5 rounded-xl transition-all">
-                  <BarChart3 className="w-4 h-4" /> Métricas
+                <Link to="/metrics" className={`hidden md:flex ${navLinkClass('/metrics')}`}>
+                  <BarChart3 className="w-3.5 h-3.5" /> Métricas
                 </Link>
 
-                <Link to="/manual" className="hidden md:flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all" title="Manual del Sistema">
-                  <BookMarked className="w-4 h-4" /> Manual
+                <Link to="/manual" className={`hidden md:flex ${navLinkClass('/manual')}`} title="Manual del Sistema">
+                  <BookMarked className="w-3.5 h-3.5" /> Manual
                 </Link>
 
                 {!isAdmin && !isDirectivo && (
-                  <Link to="/perfil" className="hidden md:flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm hover:text-sanatorio-primary hover:bg-sanatorio-primary/5 rounded-xl transition-all">
-                    <UserCog className="w-4 h-4" /> Perfil
+                  <Link to="/perfil" className={`hidden md:flex ${navLinkClass('/perfil')}`}>
+                    <UserCog className="w-3.5 h-3.5" /> Perfil
                   </Link>
                 )}
 
-                {/* Role Badge oculto a pedido del usuario
-                <div className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest ${role === 'admin' ? 'bg-purple-50 text-purple-600 border border-purple-200' :
-                  role === 'directivo' ? 'bg-blue-50 text-blue-600 border border-blue-200' :
-                    'bg-green-50 text-green-600 border border-green-200'
-                  }`}>
-                  <Shield className="w-3 h-3" />
-                  {role === 'admin' ? 'Admin' : role === 'directivo' ? 'Directivo' : 'Responsable'}
-                </div>
-                */}
-
                 <button
                   onClick={handleLogoutClick}
-                  className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600 rounded-xl font-bold text-sm transition-all ml-2 cursor-pointer z-[10000]"
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600 border border-slate-200/60 hover:border-red-200 rounded-xl font-bold text-xs transition-all ml-1.5 cursor-pointer z-[10000]"
                   style={{ pointerEvents: 'auto' }}
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-3.5 h-3.5" />
                   <span className="hidden md:inline">Salir</span>
                 </button>
               </>
             ) : (
               <Link
                 to="/login"
-                className="flex items-center gap-2 px-5 py-2.5 bg-sanatorio-primary/5 text-sanatorio-primary hover:bg-sanatorio-primary hover:text-white rounded-xl font-bold text-sm transition-all border border-sanatorio-primary/10 shadow-sm"
+                className="flex items-center gap-1.5 px-4 py-2 bg-sanatorio-primary text-white hover:bg-[#004270] rounded-xl font-bold text-xs transition-all shadow-xs"
               >
-                <LogIn className="w-4 h-4" />
-                <span className="hidden md:inline">Ingresar</span>
+                <LogIn className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Acceso Institucional</span>
               </Link>
             )}
           </nav>
