@@ -519,7 +519,7 @@ export const generateFelicitacionPDF = async (
         doc.setPage(i);
         setF('bold', 7, PDF_COLORS.slate500);
         doc.text(
-            `Emitido el ${new Date().toLocaleDateString('es-AR')} · Sanatorio Argentino · Sistema de Gestión de Calidad DORA`,
+            `Emitido el ${new Date().toLocaleDateString('es-AR')} · Sanatorio Argentino · Gestión de Calidad · Innovación y Transformación Digital`,
             pageW / 2,
             pageH - 12.5,
             { align: 'center' }

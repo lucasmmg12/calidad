@@ -4,6 +4,8 @@ import { supabase } from '../utils/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { SECTOR_OPTIONS } from '../constants/sectors';
 import { SectorTracking } from './SectorTracking';
+import { exportCasesToExcel, exportCasesToPDF, type ExportCaseRow } from '../utils/institutionalExport';
+import { generateValidationPDF, isFelicitacionReport } from '../utils/validationPdfExport';
 import {
     Loader2,
     ExternalLink,
@@ -15,6 +17,8 @@ import {
     FileQuestion,
     MessageSquare,
     Search,
+    FileSpreadsheet,
+    Download,
 } from 'lucide-react';
 
 interface Assignment {
@@ -51,6 +55,7 @@ const TYPE_MAP: Record<string, { label: string; color: string }> = {
     simple: { label: 'Simple', color: 'bg-blue-100 text-blue-700' },
     desvio: { label: 'Desvío', color: 'bg-orange-100 text-orange-700' },
     adverse: { label: 'Evento Adverso', color: 'bg-red-100 text-red-700' },
+    felicitacion: { label: '🌟 Felicitación', color: 'bg-amber-100 text-amber-800 border border-amber-200' },
 };
 
 export const MyCases = () => {
@@ -187,6 +192,66 @@ export const MyCases = () => {
     const pendingCount = assignments.filter(a => a.status === 'pending').length;
     const resolvedCount = assignments.filter(a => a.status === 'resolved' || a.status === 'quality_validation').length;
 
+    const sectorSubtitle =
+        sectors.map(s => SECTOR_OPTIONS.find(o => o.value === s)?.label || s).join(', ') || 'Mis Sectores';
+
+    const buildExportRows = (): ExportCaseRow[] =>
+        filteredAssignments.map(a => {
+            const report = a.reports as any;
+            const statusInfo = STATUS_MAP[a.status] || STATUS_MAP.pending;
+            const isFelic = isFelicitacionReport(report) || a.management_type === 'felicitacion';
+            const typeInfo = isFelic
+                ? TYPE_MAP.felicitacion
+                : TYPE_MAP[a.management_type] || TYPE_MAP.simple;
+            const sectorLabel = SECTOR_OPTIONS.find(s => s.value === a.sector)?.label || a.sector;
+
+            return {
+                trackingId: report?.tracking_id || '—',
+                date: a.created_at ? new Date(a.created_at).toLocaleDateString('es-AR') : '—',
+                sector: sectorLabel,
+                managementType: typeInfo.label.replace('🌟 ', ''),
+                urgency: report?.ai_urgency || 'Normal',
+                status: isFelic ? 'Felicitación' : statusInfo.label,
+                category: isFelic ? 'Felicitación' : (report?.ai_category || report?.finding_type || 'General'),
+                summary: report?.ai_summary || report?.content || '—',
+                immediateAction: a.immediate_action || '',
+                qualityObservations: report?.quality_observations || '',
+                resolvedAt: a.resolved_at ? new Date(a.resolved_at).toLocaleDateString('es-AR') : '',
+            };
+        });
+
+    const handleExportExcel = async () => {
+        const rows = buildExportRows();
+        await exportCasesToExcel({
+            title: 'Mis Casos Asignados',
+            subtitle: `Sectores: ${sectorSubtitle}`,
+            sheetName: 'Mis Casos',
+            fileNamePrefix: 'Mis_Casos_Sanatorio_Argentino',
+            rows,
+            kpis: {
+                total: filteredAssignments.length,
+                pending: filteredAssignments.filter(a => a.status === 'pending').length,
+                resolved: filteredAssignments.filter(a => a.status === 'resolved' || a.status === 'quality_validation').length,
+                felicitaciones: filteredAssignments.filter(a => isFelicitacionReport(a.reports as any) || a.management_type === 'felicitacion').length,
+            },
+        });
+    };
+
+    const handleExportPDF = async () => {
+        const rows = buildExportRows();
+        await exportCasesToPDF({
+            title: 'Mis Casos Asignados',
+            subtitle: `Sectores: ${sectorSubtitle}`,
+            fileNamePrefix: 'Mis_Casos_Sanatorio_Argentino',
+            rows,
+            kpis: {
+                total: filteredAssignments.length,
+                pending: filteredAssignments.filter(a => a.status === 'pending').length,
+                resolved: filteredAssignments.filter(a => a.status === 'resolved' || a.status === 'quality_validation').length,
+            },
+        });
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -244,7 +309,7 @@ export const MyCases = () => {
                         </div>
                     </div>
 
-                    {/* Filters & Search */}
+                    {/* Filters, Search & Export Actions */}
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
                         <div className="flex items-center gap-2">
                             <Filter className="w-4 h-4 text-gray-400" />
@@ -252,7 +317,7 @@ export const MyCases = () => {
                                 <button
                                     key={f}
                                     onClick={() => setFilter(f)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === f
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${filter === f
                                         ? 'bg-sanatorio-primary text-white shadow-sm'
                                         : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                                         }`}
@@ -280,6 +345,28 @@ export const MyCases = () => {
                                     <XCircle className="w-4 h-4" />
                                 </button>
                             )}
+                        </div>
+                        <div className="flex items-center gap-2 sm:ml-auto">
+                            <button
+                                type="button"
+                                onClick={handleExportExcel}
+                                disabled={filteredAssignments.length === 0}
+                                className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all shadow-2xs disabled:opacity-40 cursor-pointer"
+                                title="Descargar listado en Excel con formato institucional"
+                            >
+                                <FileSpreadsheet className="w-3.5 h-3.5" />
+                                Excel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleExportPDF}
+                                disabled={filteredAssignments.length === 0}
+                                className="flex items-center gap-1.5 px-3.5 py-2 bg-sanatorio-primary/10 text-sanatorio-primary border border-sanatorio-primary/20 rounded-xl text-xs font-bold hover:bg-sanatorio-primary hover:text-white transition-all shadow-2xs disabled:opacity-40 cursor-pointer"
+                                title="Descargar listado en PDF institucional"
+                            >
+                                <Download className="w-3.5 h-3.5" />
+                                PDF
+                            </button>
                         </div>
                     </div>
                     
@@ -354,13 +441,37 @@ export const MyCases = () => {
                                                         <span className="font-bold">{sectorLabel}</span> · {new Date(assignment.created_at).toLocaleDateString('es-AR')}
                                                     </p>
                                                 </div>
-                                                <a
-                                                    href={resolutionLink}
-                                                    className="flex-shrink-0 px-3 py-2 bg-sanatorio-primary text-white font-bold text-xs rounded-lg hover:opacity-90 transition-all flex items-center gap-1.5 shadow-sm"
-                                                >
-                                                    <ExternalLink className="w-3.5 h-3.5" />
-                                                    {assignment.status === 'pending' ? 'Gestionar' : 'Ver'}
-                                                </a>
+                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            generateValidationPDF(
+                                                                {
+                                                                    ...report,
+                                                                    sector: assignment.sector || report.sector,
+                                                                },
+                                                                [assignment as any],
+                                                                SECTOR_OPTIONS
+                                                            )
+                                                        }
+                                                        className={`px-2.5 py-2 font-bold text-xs rounded-lg border transition-all flex items-center gap-1 cursor-pointer ${
+                                                            isFelicitacionReport(report) || assignment.management_type === 'felicitacion'
+                                                                ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-blue-50 hover:text-sanatorio-primary hover:border-blue-200'
+                                                        }`}
+                                                        title="Descargar ficha individual en PDF"
+                                                    >
+                                                        <Download className="w-3.5 h-3.5" />
+                                                        <span className="hidden sm:inline">PDF</span>
+                                                    </button>
+                                                    <a
+                                                        href={resolutionLink}
+                                                        className="px-3 py-2 bg-sanatorio-primary text-white font-bold text-xs rounded-lg hover:opacity-90 transition-all flex items-center gap-1.5 shadow-sm"
+                                                    >
+                                                        <ExternalLink className="w-3.5 h-3.5" />
+                                                        {assignment.status === 'pending' ? 'Gestionar' : 'Ver'}
+                                                    </a>
+                                                </div>
                                             </div>
 
                                             <p className="text-sm text-gray-600 leading-relaxed line-clamp-2">

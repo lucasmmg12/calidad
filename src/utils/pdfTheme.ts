@@ -302,7 +302,7 @@ export const applyInstitutionalFooters = (
     const pageH = doc.internal.pageSize.getHeight();
     const M = options?.margin ?? 16;
     const accent = options?.accentColor ?? PDF_COLORS.secondary;
-    const subtitle = options?.subtitle ?? 'Sanatorio Argentino · Departamento de Gestión de Calidad y Seguridad del Paciente · Normas ITAES';
+    const subtitle = options?.subtitle ?? 'Sanatorio Argentino · Gestión de Calidad y Seguridad del Paciente · Innovación y Transformación Digital';
 
     for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);

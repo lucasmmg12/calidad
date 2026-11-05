@@ -47,12 +47,12 @@ import { SECTOR_OPTIONS } from '../constants/sectors';
 import { ORIGIN_OPTIONS } from '../constants/origin_options';
 import type { UserProfile } from '../contexts/AuthContext';
 import { generateId } from '../utils/compat';
-import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { ChatWindow } from './ChatWindow';
 import { generateValidationPDF, isFelicitacionReport } from '../utils/validationPdfExport';
 import { PDF_COLORS, loadLogoImage, drawLogoBadge, sanitizePdfText, applyInstitutionalFooters } from '../utils/pdfTheme';
+import { exportCasesToExcel } from '../utils/institutionalExport';
 
 // Discard Confirmation Modal Component
 const DiscardConfirmationModal = ({
@@ -2303,32 +2303,48 @@ export const Dashboard = () => {
                         <div className="flex items-center gap-2 shrink-0">
                             <button
                                 type="button"
-                                onClick={() => {
-                                    const statusLabel = (s: string) =>
-                                        s === 'pending' || s === 'analyzed' ? 'Pendiente' :
-                                            s === 'pending_resolution' ? 'En Gestión' :
-                                                s === 'quality_validation' ? 'Validación' :
+                                onClick={async () => {
+                                    const statusLabel = (r: any) => {
+                                        if (isFelicitacionReport(r)) return 'Felicitación';
+                                        const s = r.status;
+                                        return s === 'pending' || s === 'analyzed' ? 'Pendiente' :
+                                            s === 'pending_resolution' || s === 'multi_sector_pending' ? 'En Gestión' :
+                                                s === 'quality_validation' ? 'En Validación' :
                                                     s === 'resolved' ? 'Resuelto' :
                                                         s === 'discarded' ? 'Descartado' : s;
-                                    const data = filteredReports.map(r => ({
-                                        'ID': r.tracking_id || '',
-                                        'Fecha': r.created_at ? new Date(r.created_at).toLocaleDateString('es-AR') : '',
-                                        'Sector': r.sector || '',
-                                        'Problema': r.ai_summary || r.content?.substring(0, 100) || '',
-                                        'Prioridad': r.ai_urgency || 'Normal',
-                                        'Estado': statusLabel(r.status),
-                                        'Clasificación': r.ai_category || 'Sin clasificar',
-                                        'Anónimo': r.is_anonymous ? 'Sí' : 'No'
-                                    }));
-                                    const ws = XLSX.utils.json_to_sheet(data);
-                                    const wb = XLSX.utils.book_new();
-                                    XLSX.utils.book_append_sheet(wb, ws, 'Reportes');
-                                    XLSX.writeFile(wb, `reportes_calidad_${new Date().toISOString().slice(0, 10)}.xlsx`);
+                                    };
+                                    await exportCasesToExcel({
+                                        title: 'Listado de Casos y Trazabilidad',
+                                        subtitle: 'Tablero General de Gestión de Calidad',
+                                        sheetName: 'Reportes Calidad',
+                                        fileNamePrefix: 'Reportes_Calidad_Sanatorio_Argentino',
+                                        rows: filteredReports.map(r => {
+                                            const sectorLabel = SECTOR_OPTIONS.find(s => s.value === r.sector)?.label || r.sector || '—';
+                                            const isFelic = isFelicitacionReport(r);
+                                            return {
+                                                trackingId: r.tracking_id || '—',
+                                                date: r.created_at ? new Date(r.created_at).toLocaleDateString('es-AR') : '—',
+                                                sector: sectorLabel,
+                                                urgency: isFelic ? 'Reconocimiento' : (r.ai_urgency || 'Normal'),
+                                                status: statusLabel(r),
+                                                category: isFelic ? 'Felicitación' : (r.ai_category || r.finding_type || 'Sin clasificar'),
+                                                summary: r.ai_summary || r.content || '—',
+                                                immediateAction: r.resolution_notes ? r.resolution_notes.split('Origen:')[0].trim() : '',
+                                                qualityObservations: r.quality_observations || '',
+                                            };
+                                        }),
+                                        kpis: {
+                                            total: filteredReports.length,
+                                            pending: filteredReports.filter(r => r.status !== 'resolved' && r.status !== 'discarded').length,
+                                            resolved: filteredReports.filter(r => r.status === 'resolved').length,
+                                            felicitaciones: filteredReports.filter(r => isFelicitacionReport(r)).length,
+                                        },
+                                    });
                                 }}
-                                className="flex items-center gap-1.5 px-3 py-2 bg-green-50 text-green-700 border border-green-200 rounded-xl text-xs font-bold hover:bg-green-100 transition-colors"
+                                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-colors cursor-pointer"
                             >
                                 <FileSpreadsheet className="w-3.5 h-3.5" />
-                                XLSX
+                                Excel
                             </button>
                             <button
                                 type="button"

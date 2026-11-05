@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { SECTOR_OPTIONS } from '../constants/sectors';
+import { exportCasesToExcel, exportCasesToPDF, type ExportCaseRow } from '../utils/institutionalExport';
+import { generateValidationPDF, isFelicitacionReport } from '../utils/validationPdfExport';
 import {
     Loader2,
     Clock,
@@ -16,6 +18,8 @@ import {
     Send,
     AlertTriangle,
     Eye,
+    FileSpreadsheet,
+    Download,
 } from 'lucide-react';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
@@ -80,6 +84,58 @@ export const SectorTracking = () => {
     const activeCount = reports.filter(r => r.status !== 'resolved').length;
     const resolvedCount = reports.filter(r => r.status === 'resolved').length;
 
+    const sectorSubtitle =
+        sectors.map(s => SECTOR_OPTIONS.find(o => o.value === s)?.label || s).join(', ') || 'Mis Sectores';
+
+    const buildExportRows = (): ExportCaseRow[] =>
+        filtered.map(r => {
+            const statusInfo = STATUS_CONFIG[r.status] || STATUS_CONFIG.pending;
+            const isFelic = isFelicitacionReport(r);
+            const destSector = SECTOR_OPTIONS.find(s => s.value === r.sector)?.label || r.sector || 'Sin sector';
+
+            return {
+                trackingId: r.tracking_id || '—',
+                date: r.created_at ? new Date(r.created_at).toLocaleDateString('es-AR') : '—',
+                sector: destSector,
+                urgency: isFelic ? 'Reconocimiento' : (r.ai_urgency || 'Normal'),
+                status: isFelic ? 'Felicitación' : statusInfo.label,
+                category: isFelic ? 'Felicitación' : (r.ai_category || r.finding_type || 'General'),
+                summary: r.ai_summary || r.content || '—',
+                immediateAction: r.resolution_notes ? r.resolution_notes.split('Origen:')[0].trim() : '',
+                qualityObservations: r.quality_observations || '',
+            };
+        });
+
+    const handleExportExcel = async () => {
+        await exportCasesToExcel({
+            title: 'Seguimientos y Monitoreo de Sector',
+            subtitle: `Sectores: ${sectorSubtitle}`,
+            sheetName: 'Seguimientos',
+            fileNamePrefix: 'Seguimientos_Sector_Sanatorio_Argentino',
+            rows: buildExportRows(),
+            kpis: {
+                total: filtered.length,
+                pending: filtered.filter(r => r.status !== 'resolved').length,
+                resolved: filtered.filter(r => r.status === 'resolved').length,
+                felicitaciones: filtered.filter(r => isFelicitacionReport(r)).length,
+            },
+        });
+    };
+
+    const handleExportPDF = async () => {
+        await exportCasesToPDF({
+            title: 'Seguimientos y Monitoreo de Sector',
+            subtitle: `Sectores: ${sectorSubtitle}`,
+            fileNamePrefix: 'Seguimientos_Sector_Sanatorio_Argentino',
+            rows: buildExportRows(),
+            kpis: {
+                total: filtered.length,
+                pending: filtered.filter(r => r.status !== 'resolved').length,
+                resolved: filtered.filter(r => r.status === 'resolved').length,
+            },
+        });
+    };
+
     const getStepProgress = (status: string) => {
         if (status === 'resolved') return 3;
         if (['in_progress', 'analyzed', 'pending_resolution', 'quality_validation'].includes(status)) return 2;
@@ -135,7 +191,7 @@ export const SectorTracking = () => {
                 </div>
             </div>
 
-            {/* Filters & Search */}
+            {/* Filters, Search & Export */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
                 <div className="flex items-center gap-2">
                     <Filter className="w-4 h-4 text-gray-400" />
@@ -143,7 +199,7 @@ export const SectorTracking = () => {
                         <button
                             key={f}
                             onClick={() => setFilter(f)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === f
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${filter === f
                                 ? 'bg-sanatorio-primary text-white shadow-sm'
                                 : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                                 }`}
@@ -166,6 +222,28 @@ export const SectorTracking = () => {
                             <XCircle className="w-4 h-4" />
                         </button>
                     )}
+                </div>
+                <div className="flex items-center gap-2 sm:ml-auto">
+                    <button
+                        type="button"
+                        onClick={handleExportExcel}
+                        disabled={filtered.length === 0}
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all shadow-2xs disabled:opacity-40 cursor-pointer"
+                        title="Descargar seguimientos en Excel con formato institucional"
+                    >
+                        <FileSpreadsheet className="w-3.5 h-3.5" />
+                        Excel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleExportPDF}
+                        disabled={filtered.length === 0}
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-sanatorio-primary/10 text-sanatorio-primary border border-sanatorio-primary/20 rounded-xl text-xs font-bold hover:bg-sanatorio-primary hover:text-white transition-all shadow-2xs disabled:opacity-40 cursor-pointer"
+                        title="Descargar seguimientos en PDF institucional"
+                    >
+                        <Download className="w-3.5 h-3.5" />
+                        PDF
+                    </button>
                 </div>
             </div>
 
@@ -208,16 +286,27 @@ export const SectorTracking = () => {
                                                 <span className="font-bold">Dirigido a:</span> {destSector} · {new Date(report.created_at).toLocaleDateString('es-AR')}
                                             </p>
                                         </div>
-                                        {hasActivity && (
+                                        <div className="flex items-center gap-2 flex-shrink-0">
                                             <button
-                                                onClick={() => setExpandedId(isExpanded ? null : report.id)}
-                                                className="flex-shrink-0 px-3 py-2 bg-gray-50 text-gray-600 font-bold text-xs rounded-lg hover:bg-sanatorio-primary/5 hover:text-sanatorio-primary transition-all flex items-center gap-1.5 border border-gray-200"
+                                                type="button"
+                                                onClick={() => generateValidationPDF(report, [], SECTOR_OPTIONS)}
+                                                className="px-2.5 py-2 bg-slate-50 text-slate-600 border border-slate-200 hover:bg-blue-50 hover:text-sanatorio-primary hover:border-blue-200 font-bold text-xs rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                                                title="Descargar ficha en PDF"
                                             >
-                                                <Activity className="w-3.5 h-3.5" />
-                                                Actividad
-                                                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                                <Download className="w-3.5 h-3.5" />
+                                                <span className="hidden sm:inline">PDF</span>
                                             </button>
-                                        )}
+                                            {hasActivity && (
+                                                <button
+                                                    onClick={() => setExpandedId(isExpanded ? null : report.id)}
+                                                    className="px-3 py-2 bg-gray-50 text-gray-600 font-bold text-xs rounded-lg hover:bg-sanatorio-primary/5 hover:text-sanatorio-primary transition-all flex items-center gap-1.5 border border-gray-200 cursor-pointer"
+                                                >
+                                                    <Activity className="w-3.5 h-3.5" />
+                                                    Actividad
+                                                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* Content preview */}
