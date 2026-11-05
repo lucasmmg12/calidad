@@ -10,75 +10,383 @@ interface ChangelogEntry {
 }
 
 const rawChangelog: ChangelogEntry[] = [
-    // === 25 de Febrero 2026 ===
-    { hash: '3fe00b7', date: '2026-02-25', type: 'fix', title: 'Deduplicación de Asignaciones por Sector', description: 'Se corrigió el conteo de sectores en el Dashboard: re-derivaciones al mismo sector ya no aparecen como sectores separados. Solo se muestra la asignación más reciente por sector.' },
-    { hash: 'b31afbc', date: '2026-02-25', type: 'feat', title: 'Reapertura con Derivación Multi-Sector', description: 'El flujo de reapertura de tickets ahora resetea el caso a "Pendiente" y abre automáticamente el panel de derivación estándar, permitiendo reenviar a uno o más sectores.' },
-    { hash: '5f9f51f', date: '2026-02-25', type: 'fix', title: 'Rechazo Multi-Sector actualiza estado del reporte', description: 'Cuando un sector rechaza la asignación, el reporte ahora cambia a "assignment_rejected" tanto para flujos legacy como multi-sector.' },
-    { hash: '148af4b', date: '2026-02-25', type: 'feat', title: 'Panel de Asignación Rechazada en Dashboard', description: 'Nuevo panel naranja en el Centro de Gestión que muestra el motivo del rechazo y permite reenviar a otro sector directamente.' },
-    { hash: '8a1a5c0', date: '2026-02-25', type: 'fix', title: 'Guard contra estado "Completado" en tickets reabiertos', description: 'El formulario de resolución ahora verifica el status del reporte para evitar mostrar "Gestión Registrada" en tickets reabiertos por Calidad.' },
-    { hash: '853e674', date: '2026-02-25', type: 'fix', title: 'Carga de borradores en Multi-Sector', description: 'Los borradores del Paso 2 (draft_data) ahora se cargan correctamente desde la tabla reports para asignaciones multi-sector.' },
-    { hash: 'de1bffb', date: '2026-02-25', type: 'feat', title: 'Feedback visual en Guardar Borrador', description: 'El botón "Guardar Borrador" ahora muestra estados de carga (spinner), éxito (verde) y error (rojo) para mayor claridad.' },
-    { hash: '297e5ef', date: '2026-02-25', type: 'fix', title: 'Paso 1 guarda en sector_assignments', description: 'El Paso 1 de resolución ahora actualiza correctamente las asignaciones de sector para tickets multi-sector.' },
-    { hash: '0f7e0f2', date: '2026-02-25', type: 'feat', title: 'Buscador de Sectores y Origen Dinámico', description: 'Se agregó un campo de búsqueda con filtro en el selector de sectores del formulario público. Las opciones de Origen en el Dashboard se generan dinámicamente.' },
-    { hash: '8eb5267', date: '2026-02-25', type: 'fix', title: 'Sector Assignments se actualizan a Resuelto', description: 'Se corrigió que las asignaciones de sector no cambiaban a "resolved" tras la respuesta del responsable.' },
-    { hash: 'af6e918', date: '2026-02-25', type: 'feat', title: 'Módulo de Felicitaciones', description: 'Nuevo formulario público para enviar felicitaciones, con notificación automática por WhatsApp al sector destinatario. Incluye KPI en Métricas y badge especial en el Dashboard.' },
+    // === 5 de Noviembre 2026 ===
+    {
+        hash: '3961f60',
+        date: '2026-11-05',
+        type: 'other',
+        title: 'Simplificación Visual del Encabezado de Reportes',
+        description: 'Se despejó la cabecera del Canal de Calidad y Reconocimiento para ofrecer una lectura más directa y clínica.'
+    },
+    {
+        hash: '23d8f01',
+        date: '2026-11-05',
+        type: 'feat',
+        title: 'Actualización Integral del Manual de Procedimientos v2.0',
+        description: 'Se renovó el Manual de Procedimientos tanto en su vista interactiva por capítulos como en el documento PDF descargable con todos los módulos vigentes.'
+    },
+    {
+        hash: '925ecf1',
+        date: '2026-11-05',
+        type: 'feat',
+        title: 'Radar Operativo de Tiempo de Respuesta (SLA)',
+        description: 'Se rediseñó el panel de alertas de tiempo de respuesta en formato colapsable, priorizando los casos recientes y por vencer sobre el pasivo histórico e incorporando resumen por sector y exportación PDF.'
+    },
+    {
+        hash: 'd5064b6',
+        date: '2026-11-05',
+        type: 'other',
+        title: 'Optimización de Memoria y Carga Completa en Ciclo PDCA',
+        description: 'Se eliminó el límite de registros en las verificaciones de efectividad (30, 60 y 90 días) y se organizó el listado en grupos desplegables por sector y etapa para minimizar el uso de memoria RAM.'
+    },
+    {
+        hash: '59ed504',
+        date: '2026-11-05',
+        type: 'feat',
+        title: 'Ventana Emergente de Casos por Nivel de Gravedad con Descarga PDF',
+        description: 'Al seleccionar casos Leves (Verdes), Moderados (Amarillos), Críticos (Rojos) o Felicitaciones en Métricas, se despliega una ventana emergente interactiva con buscador y exportación directa a PDF y Excel sin abandonar el tablero.'
+    },
+    {
+        hash: 'cff034f',
+        date: '2026-11-05',
+        type: 'feat',
+        title: 'Revista Institucional de Inteligencia Clínica y Gráficos Explicativos',
+        description: 'Se transformó el Informe Institucional PDF en una revista editorial de 5 páginas con glosario de indicadores explicados, gráficos de línea y barras con valores directos y Dossier de Inteligencia Clínica.'
+    },
+    {
+        hash: '30d2324',
+        date: '2026-11-05',
+        type: 'feat',
+        title: 'Rediseño del Centro de Ayuda y Guías Interactivas',
+        description: 'Se incorporó el circuito visual de 6 etapas del ciclo de calidad, la matriz comparativa entre Gestión Simple y Desvío, guías operativas por perfil y acordeón de preguntas frecuentes.'
+    },
+    {
+        hash: '62f2286',
+        date: '2026-11-05',
+        type: 'other',
+        title: 'Aprovechamiento de Pantalla Completa en Tableros Operativos',
+        description: 'Se expandió el ancho útil de la interfaz en la barra de navegación, Mis Casos, Tablero de Gestión y Métricas para facilitar la auditoría en monitores de escritorio.'
+    },
+    {
+        hash: 'b889ca8',
+        date: '2026-11-05',
+        type: 'feat',
+        title: 'Exportación Institucional en Excel Estilizado y PDF en Mis Casos',
+        description: 'Se habilitó la descarga de Casos Asignados y Seguimientos en formato Excel (.xlsx con identidad visual, logo del Sanatorio y resumen de indicadores) y en PDF con pie institucional.'
+    },
+    {
+        hash: '298d77e',
+        date: '2026-11-05',
+        type: 'other',
+        title: 'Limpieza de Etiqueta Superior en el Tablero de Gestión',
+        description: 'Se depuró el encabezado principal del Tablero de Casos para optimizar el espacio vertical disponible.'
+    },
+    {
+        hash: '09d396f',
+        date: '2026-11-05',
+        type: 'fix',
+        title: 'Panel de Alertas de Vencimiento Colapsado por Defecto',
+        description: 'El bloque de alertas en el Tablero de Casos ahora inicia contraído como un acordeón desplegable con contadores rápidos de vencidos y próximos a vencer.'
+    },
+    {
+        hash: '487c5d4',
+        date: '2026-11-05',
+        type: 'feat',
+        title: 'Rediseño de Documentos PDF y Certificados de Felicitación',
+        description: 'Se renovó la estética tipográfica y visual de todas las exportaciones PDF y se crearon los Certificados Oficiales de Reconocimiento y Felicitación para el personal destacado.'
+    },
 
-    // === 24 de Febrero 2026 ===
-    { hash: 'e0388d0', date: '2026-02-24', type: 'feat', title: 'Origen de Hallazgo con 6 opciones', description: 'Se ampliaron las opciones de origen del hallazgo (Auditoría FDS, Ronda Seguridad, etc.), se hizo obligatorio el sector reportante y se agregaron tooltips en las pestañas del Dashboard.' },
-    { hash: '75a024a', date: '2026-02-24', type: 'feat', title: 'Botón Reenviar en Multi-Sector', description: 'Los sectores pendientes en la vista multi-sector ahora tienen un botón para reenviar el mensaje por WhatsApp individualmente.' },
-    { hash: 'ac52a42', date: '2026-02-24', type: 'fix', title: 'Modales siempre centrados en viewport', description: 'Los modales de edición, creación y eliminación de usuarios ahora se centran correctamente en la pantalla.' },
-    { hash: '5851b53', date: '2026-02-24', type: 'feat', title: 'Migración Excel Legacy 156 registros', description: 'Se cargaron 156 registros históricos desde Excel al sistema, incluyendo formulario de hallazgo y recordatorio multi-sector.' },
+    // === 9 de Septiembre 2026 ===
+    {
+        hash: '6f6e03e',
+        date: '2026-09-09',
+        type: 'feat',
+        title: 'Unificación de Nomenclatura en Auditoría de Proceso',
+        description: 'Se estandarizó la denominación del módulo de relevamiento operativo como Auditoría de Proceso en toda la plataforma.'
+    },
 
-    // === 20 de Febrero 2026 ===
-    { hash: 'b3a07d4', date: '2026-02-20', type: 'feat', title: 'Asignación de Sector para todos los roles', description: 'Todos los roles ahora pueden tener sectores asignados. Se añadió wallpaper institucional al fondo de la aplicación.' },
-    { hash: 'ceea657', date: '2026-02-20', type: 'feat', title: 'Columna Fecha + Filtros + Exportación XLSX/PDF', description: 'Se agregó columna de fecha en la tabla de casos, filtros por sector y rango de fechas, orden por más reciente, y exportación a XLSX y PDF con logo institucional.' },
-    { hash: '2eca9c8', date: '2026-02-20', type: 'feat', title: 'Filas expandibles en Clasificaciones', description: 'Las filas de clasificación en Métricas ahora son expandibles y muestran los casos asociados con detalles.' },
-    { hash: '6e3a030', date: '2026-02-20', type: 'feat', title: 'Multi-Select de Sectores y Métricas de Anonimato', description: 'Filtros de métricas con selección múltiple de sectores, rango de fechas y nueva métrica de reportes anónimos vs. identificados.' },
-    { hash: '03f672a', date: '2026-02-20', type: 'feat', title: 'Eliminación de Reportes por Admin', description: 'Los administradores ahora pueden eliminar reportes directamente. Se corrigió la sintaxis de migración RLS.' },
-    { hash: '86d6590', date: '2026-02-20', type: 'feat', title: 'Respuestas Multi-Sector en Validación', description: 'La vista de validación de calidad ahora soporta y muestra correctamente las respuestas de múltiples sectores.' },
-    { hash: '46ec264', date: '2026-02-20', type: 'feat', title: 'Gestión Dinámica de Destinatarios de Alertas', description: 'Sistema configurable para gestionar los destinatarios de alertas rojas (SLA) dinámicamente.' },
-    { hash: 'e8b334b', date: '2026-02-20', type: 'feat', title: 'Filtros de Métricas + Compatibilidad Browsers', description: 'Se añadieron filtros avanzados en el panel de métricas con soporte para navegadores antiguos.' },
-    { hash: 'f0f0c25', date: '2026-02-20', type: 'fix', title: 'React Error #310 — Hooks fuera de IIFEs', description: 'Se resolvió un error crítico de React moviendo hooks desde funciones inmediatas (IIFEs) al nivel superior del componente.' },
-    { hash: '2988f94', date: '2026-02-20', type: 'fix', title: 'Z-index del dropdown de Sectores', description: 'Se corrigió el z-index del dropdown de sectores para que se superponga correctamente sobre los KPI cards.' },
+    // === 31 de Agosto 2026 ===
+    {
+        hash: 'dd1dbfe',
+        date: '2026-08-31',
+        type: 'other',
+        title: 'Actualización de Plantilla de Relevamiento y Exportador de Planillas',
+        description: 'Se ajustó la estructura de criterios de evaluación en terreno y se perfeccionó la exportación de resultados a hojas de cálculo.'
+    },
 
-    // === 19 de Febrero 2026 ===
-    { hash: 'bafc8c7', date: '2026-02-19', type: 'feat', title: 'Resolución en 2 Pasos + Terminología Observación', description: 'Se implementó el formulario de resolución en 2 pasos: Paso 1 (Acción Inmediata con evidencia) y Paso 2 (Análisis de Causa + Plan de Acción con auto-guardado). Se actualizó la terminología de "reporte" a "observación".' },
-    { hash: '575dd1c', date: '2026-02-19', type: 'feat', title: 'Nuevo Sector PYT + Limpieza de Sectores', description: 'Se agregó el sector "PYT – Pagos y Tesorería" y se eliminaron los sectores de prueba (Limpieza, Guardia, Quirófano).' },
+    // === 24 de Agosto 2026 ===
+    {
+        hash: '06974dc',
+        date: '2026-08-24',
+        type: 'feat',
+        title: 'Visualización de Evidencia Fotográfica en Resolución de Casos',
+        description: 'Los responsables de sector ahora pueden visualizar directamente las fotografías adjuntadas por el reportante dentro del formulario de resolución.'
+    },
 
-    // === 13 de Febrero 2026 ===
-    { hash: '343b81b', date: '2026-02-13', type: 'feat', title: 'Reenvío WhatsApp en Alertas SLA', description: 'Se añadió botón de reenvío de WhatsApp en alertas de SLA, análisis de recurrencia mapeado por sector, selector cascada sector-responsable, y observaciones de calidad con tipo de hallazgo.' },
-    { hash: '5f86274', date: '2026-02-13', type: 'feat', title: 'Desglose de Gravedad por Sector', description: 'Se añadió panel expandible por sector con desglose de gravedad (Leve/Medio/Crítico) en el análisis de recurrencia.' },
-    { hash: '0e0649c', date: '2026-02-13', type: 'fix', title: 'Terminología SLA → Tiempo de Respuesta', description: 'Se reemplazó la terminología técnica "SLA" por "Tiempo de Respuesta" en toda la interfaz para mayor claridad.' },
-    { hash: 'e2ff7d5', date: '2026-02-11', type: 'fix', title: 'Fix padding en inputs del Login', description: 'Se fuerza padding-left inline para evitar que los íconos se superpongan con el texto ingresado en los campos de correo y contraseña.' },
-    { hash: 'ed91c14', date: '2026-02-11', type: 'fix', title: 'Limpieza del avatar Dora en Guía Rápida', description: 'Se removió el avatar de Dora del recuadro de Guía Rápida de Reporte, restaurando el diseño limpio original. Se actualizó el logo del login.' },
-    { hash: 'dc2581c', date: '2026-02-11', type: 'fix', title: 'Login: logo institucional y padding', description: 'Se reemplazó el ícono de candado por el logo del Sanatorio Argentino en la pantalla de inicio de sesión.' },
-    { hash: 'f96b4ac', date: '2026-02-11', type: 'feat', title: 'Dora asomándose en el formulario', description: 'Se integró a la mascota Dora en el borde superior del card de Guía Rápida con efecto de "asomarse" y globo de diálogo interactivo.' },
-    { hash: 'c6493f2', date: '2026-02-11', type: 'feat', title: 'Donut Chart para Gravedad de Incidentes', description: 'Se reemplazó el gráfico de barras verticales por un donut chart CSS con conic-gradient. Incluye total en el centro y leyenda lateral con barras de progreso.' },
-    { hash: '7292867', date: '2026-02-11', type: 'feat', title: 'Guía de Ayuda diferenciada por Rol', description: 'Se crearon 4 guías distintas en /guia según el rol del usuario: Público (sin login), Admin (gestión completa), Responsable (consulta y estados) y Directivo (métricas ejecutivas).' },
-    { hash: '8aa3ac7', date: '2026-02-11', type: 'feat', title: 'Dashboard solo lectura para Responsable', description: 'Se restringieron las acciones del Dashboard para el rol Responsable: botones de derivación, clasificación, prioridad y descarte son solo visibles para Admin. Se reemplazó la columna "Ver" por "Clasificación".' },
-    { hash: 'ecc0298', date: '2026-02-11', type: 'feat', title: 'Mascota Dora: variante Peek', description: 'Se añadió una variante "peek" del componente DoraAssistant que se asoma entre el título y el formulario con un globo de diálogo auto-dismissible.' },
-    { hash: 'f4e4cba', date: '2026-02-11', type: 'fix', title: 'Fix AbortError en AuthContext', description: 'Se resolvió el error AbortError al diferir las llamadas a la base de datos fuera del callback onAuthStateChange usando setTimeout.' },
-    { hash: '243b42f', date: '2026-02-11', type: 'fix', title: 'Persistencia de sesión en refresh', description: 'Se eliminaron condiciones de carrera en AuthContext y ProtectedRoute, asegurando que la sesión se mantenga al recargar la página.' },
-    { hash: 'bf875b6', date: '2026-02-11', type: 'feat', title: 'Log de Actividad completo con Timeline', description: 'Se implementó un log de actividad visual con timeline parseada tanto en el Dashboard como en la página de Seguimiento de tickets.' },
-    { hash: 'b7136d6', date: '2026-02-11', type: 'fix', title: 'Fix modal de rechazo inline', description: 'Se corrigió la pérdida de foco del textarea al re-renderizar, integrando el modal de rechazo directamente en el componente.' },
-    { hash: '370549e', date: '2026-02-11', type: 'fix', title: 'Botón Rechazar visible en formulario', description: 'Se agregó un botón "Rechazar Asignación" visible dentro del formulario de resolución para el Responsable.' },
-    { hash: '1dcc48c', date: '2026-02-11', type: 'feat', title: 'Vista de rechazo de asignación en Admin', description: 'Se añadió una vista específica para asignaciones rechazadas en el Dashboard del admin, mostrando el motivo y permitiendo re-derivación.' },
-    { hash: 'b0d533c', date: '2026-02-11', type: 'fix', title: 'Redirección Directivo a Métricas', description: 'Los usuarios con rol Directivo ahora son redirigidos a /metrics después del login en lugar del Dashboard.' },
-    { hash: '4eb074f', date: '2026-02-11', type: 'feat', title: 'Gráfico de distribución de clasificaciones', description: 'Se añadió un gráfico de distribución de categorías/clasificaciones en el panel de Métricas.' },
-    { hash: '331e83d', date: '2026-02-11', type: 'fix', title: 'Filtro de métricas por sectores asignados', description: 'Las métricas ahora se filtran correctamente por los sectores asignados al usuario con rol Responsable.' },
-    { hash: '1e4fec3', date: '2026-02-11', type: 'fix', title: 'Modales de notificación en Gestión de Usuarios', description: 'Se reemplazaron las alertas del navegador por modales personalizados en la página de administración de usuarios.' },
-    { hash: '2ec4821', date: '2026-02-11', type: 'feat', title: 'Gestión de Usuarios y Edge Function', description: 'Se creó la página de administración de usuarios con CRUD completo y una Edge Function en Supabase para la creación de cuentas.' },
-    { hash: 'de7e38a', date: '2026-02-11', type: 'fix', title: 'Fix loop infinito en perfil de usuario', description: 'Se resolvió un bucle infinito en el perfil de usuario, se removió el botón SOS y se mejoró el flujo de logout.' },
-    { hash: '7788e83', date: '2026-02-11', type: 'feat', title: 'Filtrado por perfil y acceso basado en roles', description: 'Se implementó el filtrado de datos según el perfil del usuario y el sistema de acceso basado en roles (RBAC).' },
-    { hash: '76295bf', date: '2026-02-11', type: 'feat', title: 'Modal de confirmación de Logout', description: 'Se añadió un modal de confirmación estilizado para cerrar sesión, mejorando la experiencia y previniendo cierres accidentales.' },
-    { hash: '739ba3e', date: '2026-02-11', type: 'fix', title: 'Fix z-index del botón de emergencia', description: 'Se corrigió el problema de z-index en la interfaz de usuario relacionado con el botón de logout de emergencia.' },
-    { hash: 'b80b252', date: '2026-02-11', type: 'feat', title: 'RBAC completo: roles, rechazo, métricas, IA', description: 'Se implementó el sistema completo de control de acceso por roles, flujo de rechazo, drill-down en métricas y feedback de IA.' },
-    { hash: 'f69ea30', date: '2026-02-09', type: 'feat', title: 'Reestructura de Presentación: 7 slides', description: 'Se reestructuró completamente la presentación institucional con 7 slides estratégicos sobre el sistema DORA.' },
-    { hash: 'c391f4c', date: '2026-02-09', type: 'feat', title: 'Avatar de Dora en presentación', description: 'Se integró el avatar circular de Dora dentro del slide de presentación institucional.' },
-    { hash: '70a4b0a', date: '2026-02-09', type: 'feat', title: 'Link de Inicio en Navbar', description: 'Se movió el enlace de inicio a la barra de navegación principal para mejorar la accesibilidad.' },
-    { hash: 'd3bb6c4', date: '2026-02-09', type: 'feat', title: 'Remoción del botón de descarga PDF', description: 'Se eliminó el botón de descarga de PDF de la interfaz según requerimiento.' },
-    { hash: '74e49ec', date: '2026-02-09', type: 'feat', title: 'Botón Home en Presentación', description: 'Se añadió un botón para volver al inicio desde la vista de presentación.' },
-    { hash: '9505f53', date: '2026-02-09', type: 'fix', title: 'Mejora posicionamiento de Dora', description: 'Se mejoró el posicionamiento y la integración visual de la mascota Dora en las distintas vistas.' },
+    // === 21 de Agosto 2026 ===
+    {
+        hash: 'c255c2e',
+        date: '2026-08-21',
+        type: 'feat',
+        title: 'Registro de Personal Presente y Mejora de Presentaciones Ejecutivas',
+        description: 'Se incorporó el campo de registro de personal presente durante la auditoría y se optimizó la maquetación del reporte ejecutivo.'
+    },
+    {
+        hash: '79c9ab7',
+        date: '2026-08-21',
+        type: 'feat',
+        title: 'Lista de Verificación Binaria (Sí / No) por Sector',
+        description: 'Se rediseñó el cuestionario sectorial como una lista de chequeo ágil Sí/No para acelerar el relevamiento en terreno.'
+    },
+    {
+        hash: '92be31d',
+        date: '2026-08-21',
+        type: 'fix',
+        title: 'Ajuste de Textos Largos y Experiencia Móvil en Auditorías',
+        description: 'Se corrigió el ajuste de líneas en los formularios de recepción y se mejoró la adaptabilidad en dispositivos móviles y tablets.'
+    },
+    {
+        hash: '51571a7',
+        date: '2026-08-21',
+        type: 'other',
+        title: 'Contraste Visual Alternado en Tarjetas de Evaluación',
+        description: 'Se aplicó alternancia cromática suave entre ítems de auditoría para facilitar la lectura secuencial.'
+    },
+    {
+        hash: 'b54f913',
+        date: '2026-08-21',
+        type: 'fix',
+        title: 'Corrección de Tipado en Componentes de Notificación Interna',
+        description: 'Se estandarizaron las definiciones de tipos en los avisos del módulo de auditoría.'
+    },
+    {
+        hash: 'ebcb5f6',
+        date: '2026-08-21',
+        type: 'feat',
+        title: 'Modales Institucionales de Confirmación en Auditorías',
+        description: 'Se reemplazaron los avisos nativos del navegador por ventanas modales integradas al diseño clínico del sistema.'
+    },
+    {
+        hash: '1f16b35',
+        date: '2026-08-21',
+        type: 'feat',
+        title: 'Reportes Ejecutivos con Veredictos y Tablas Autopaginadas',
+        description: 'Se añadieron indicadores de resultado global, paginación automática de tablas extensas y notas metodológicas sobre la muestra.'
+    },
+    {
+        hash: 'ec827d4',
+        date: '2026-08-21',
+        type: 'feat',
+        title: 'Escala Cromática Permanente en Indicadores de Cumplimiento',
+        description: 'Los selectores de ponderación mantienen visible su escala semántica de color para identificar rápidamente el nivel de adherencia.'
+    },
+    {
+        hash: 'c9e3cdc',
+        date: '2026-08-21',
+        type: 'feat',
+        title: 'Historial de Relevamientos y Panel de Instrucciones Operativas',
+        description: 'Se incorporó el archivo histórico de auditorías realizadas junto con una guía rápida de criterios de evaluación.'
+    },
+    {
+        hash: '1f867fb',
+        date: '2026-08-21',
+        type: 'feat',
+        title: 'Guardado Automático y Notas de Voz en Relevamientos',
+        description: 'Se sumó soporte para dictado por voz, persistencia automática de borradores y generación de presentaciones de resultados.'
+    },
+    {
+        hash: '4a481bc',
+        date: '2026-08-21',
+        type: 'fix',
+        title: 'Preservación de Saltos de Línea en Observaciones de Campo',
+        description: 'Se corrigió el formateo de párrafos y saltos de línea en las notas detalladas de auditoría.'
+    },
+    {
+        hash: 'f1f77ec',
+        date: '2026-08-21',
+        type: 'fix',
+        title: 'Restauración de Accesos Directos en Barra de Navegación',
+        description: 'Se normalizaron los enlaces principales de navegación entre los módulos operativos.'
+    },
+    {
+        hash: '547a748',
+        date: '2026-08-21',
+        type: 'feat',
+        title: 'Lanzamiento del Módulo de Relevamiento con Exportación a Planilla',
+        description: 'Implementación de la estructura base para el registro de controles en terreno y descarga de resultados tabulados.'
+    },
+
+    // === 13 de Agosto 2026 ===
+    {
+        hash: 'b23f004',
+        date: '2026-08-13',
+        type: 'feat',
+        title: 'Edición de Resumen de Caso y Observaciones de Calidad en PDF',
+        description: 'Se habilitó la edición manual del resumen ejecutivo del caso y la inclusión de las observaciones de cierre del Comité de Calidad en la ficha PDF.'
+    },
+
+    // === 7 de Agosto 2026 ===
+    {
+        hash: '23b5364',
+        date: '2026-08-07',
+        type: 'feat',
+        title: 'Módulo de Auditoría de Procesos con Listas de Chequeo e Informes',
+        description: 'Incorporación del módulo de evaluación de procesos asistenciales con permisos por rol, formularios estructurados y vinculación con hallazgos.'
+    },
+
+    // === 6 de Agosto 2026 ===
+    {
+        hash: '1c626e5',
+        date: '2026-08-06',
+        type: 'fix',
+        title: 'Depuración de Dependencias Visuales en Componentes',
+        description: 'Limpieza de íconos no utilizados para mantener una compilación limpia y rápida.'
+    },
+    {
+        hash: '5107646',
+        date: '2026-08-06',
+        type: 'feat',
+        title: 'Separación de Indicadores entre Reportes Recibidos y Emitidos',
+        description: 'El panel de Métricas distingue claramente cuántos hallazgos recibió un sector como destinatario y cuántos generó como sector emisor.'
+    },
+    {
+        hash: 'a10f208',
+        date: '2026-08-06',
+        type: 'fix',
+        title: 'Sincronización de Sector Emisor en Filtros y Gráficos de Métricas',
+        description: 'Los filtros sectoriales del tablero estadístico ahora contemplan tanto el sector de origen como el sector asignado.'
+    },
+    {
+        hash: '69a6bae',
+        date: '2026-08-06',
+        type: 'fix',
+        title: 'Visualización y Filtrado por Sector Origen y Destino en el Tablero',
+        description: 'Se añadieron columnas e indicadores diferenciados para identificar qué servicio originó el reporte y cuál debe resolverlo.'
+    },
+    {
+        hash: 'bbfb36a',
+        date: '2026-08-06',
+        type: 'fix',
+        title: 'Trazabilidad Unificada del Sector Reportante en Todo el Flujo',
+        description: 'Se sincronizó el dato del sector de origen entre el formulario de ingreso, el tablero central y la vista de resolución.'
+    },
+
+    // === 5 de Agosto 2026 ===
+    {
+        hash: 'dc754fe',
+        date: '2026-08-05',
+        type: 'fix',
+        title: 'Cálculo Preciso de Demanda Recibida por Sector',
+        description: 'Se ajustó el conteo de casos recibidos para no mezclar los reportes emitidos proactivamente por el propio servicio.'
+    },
+    {
+        hash: 'afb317e',
+        date: '2026-08-05',
+        type: 'fix',
+        title: 'Sincronización de Derivaciones Multi-Sector en Estadísticas',
+        description: 'El panel de Métricas incorpora todas las asignaciones compartidas entre múltiples servicios.'
+    },
+
+    // === 20 de Julio 2026 ===
+    {
+        hash: 'bbba095',
+        date: '2026-07-20',
+        type: 'feat',
+        title: 'Acceso Rápido de Derivación de Mantenimiento en Asistente Virtual',
+        description: 'Se integró un acceso directo en la ventana del asistente para orientar solicitudes edilicias o de mantenimiento al canal correspondiente.'
+    },
+    {
+        hash: '087c332',
+        date: '2026-07-20',
+        type: 'feat',
+        title: 'Aviso Preventivo para Solicitudes de Mantenimiento e Infraestructura',
+        description: 'Se añadió una guía interactiva en el formulario de reporte para encauzar pedidos de mantenimiento operativo.'
+    },
+
+    // === 17 de Julio 2026 ===
+    {
+        hash: 'c82afda',
+        date: '2026-07-17',
+        type: 'fix',
+        title: 'Prevención de Tarjetas Duplicadas al Re-derivar en Mis Casos',
+        description: 'Se optimizó la consulta de asignaciones para mostrar una única entrada consolidada cuando un caso es reasignado al mismo servicio.'
+    },
+
+    // === 15 de Julio 2026 ===
+    {
+        hash: '924e40f',
+        date: '2026-07-15',
+        type: 'fix',
+        title: 'Corrección de Apertura en Modal de Retroalimentación de Calidad',
+        description: 'Se ajustó la lógica de visualización del cuadro de devolución y cierre en el Tablero de Gestión.'
+    },
+    {
+        hash: '3b970fa',
+        date: '2026-07-15',
+        type: 'feat',
+        title: 'Avisos Claros ante Errores de Entrega en Notificaciones Externas',
+        description: 'El sistema informa de manera detallada al administrador cuando un número de contacto presenta inconvenientes de recepción.'
+    },
+    {
+        hash: '0e8c00b',
+        date: '2026-07-15',
+        type: 'fix',
+        title: 'Estandarización de Configuración Regional en Plantillas de Aviso',
+        description: 'Se alineó el código de idioma regional en los mensajes automáticos para garantizar la entrega inmediata.'
+    },
+    {
+        hash: 'fd9d070',
+        date: '2026-07-15',
+        type: 'fix',
+        title: 'Ajuste de Parámetros en Notificación de Derivación a Responsables',
+        description: 'Se normalizó la plantilla utilizada al notificar nuevas asignaciones a líderes de sector.'
+    },
+
+    // === 14 de Julio 2026 ===
+    {
+        hash: '32f5ab5',
+        date: '2026-07-14',
+        type: 'fix',
+        title: 'Saneamiento de Textos y Saltos de Línea en Notificaciones Automáticas',
+        description: 'Se incorporó limpieza automática de caracteres especiales en los resúmenes enviados por mensajería.'
+    },
+    {
+        hash: 'bd6ec52',
+        date: '2026-07-14',
+        type: 'fix',
+        title: 'Normalización de Formato Telefónico Nacional en Alertas',
+        description: 'Se estandarizó el formato de números móviles para asegurar la compatibilidad con el motor de notificaciones.'
+    },
+    {
+        hash: 'eea0604',
+        date: '2026-07-14',
+        type: 'fix',
+        title: 'Compatibilidad de Numeración Móvil en Envío de Mensajes',
+        description: 'Ajuste en el procesamiento de números de contacto para envíos automáticos.'
+    },
+    {
+        hash: 'b90dfaf',
+        date: '2026-07-14',
+        type: 'feat',
+        title: 'Mejoras en Encuesta de Conformidad del Reportante y Tablero',
+        description: 'Se perfeccionó el registro de retroalimentación post-cierre y su visualización en el panel de control.'
+    },
+
+    // === 24 de Junio 2026 ===
+    {
+        hash: '449d1b1',
+        date: '2026-06-24',
+        type: 'fix',
+        title: 'Vinculación del Filtro de Tipo de Hallazgo en Tablero y Mis Casos',
+        description: 'Se conectó el filtrado por tipología de hallazgo entre las tarjetas de métricas y las listas de casos.'
+    },
+    {
+        hash: '5696c45',
+        date: '2026-06-24',
+        type: 'feat',
+        title: 'Nota Metodológica sobre Reportes sin Riesgo Clínico Asignado',
+        description: 'Se incorporó el desglose aclaratorio para distinguir felicitaciones y registros históricos dentro de las métricas de severidad.'
+    },
 ];
 
 // Group by date
