@@ -1913,9 +1913,6 @@ export const Dashboard = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 sm:mb-8 gap-3 sm:gap-4">
                 <div>
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sanatorio-primary/8 text-sanatorio-primary text-[10px] font-bold uppercase tracking-widest mb-1.5">
-                        Auditoría Clínica & Trazabilidad
-                    </div>
                     <h1 className="text-xl sm:text-3xl font-display font-extrabold text-slate-800 flex items-center gap-2.5">
                         <div className="p-2 rounded-xl bg-sanatorio-primary text-white shadow-xs">
                             <LayoutDashboard className="w-5 h-5" />
