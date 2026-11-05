@@ -1,5 +1,4 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../utils/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -14,7 +13,11 @@ import {
     Loader2,
     Tag,
     ClipboardCheck,
-    Send
+    Send,
+    X,
+    Search,
+    FileSpreadsheet,
+    Eye
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Chart, registerables } from 'chart.js';
@@ -28,6 +31,12 @@ import {
     generateIntelligenceMagazinePDF,
     computeTimeSeries,
 } from '../utils/intelligenceMagazinePdf';
+import {
+    exportCasesToPDF,
+    exportCasesToExcel,
+    type ExportCaseRow,
+} from '../utils/institutionalExport';
+import { generateValidationPDF } from '../utils/validationPdfExport';
 
 Chart.register(...registerables);
 
@@ -57,20 +66,216 @@ export const MetricsDashboard = () => {
     const [filters, setFilters] = useState<MetricsFilterState>({ sectors: [], dateFrom: '', dateTo: '' });
 
     const { role, sectors, profile, session } = useAuth();
-    const navigate = useNavigate();
 
     const canViewAll = role === 'admin' || role === 'directivo';
 
-    const handleMetricClick = (filters: { urgency?: string; category?: string; sector?: string; reporter_sector?: string; finding_type?: string }) => {
-        const base = (role === 'admin' || role === 'responsable') ? '/dashboard' : '/mis-casos';
-        const params = new URLSearchParams();
-        if (filters.urgency) params.set('urgency', filters.urgency);
-        if (filters.category) params.set('category', filters.category);
-        if (filters.sector) params.set('sector', filters.sector);
-        if (filters.reporter_sector) params.set('reporter_sector', filters.reporter_sector);
-        if (filters.finding_type) params.set('finding_type', filters.finding_type);
-        
-        navigate(`${base}?${params.toString()}`);
+    // ─── Popup Modal State for Inspecting & Exporting Cases (Verde / Amarillo / Rojo / etc.) ───
+    const [caseModalFilter, setCaseModalFilter] = useState<{
+        urgency?: string;
+        category?: string;
+        sector?: string;
+        reporter_sector?: string;
+        finding_type?: string;
+    } | null>(null);
+    const [modalSearch, setModalSearch] = useState('');
+    const [modalStatusFilter, setModalStatusFilter] = useState<'all' | 'pending' | 'resolved'>('all');
+    const [isExportingModalPdf, setIsExportingModalPdf] = useState(false);
+    const [isExportingModalExcel, setIsExportingModalExcel] = useState(false);
+
+    const handleMetricClick = (nextFilter: {
+        urgency?: string;
+        category?: string;
+        sector?: string;
+        reporter_sector?: string;
+        finding_type?: string;
+    }) => {
+        setModalSearch('');
+        setModalStatusFilter('all');
+        setCaseModalFilter(nextFilter);
+    };
+
+    const modalCases = useMemo(() => {
+        if (!caseModalFilter) return [];
+        return rawReports
+            .filter(r => {
+                if (caseModalFilter.urgency) {
+                    if (r.ai_urgency !== caseModalFilter.urgency) return false;
+                }
+                if (caseModalFilter.category) {
+                    const isFelic =
+                        r.finding_type?.startsWith('Felicitaci') ||
+                        r.ai_category?.startsWith('Felicitaci');
+                    if (caseModalFilter.category === 'Felicitación') {
+                        if (!isFelic) return false;
+                    } else if (r.ai_category !== caseModalFilter.category) {
+                        return false;
+                    }
+                }
+                if (caseModalFilter.sector && (r.sector || 'Otros') !== caseModalFilter.sector) {
+                    return false;
+                }
+                if (
+                    caseModalFilter.reporter_sector &&
+                    (r.reporter_sector || r.origin_sector || 'Sin asignar') !== caseModalFilter.reporter_sector
+                ) {
+                    return false;
+                }
+                if (caseModalFilter.finding_type) {
+                    let ft = r.finding_type || 'Sin clasificar';
+                    if (ft.startsWith('Felicitaci')) ft = 'Felicitación';
+                    if (ft !== caseModalFilter.finding_type) return false;
+                }
+                if (modalStatusFilter === 'resolved' && r.status !== 'resolved') return false;
+                if (modalStatusFilter === 'pending' && r.status === 'resolved') return false;
+                if (modalSearch.trim()) {
+                    const q = modalSearch.toLowerCase();
+                    const matchId = (r.tracking_id || '').toLowerCase().includes(q);
+                    const matchSector = (r.sector || '').toLowerCase().includes(q);
+                    const matchSummary = (r.ai_summary || '').toLowerCase().includes(q);
+                    const matchContent = (r.content || '').toLowerCase().includes(q);
+                    if (!matchId && !matchSector && !matchSummary && !matchContent) return false;
+                }
+                return true;
+            })
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }, [rawReports, caseModalFilter, modalStatusFilter, modalSearch]);
+
+    const getModalTitleInfo = () => {
+        if (!caseModalFilter) return { title: 'Casos Filtrados', badge: 'Listado', tone: 'blue' };
+        if (caseModalFilter.urgency === 'Rojo') {
+            return {
+                title: 'Casos Críticos (Rojo)',
+                subtitle: 'Eventos con riesgo asistencial directo o impacto alto en seguridad del paciente',
+                badge: 'Riesgo Crítico · Rojo',
+                tone: 'red',
+            };
+        }
+        if (caseModalFilter.urgency === 'Amarillo') {
+            return {
+                title: 'Casos Moderados (Amarillo)',
+                subtitle: 'Desvíos operativos o demoras que requieren análisis y acción correctiva',
+                badge: 'Riesgo Medio · Amarillo',
+                tone: 'amber',
+            };
+        }
+        if (caseModalFilter.urgency === 'Verde') {
+            return {
+                title: 'Casos Leves (Verde)',
+                subtitle: 'Observaciones menores u oportunidades de mejora preventiva',
+                badge: 'Riesgo Leve · Verde',
+                tone: 'green',
+            };
+        }
+        if (caseModalFilter.category === 'Felicitación') {
+            return {
+                title: 'Felicitaciones y Reconocimientos',
+                subtitle: 'Destacos positivos hacia el trato humano y profesionalismo del equipo',
+                badge: 'Felicitaciones',
+                tone: 'teal',
+            };
+        }
+        if (caseModalFilter.sector) {
+            return {
+                title: `Casos del Sector: ${caseModalFilter.sector}`,
+                subtitle: 'Hallazgos recibidos como sector destino de resolución',
+                badge: 'Filtro por Sector',
+                tone: 'blue',
+            };
+        }
+        if (caseModalFilter.reporter_sector) {
+            return {
+                title: `Emitidos por: ${caseModalFilter.reporter_sector}`,
+                subtitle: 'Hallazgos reportados por este sector como origen',
+                badge: 'Sector Origen',
+                tone: 'blue',
+            };
+        }
+        if (caseModalFilter.finding_type) {
+            return {
+                title: `Tipo de Hallazgo: ${caseModalFilter.finding_type}`,
+                subtitle: 'Casos clasificados bajo esta tipología operativa',
+                badge: caseModalFilter.finding_type,
+                tone: 'blue',
+            };
+        }
+        return { title: 'Detalle de Casos', subtitle: 'Auditoría nominal de reportes', badge: 'Calidad', tone: 'blue' };
+    };
+
+    const buildModalExportRows = (): ExportCaseRow[] => {
+        return modalCases.map(r => ({
+            trackingId: r.tracking_id || 'S/N',
+            date: r.created_at ? new Date(r.created_at).toLocaleDateString('es-AR') : '-',
+            sector: r.sector || 'Sin asignar',
+            originSector: r.reporter_sector || r.origin_sector || '-',
+            managementType: r.finding_type || r.ai_category || 'Hallazgo',
+            urgency: r.ai_urgency || 'S/C',
+            status:
+                r.status === 'resolved'
+                    ? 'Resuelto'
+                    : r.status === 'quality_validation'
+                        ? 'En Validación'
+                        : 'Pendiente',
+            category: r.ai_category || r.finding_type || 'General',
+            summary: r.ai_summary || r.content || 'Sin descripción',
+            immediateAction: r.immediate_action || r.solution_notes || '',
+            qualityObservations: r.quality_observations || r.root_cause || '',
+            resolvedAt: r.resolved_at ? new Date(r.resolved_at).toLocaleDateString('es-AR') : '-',
+        }));
+    };
+
+    const handleDownloadModalPDF = async () => {
+        if (modalCases.length === 0) return;
+        setIsExportingModalPdf(true);
+        try {
+            const info = getModalTitleInfo();
+            const rows = buildModalExportRows();
+            const resolvedCount = modalCases.filter(c => c.status === 'resolved').length;
+            const felicCount = modalCases.filter(
+                c => c.finding_type?.startsWith('Felicitaci') || c.ai_category?.startsWith('Felicitaci')
+            ).length;
+            await exportCasesToPDF({
+                title: `Auditoría de Calidad — ${info.title}`,
+                subtitle: `${info.subtitle || ''} · Total: ${modalCases.length} casos`,
+                fileNamePrefix: `Casos_${info.title.replace(/[^a-zA-Z0-9]/g, '_')}`,
+                rows,
+                kpis: {
+                    total: modalCases.length,
+                    pending: modalCases.length - resolvedCount,
+                    resolved: resolvedCount,
+                    felicitaciones: felicCount,
+                },
+            });
+        } finally {
+            setIsExportingModalPdf(false);
+        }
+    };
+
+    const handleDownloadModalExcel = async () => {
+        if (modalCases.length === 0) return;
+        setIsExportingModalExcel(true);
+        try {
+            const info = getModalTitleInfo();
+            const rows = buildModalExportRows();
+            const resolvedCount = modalCases.filter(c => c.status === 'resolved').length;
+            const felicCount = modalCases.filter(
+                c => c.finding_type?.startsWith('Felicitaci') || c.ai_category?.startsWith('Felicitaci')
+            ).length;
+            await exportCasesToExcel({
+                title: `Auditoría de Calidad — ${info.title}`,
+                subtitle: `${info.subtitle || ''} · Total: ${modalCases.length} casos`,
+                sheetName: info.badge.slice(0, 28),
+                fileNamePrefix: `Casos_${info.title.replace(/[^a-zA-Z0-9]/g, '_')}`,
+                rows,
+                kpis: {
+                    total: modalCases.length,
+                    pending: modalCases.length - resolvedCount,
+                    resolved: resolvedCount,
+                    felicitaciones: felicCount,
+                },
+            });
+        } finally {
+            setIsExportingModalExcel(false);
+        }
     };
 
     // ─── Apply user filters (sectors[], dateFrom, dateTo) on top of role-filtered reports ───
@@ -798,7 +1003,7 @@ export const MetricsDashboard = () => {
                             Estratificación por Gravedad (Triage IA) y Felicitaciones
                         </h3>
                         <p className="text-xs text-slate-500 mb-4">
-                            Comparativa directa por nivel de severidad clínica asignado automáticamente por Inteligencia Artificial.
+                            Seleccioná una barra o tarjeta para abrir la ventana emergente con el detalle de casos y descargarlos en PDF.
                         </p>
 
                         <div className="h-[230px] w-full">
@@ -821,6 +1026,15 @@ export const MetricsDashboard = () => {
                                 options={{
                                     responsive: true,
                                     maintainAspectRatio: false,
+                                    onClick: (_event, elements) => {
+                                        if (elements.length > 0) {
+                                            const idx = elements[0].index;
+                                            if (idx === 0) handleMetricClick({ urgency: 'Rojo' });
+                                            else if (idx === 1) handleMetricClick({ urgency: 'Amarillo' });
+                                            else if (idx === 2) handleMetricClick({ urgency: 'Verde' });
+                                            else if (idx === 3) handleMetricClick({ category: 'Felicitación' });
+                                        }
+                                    },
                                     plugins: {
                                         legend: { display: false },
                                         tooltip: {
@@ -829,7 +1043,7 @@ export const MetricsDashboard = () => {
                                             callbacks: {
                                                 label: (context: any) => {
                                                     const pct = stats.total > 0 ? Math.round((context.raw / stats.total) * 100) : 0;
-                                                    return ` ${context.raw} casos (${pct}% del volumen total)`;
+                                                    return ` ${context.raw} casos (${pct}% del volumen total) — Click para ver listado`;
                                                 }
                                             }
                                         }
@@ -853,7 +1067,7 @@ export const MetricsDashboard = () => {
                         <div className="grid grid-cols-2 gap-2.5 mt-4">
                             <div
                                 onClick={() => handleMetricClick({ urgency: 'Rojo' })}
-                                className="p-3 rounded-xl bg-red-50/70 border border-red-200/80 cursor-pointer hover:bg-red-50 transition-colors"
+                                className="p-3 rounded-xl bg-red-50/70 border border-red-200/80 cursor-pointer hover:bg-red-100/70 hover:shadow-sm transition-all group"
                             >
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-black text-red-700">🔴 Crítico (Rojo)</span>
@@ -862,11 +1076,14 @@ export const MetricsDashboard = () => {
                                 <p className="text-[11px] text-red-800/80 mt-1 leading-snug">
                                     Riesgo asistencial directo. Requiere contención en &lt; 24-48 hs.
                                 </p>
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-700 mt-1.5 group-hover:underline">
+                                    <Eye className="w-3 h-3" /> Ver casos y descargar PDF
+                                </span>
                             </div>
 
                             <div
                                 onClick={() => handleMetricClick({ urgency: 'Amarillo' })}
-                                className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 cursor-pointer hover:bg-amber-50 transition-colors"
+                                className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 cursor-pointer hover:bg-amber-100/70 hover:shadow-sm transition-all group"
                             >
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-black text-amber-700">🟡 Moderado (Amarillo)</span>
@@ -875,11 +1092,14 @@ export const MetricsDashboard = () => {
                                 <p className="text-[11px] text-amber-800/80 mt-1 leading-snug">
                                     Desvío operativo o demora que afecta la calidad percibida.
                                 </p>
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 mt-1.5 group-hover:underline">
+                                    <Eye className="w-3 h-3" /> Ver casos y descargar PDF
+                                </span>
                             </div>
 
                             <div
                                 onClick={() => handleMetricClick({ urgency: 'Verde' })}
-                                className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/80 cursor-pointer hover:bg-emerald-50 transition-colors"
+                                className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/80 cursor-pointer hover:bg-emerald-100/70 hover:shadow-sm transition-all group"
                             >
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-black text-emerald-700">🟢 Leve (Verde)</span>
@@ -888,11 +1108,14 @@ export const MetricsDashboard = () => {
                                 <p className="text-[11px] text-emerald-800/80 mt-1 leading-snug">
                                     Observación menor u oportunidad de mejora preventiva.
                                 </p>
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 mt-1.5 group-hover:underline">
+                                    <Eye className="w-3 h-3" /> Ver casos y descargar PDF
+                                </span>
                             </div>
 
                             <div
                                 onClick={() => handleMetricClick({ category: 'Felicitación' })}
-                                className="p-3 rounded-xl bg-teal-50/70 border border-teal-200/80 cursor-pointer hover:bg-teal-50 transition-colors"
+                                className="p-3 rounded-xl bg-teal-50/70 border border-teal-200/80 cursor-pointer hover:bg-teal-100/70 hover:shadow-sm transition-all group"
                             >
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-black text-teal-700">🌟 Felicitaciones</span>
@@ -901,6 +1124,9 @@ export const MetricsDashboard = () => {
                                 <p className="text-[11px] text-teal-800/80 mt-1 leading-snug">
                                     Reconocimientos positivos al equipo que fortalecen el clima laboral.
                                 </p>
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-teal-700 mt-1.5 group-hover:underline">
+                                    <Eye className="w-3 h-3" /> Ver casos y descargar PDF
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -1444,6 +1670,312 @@ export const MetricsDashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {/* ── VENTANA EMERGENTE (MODAL) DE CASOS POR GRAVEDAD / FILTRO CON DESCARGA PDF ── */}
+            {caseModalFilter && (() => {
+                const info = getModalTitleInfo();
+                const resolvedCount = modalCases.filter(c => c.status === 'resolved').length;
+                const pendingCount = modalCases.length - resolvedCount;
+
+                return (
+                    <div
+                        className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200"
+                        onClick={() => setCaseModalFilter(null)}
+                    >
+                        <div
+                            className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Modal Header */}
+                            <div className="p-5 sm:p-6 bg-slate-50 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                <div>
+                                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-sanatorio-primary/10 text-sanatorio-primary">
+                                            Auditoría de Casos en Ventana Emergente
+                                        </span>
+                                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
+                                            {modalCases.length} {modalCases.length === 1 ? 'caso' : 'casos'}
+                                        </span>
+                                    </div>
+                                    <h2 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
+                                        {info.title}
+                                    </h2>
+                                    {info.subtitle && (
+                                        <p className="text-xs text-slate-500 mt-0.5">{info.subtitle}</p>
+                                    )}
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2.5">
+                                    <button
+                                        onClick={handleDownloadModalPDF}
+                                        disabled={isExportingModalPdf || modalCases.length === 0}
+                                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sanatorio-primary hover:bg-[#003f69] text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50"
+                                    >
+                                        {isExportingModalPdf ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <FileDown className="w-4 h-4" />
+                                        )}
+                                        Descargar en PDF ({modalCases.length})
+                                    </button>
+
+                                    <button
+                                        onClick={handleDownloadModalExcel}
+                                        disabled={isExportingModalExcel || modalCases.length === 0}
+                                        className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50"
+                                    >
+                                        {isExportingModalExcel ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <FileSpreadsheet className="w-4 h-4" />
+                                        )}
+                                        Excel
+                                    </button>
+
+                                    <button
+                                        onClick={() => setCaseModalFilter(null)}
+                                        className="p-2 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                                        title="Cerrar ventana"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Severity Quick-Selector Bar + Search & Status Filter */}
+                            <div className="px-5 sm:px-6 py-3.5 bg-white border-b border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                                {/* Quick-switch between Verde, Amarillo, Rojo, Felicitaciones */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">
+                                        Gravedad:
+                                    </span>
+                                    <button
+                                        onClick={() => setCaseModalFilter({ urgency: 'Verde' })}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 ${
+                                            caseModalFilter.urgency === 'Verde'
+                                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                                : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                        }`}
+                                    >
+                                        🟢 Leves / Verdes ({stats.byUrgency.Verdes})
+                                    </button>
+                                    <button
+                                        onClick={() => setCaseModalFilter({ urgency: 'Amarillo' })}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 ${
+                                            caseModalFilter.urgency === 'Amarillo'
+                                                ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                                                : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                        }`}
+                                    >
+                                        🟡 Medios / Amarillos ({stats.byUrgency.Amarillos})
+                                    </button>
+                                    <button
+                                        onClick={() => setCaseModalFilter({ urgency: 'Rojo' })}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 ${
+                                            caseModalFilter.urgency === 'Rojo'
+                                                ? 'bg-red-600 text-white border-red-600 shadow-sm'
+                                                : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                                        }`}
+                                    >
+                                        🔴 Críticos / Rojos ({stats.byUrgency.Rojos})
+                                    </button>
+                                    <button
+                                        onClick={() => setCaseModalFilter({ category: 'Felicitación' })}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 ${
+                                            caseModalFilter.category === 'Felicitación'
+                                                ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
+                                                : 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100'
+                                        }`}
+                                    >
+                                        🌟 Felicitaciones ({stats.felicitaciones})
+                                    </button>
+                                </div>
+
+                                {/* Search & Status Filter */}
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                    <div className="flex items-center bg-slate-100 p-1 rounded-lg text-xs font-bold">
+                                        <button
+                                            onClick={() => setModalStatusFilter('all')}
+                                            className={`px-2.5 py-1 rounded-md transition-all ${
+                                                modalStatusFilter === 'all'
+                                                    ? 'bg-white text-slate-800 shadow-xs'
+                                                    : 'text-slate-500 hover:text-slate-700'
+                                            }`}
+                                        >
+                                            Todos ({modalCases.length})
+                                        </button>
+                                        <button
+                                            onClick={() => setModalStatusFilter('pending')}
+                                            className={`px-2.5 py-1 rounded-md transition-all ${
+                                                modalStatusFilter === 'pending'
+                                                    ? 'bg-white text-amber-700 shadow-xs'
+                                                    : 'text-slate-500 hover:text-slate-700'
+                                            }`}
+                                        >
+                                            Pendientes ({pendingCount})
+                                        </button>
+                                        <button
+                                            onClick={() => setModalStatusFilter('resolved')}
+                                            className={`px-2.5 py-1 rounded-md transition-all ${
+                                                modalStatusFilter === 'resolved'
+                                                    ? 'bg-white text-emerald-700 shadow-xs'
+                                                    : 'text-slate-500 hover:text-slate-700'
+                                            }`}
+                                        >
+                                            Resueltos ({resolvedCount})
+                                        </button>
+                                    </div>
+
+                                    <div className="relative min-w-[230px]">
+                                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                        <input
+                                            type="text"
+                                            value={modalSearch}
+                                            onChange={e => setModalSearch(e.target.value)}
+                                            placeholder="Buscar por #ID, sector, texto..."
+                                            className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-sanatorio-primary/20 focus:border-sanatorio-primary"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Modal Body: Cases List */}
+                            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-3 bg-slate-50/60">
+                                {modalCases.length === 0 ? (
+                                    <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center">
+                                        <p className="text-sm font-bold text-slate-600">
+                                            No se encontraron casos para este filtro.
+                                        </p>
+                                        <p className="text-xs text-slate-400 mt-1">
+                                            Probá cambiar entre Verdes, Amarillos o Rojos en la barra superior.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    modalCases.map(caso => {
+                                        const isResolved = caso.status === 'resolved';
+                                        const urg = caso.ai_urgency || 'S/C';
+                                        const urgBadge =
+                                            urg === 'Rojo'
+                                                ? 'bg-red-100 text-red-700 border-red-200'
+                                                : urg === 'Amarillo'
+                                                    ? 'bg-amber-100 text-amber-800 border-amber-200'
+                                                    : urg === 'Verde'
+                                                        ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                                                        : 'bg-teal-100 text-teal-700 border-teal-200';
+
+                                        return (
+                                            <div
+                                                key={caso.id || caso.tracking_id}
+                                                className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200/90 shadow-xs hover:border-sanatorio-primary/30 transition-all"
+                                            >
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <span className="font-mono text-xs font-black px-2.5 py-1 rounded-md bg-slate-100 text-sanatorio-primary">
+                                                            #{caso.tracking_id || 'S/N'}
+                                                        </span>
+                                                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${urgBadge}`}>
+                                                            {urg === 'Rojo'
+                                                                ? '🔴 Crítico (Rojo)'
+                                                                : urg === 'Amarillo'
+                                                                    ? '🟡 Medio (Amarillo)'
+                                                                    : urg === 'Verde'
+                                                                        ? '🟢 Leve (Verde)'
+                                                                        : caso.finding_type || 'Felicitación'}
+                                                        </span>
+                                                        <span
+                                                            className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                                                                isResolved
+                                                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                                    : 'bg-blue-50 text-blue-700 border border-blue-200'
+                                                            }`}
+                                                        >
+                                                            {isResolved ? '✓ Resuelto' : '⏳ En Gestión / Pendiente'}
+                                                        </span>
+                                                        <span className="text-xs text-slate-400 font-medium">
+                                                            {caso.created_at
+                                                                ? new Date(caso.created_at).toLocaleDateString('es-AR')
+                                                                : '-'}
+                                                        </span>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => generateValidationPDF(caso)}
+                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-sanatorio-primary hover:text-white text-slate-700 text-[11px] font-bold transition-colors self-start sm:self-auto"
+                                                        title="Descargar ficha individual en PDF"
+                                                    >
+                                                        <FileDown className="w-3.5 h-3.5" />
+                                                        Ficha PDF
+                                                    </button>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-3 text-xs">
+                                                    <div>
+                                                        <span className="text-slate-400 font-semibold">Sector Destino: </span>
+                                                        <span className="font-bold text-slate-700">{caso.sector || 'Sin asignar'}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-400 font-semibold">Sector Origen: </span>
+                                                        <span className="font-medium text-slate-600">
+                                                            {caso.reporter_sector || caso.origin_sector || 'No especificado'}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-400 font-semibold">Clasificación: </span>
+                                                        <span className="font-medium text-slate-600">
+                                                            {caso.ai_category || caso.finding_type || 'General'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {caso.ai_summary && (
+                                                    <p className="text-xs font-bold text-slate-800 mt-2.5">
+                                                        Resumen IA: <span className="font-semibold text-slate-700">{caso.ai_summary}</span>
+                                                    </p>
+                                                )}
+
+                                                {caso.content && (
+                                                    <p className="text-xs text-slate-600 mt-1.5 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                                        {caso.content}
+                                                    </p>
+                                                )}
+
+                                                {(caso.immediate_action || caso.solution_notes || caso.quality_observations) && (
+                                                    <div className="mt-2.5 p-3 rounded-lg bg-emerald-50/60 border border-emerald-100 text-xs text-emerald-900 space-y-1">
+                                                        {(caso.immediate_action || caso.solution_notes) && (
+                                                            <p>
+                                                                <strong>Acción / Resolución:</strong>{' '}
+                                                                {caso.immediate_action || caso.solution_notes}
+                                                            </p>
+                                                        )}
+                                                        {caso.quality_observations && (
+                                                            <p>
+                                                                <strong>Observaciones de Calidad:</strong> {caso.quality_observations}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="px-5 sm:px-6 py-3 bg-white border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+                                <span>
+                                    Sanatorio Argentino · Gestión de Calidad · <strong>Innovación y Transformación Digital</strong>
+                                </span>
+                                <button
+                                    onClick={() => setCaseModalFilter(null)}
+                                    className="px-4 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors"
+                                >
+                                    Cerrar ventana
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 };
