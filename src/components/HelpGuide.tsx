@@ -1,544 +1,835 @@
-import { ShieldCheck, UserCog, MessageSquare, Bell, CheckCircle2, Info, Lock, Smartphone, BrainCircuit, FileCheck, Eye, BarChart3, Filter, Clock, AlertTriangle, TrendingUp, Zap, ClipboardList, Layers, ArrowRight, Send, Sparkles, PieChart, Target, Activity } from 'lucide-react';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+    ShieldCheck,
+    UserCog,
+    MessageSquare,
+    Bell,
+    CheckCircle2,
+    Info,
+    Lock,
+    Smartphone,
+    BrainCircuit,
+    FileCheck,
+    Eye,
+    BarChart3,
+    Filter,
+    Clock,
+    AlertTriangle,
+    TrendingUp,
+    ClipboardList,
+    Layers,
+    ArrowRight,
+    Send,
+    Sparkles,
+    PieChart,
+    Target,
+    Activity,
+    Award,
+    FileSpreadsheet,
+    Download,
+    Users,
+    ChevronDown,
+    HelpCircle,
+    BookOpen,
+    Check,
+    Building2,
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
-/* ──────────────────────────────────────────
-   WORKFLOW GRAPH (shared across all views)
-   ────────────────────────────────────────── */
-const WorkflowGraph = () => {
-    const steps = [
-        { icon: <MessageSquare className="w-5 h-5" />, title: "Reporte", desc: "Usuario envía hallazgo (+Foto)", color: "bg-blue-100 text-blue-600", position: "top-0 left-1/2 -translate-x-1/2" },
-        { icon: <BrainCircuit className="w-5 h-5" />, title: "Análisis IA", desc: "Clasificación automática Riesgo", color: "bg-purple-100 text-purple-600", position: "top-1/4 right-[5%]" },
-        { icon: <UserCog className="w-5 h-5" />, title: "Gestión", desc: "Calidad deriva al Responsable", color: "bg-orange-100 text-orange-600", position: "bottom-1/4 right-[5%]" },
-        { icon: <Smartphone className="w-5 h-5" />, title: "Notificación", desc: "Responsable recibe link WhatsApp", color: "bg-green-100 text-green-600", position: "bottom-0 left-1/2 -translate-x-1/2" },
-        { icon: <FileCheck className="w-5 h-5" />, title: "Resolución", desc: "Carga de solución y evidencias", color: "bg-teal-100 text-teal-600", position: "bottom-1/4 left-[5%]" },
-        { icon: <Bell className="w-5 h-5" />, title: "Feedback", desc: "Reportante recibe aviso de cierre", color: "bg-pink-100 text-pink-600", position: "top-1/4 left-[5%]" }
+/* ──────────────────────────────────────────────────────────
+   1. CICLO INTEGRAL DE CALIDAD (6 ETAPAS CONECTADAS)
+   ────────────────────────────────────────────────────────── */
+const QualityCyclePipeline = () => {
+    const stages = [
+        {
+            step: '01',
+            icon: <MessageSquare className="w-5 h-5" />,
+            title: 'Reporte / Felicitación',
+            badge: 'Canal Abierto 24/7',
+            desc: 'El colaborador o paciente registra un hallazgo (identificado o anónimo) o una felicitación con fotos y audio.',
+            accent: 'border-blue-200 bg-blue-50/60 text-sanatorio-primary',
+            iconBg: 'bg-sanatorio-primary text-white shadow-sanatorio-primary/20',
+        },
+        {
+            step: '02',
+            icon: <BrainCircuit className="w-5 h-5" />,
+            title: 'Triage & Análisis IA',
+            badge: 'Automático',
+            desc: 'El motor de IA resume el caso, sugiere categoría operativa y asigna semáforo de urgencia (Verde, Amarillo o Rojo).',
+            accent: 'border-purple-200 bg-purple-50/60 text-purple-700',
+            iconBg: 'bg-purple-600 text-white shadow-purple-500/20',
+        },
+        {
+            step: '03',
+            icon: <UserCog className="w-5 h-5" />,
+            title: 'Derivación Calidad',
+            badge: 'Simple o Multi-Sector',
+            desc: 'Calidad define el tipo de gestión (Simple, Desvío, Evento Adverso o Felicitación) y deriva a uno o varios sectores.',
+            accent: 'border-amber-200 bg-amber-50/60 text-amber-800',
+            iconBg: 'bg-amber-500 text-white shadow-amber-500/20',
+        },
+        {
+            step: '04',
+            icon: <Smartphone className="w-5 h-5" />,
+            title: 'Aviso WhatsApp',
+            badge: 'Link Único Directo',
+            desc: 'El responsable recibe una notificación instantánea en su celular con enlace directo para gestionar sin trabas.',
+            accent: 'border-emerald-200 bg-emerald-50/60 text-emerald-700',
+            iconBg: 'bg-emerald-600 text-white shadow-emerald-500/20',
+        },
+        {
+            step: '05',
+            icon: <FileCheck className="w-5 h-5" />,
+            title: 'Resolución Sectorial',
+            badge: 'Causa Raíz + Plan',
+            desc: 'El sector documenta la acción inmediata, análisis de causa raíz, plan de acción, fecha compromiso y evidencias.',
+            accent: 'border-teal-200 bg-teal-50/60 text-teal-800',
+            iconBg: 'bg-sanatorio-secondary text-white shadow-sanatorio-secondary/20',
+        },
+        {
+            step: '06',
+            icon: <Award className="w-5 h-5" />,
+            title: 'Validación & Cierre',
+            badge: 'Feedback + PDF',
+            desc: 'Calidad audita y aprueba la solución, notifica al reportante por WhatsApp y habilita el Informe o Certificado PDF.',
+            accent: 'border-indigo-200 bg-indigo-50/60 text-indigo-700',
+            iconBg: 'bg-indigo-600 text-white shadow-indigo-500/20',
+        },
     ];
 
     return (
-        <div className="relative w-full max-w-lg mx-auto h-[350px] md:h-[400px] my-12 hidden md:block">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-white rounded-full shadow-xl border-4 border-sanatorio-primary/10 flex flex-col items-center justify-center text-center z-10">
-                <ShieldCheck className="w-10 h-10 text-sanatorio-primary mb-1" />
-                <p className="text-[10px] font-black uppercase text-sanatorio-primary tracking-widest">Ciclo de<br />Calidad</p>
-            </div>
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] rounded-full border-2 border-dashed border-gray-200 -z-0 animate-spin-slow"></div>
-            {steps.map((step, idx) => (
-                <div key={idx} className={`absolute ${step.position} w-40 flex flex-col items-center text-center`}>
-                    <div className={`w-12 h-12 rounded-2xl ${step.color} flex items-center justify-center shadow-lg mb-2 relative z-10 transition-transform hover:scale-110`}>
-                        {step.icon}
+        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 mb-6 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl bg-sanatorio-primary/10 text-sanatorio-primary flex items-center justify-center">
+                        <ShieldCheck className="w-6 h-6" />
                     </div>
-                    <h4 className="font-bold text-gray-800 text-xs uppercase">{step.title}</h4>
-                    <p className="text-[10px] text-gray-500 leading-tight">{step.desc}</p>
-                </div>
-            ))}
-        </div>
-    );
-};
-
-/* ──────────────────────────────────────────
-   REUSABLE STEP CARD
-   ────────────────────────────────────────── */
-const StepItem = ({ number, title, children }: { number: number; title: string; children: React.ReactNode }) => (
-    <div className="flex gap-4">
-        <div className="flex-shrink-0 w-8 h-8 bg-blue-50 text-sanatorio-primary rounded-full flex items-center justify-center font-bold text-sm">{number}</div>
-        <div>
-            <h3 className="font-bold text-gray-800 mb-1">{title}</h3>
-            <div className="text-sm text-gray-600 leading-relaxed">{children}</div>
-        </div>
-    </div>
-);
-
-/* ──────────────────────────────────────────
-   FEATURE CARD
-   ────────────────────────────────────────── */
-const FeatureCard = ({ icon, title, description, accent }: { icon: React.ReactNode; title: string; description: string; accent: string }) => (
-    <div className={`bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow`}>
-        <div className={`w-10 h-10 rounded-xl ${accent} flex items-center justify-center mb-3`}>
-            {icon}
-        </div>
-        <h4 className="font-bold text-gray-800 text-sm mb-1">{title}</h4>
-        <p className="text-xs text-gray-500 leading-relaxed">{description}</p>
-    </div>
-);
-
-/* ══════════════════════════════════════════
-   1. GUÍA PÚBLICA (sin login)
-   ══════════════════════════════════════════ */
-const PublicGuide = () => (
-    <div className="max-w-3xl mx-auto space-y-8">
-        <div className="bg-white rounded-3xl shadow-card border border-gray-100 overflow-hidden">
-            <div className="bg-gradient-to-br from-sanatorio-secondary/10 to-transparent p-8 border-b border-gray-50">
-                <div className="w-14 h-14 bg-sanatorio-secondary rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-sanatorio-secondary/20">
-                    <MessageSquare className="w-8 h-8 text-white" />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">Guía para el Personal</h2>
-                <p className="text-gray-500">Todo lo que necesitas saber para reportar hallazgos o sugerencias.</p>
-            </div>
-
-            <div className="p-8 space-y-8">
-                <div className="space-y-6">
-                    <StepItem number={1} title="Carga de Reporte">
-                        <p>Completa el formulario indicando sector y detalle. Si dejas tu teléfono, recibirás notificaciones.</p>
-                    </StepItem>
-                    <StepItem number={2} title="Análisis Automático">
-                        <p>Nuestra IA clasifica la urgencia. Si es <span className="text-red-600 font-bold">Crítica</span>, avisa a los directores al instante.</p>
-                    </StepItem>
-                    <StepItem number={3} title="Ciclo de Resolución">
-                        <p>Calidad deriva el caso al responsable de área. Cuando este lo soluciona, recibirás un mensaje de <strong>"Caso Resuelto"</strong> en tu WhatsApp con la confirmación.</p>
-                    </StepItem>
-                </div>
-
-                <div className="bg-sanatorio-neutral rounded-2xl p-5 border border-gray-100 flex items-start gap-4">
-                    <ShieldCheck className="w-6 h-6 text-sanatorio-secondary shrink-0" />
-                    <p className="text-xs text-gray-500 leading-relaxed italic">
-                        Tu participación activa cierra el círculo de mejora. Gracias por comprometerte.
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        {/* Panel bloqueado para no-logueados */}
-        <div className="bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center p-12 text-center space-y-4">
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-100">
-                <Lock className="w-8 h-8 text-gray-300" />
-            </div>
-            <div className="space-y-2">
-                <h3 className="text-xl font-bold text-gray-400">Contenido Restringido</h3>
-                <p className="text-sm text-gray-400 max-w-xs mx-auto">
-                    Las guías específicas por rol solo son visibles para personal autorizado con sesión activa.
-                </p>
-            </div>
-        </div>
-    </div>
-);
-
-/* ══════════════════════════════════════════
-   2. GUÍA ADMIN
-   ══════════════════════════════════════════ */
-const AdminGuide = () => (
-    <div className="space-y-8">
-        {/* Grid de cards: 2 columnas */}
-        <div className="grid lg:grid-cols-2 gap-8">
-
-            {/* Card 1: Guía Personal (breve) */}
-            <div className="bg-white rounded-3xl shadow-card border border-gray-100 overflow-hidden flex flex-col">
-                <div className="bg-gradient-to-br from-sanatorio-secondary/10 to-transparent p-8 border-b border-gray-50">
-                    <div className="w-14 h-14 bg-sanatorio-secondary rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-sanatorio-secondary/20">
-                        <MessageSquare className="w-8 h-8 text-white" />
+                    <div>
+                        <span className="text-[11px] font-extrabold uppercase tracking-widest text-sanatorio-secondary">
+                            Trazabilidad Punta a Punta
+                        </span>
+                        <h2 className="text-xl sm:text-2xl font-display font-black text-slate-800">
+                            Ciclo Institucional de Gestión de Calidad
+                        </h2>
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Guía para el Personal</h2>
-                    <p className="text-gray-500">Ciclo de reporte: desde la carga hasta la resolución.</p>
                 </div>
-                <div className="p-8 space-y-6 flex-grow">
-                    <StepItem number={1} title="Carga de Reporte">
-                        <p>El usuario completa el formulario, la IA clasifica urgencia y sector.</p>
-                    </StepItem>
-                    <StepItem number={2} title="Análisis y Derivación">
-                        <p>Tu equipo revisa, clasifica y deriva al responsable vía WhatsApp.</p>
-                    </StepItem>
-                    <StepItem number={3} title="Resolución y Cierre">
-                        <p>Cuando el responsable responde, el sistema lo envía a <strong>Validación de Calidad</strong> para su aprobación o rechazo.</p>
-                    </StepItem>
+                <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/80 text-xs font-bold text-slate-600 self-start sm:self-auto">
+                    <Clock className="w-4 h-4 text-sanatorio-primary" />
+                    Monitoreo continuo en tiempo real
                 </div>
             </div>
 
-            {/* Card 2: Panel Administrativo */}
-            <div className="bg-white rounded-3xl shadow-card border border-gray-100 overflow-hidden flex flex-col animate-in slide-in-from-right-8 duration-500">
-                <div className="bg-gradient-to-br from-purple-500/5 to-transparent p-8 border-b border-gray-50">
-                    <div className="w-14 h-14 bg-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-purple-500/20">
-                        <UserCog className="w-8 h-8 text-white" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Panel Administrativo</h2>
-                    <p className="text-gray-500">Control total del ciclo de calidad.</p>
-                </div>
-                <div className="p-8 space-y-6 flex-grow">
-                    {/* WhatsApp Feature */}
-                    <div className="bg-green-50 p-4 rounded-xl border border-green-100 flex items-start gap-3">
-                        <Smartphone className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                {stages.map((s, idx) => (
+                    <div
+                        key={s.step}
+                        className="relative group bg-slate-50/60 hover:bg-white rounded-2xl border border-slate-200/80 hover:border-sanatorio-primary/30 p-4 transition-all duration-200 hover:shadow-md flex flex-col justify-between"
+                    >
                         <div>
-                            <h4 className="text-sm font-bold text-green-800 uppercase mb-1">Derivación por WhatsApp</h4>
-                            <p className="text-xs text-green-700 leading-relaxed">
-                                Envía solicitudes de gestión directamente con un link único. El responsable carga solución desde su celular.
+                            <div className="flex items-center justify-between mb-3">
+                                <div className={`w-10 h-10 rounded-xl ${s.iconBg} shadow-md flex items-center justify-center transition-transform group-hover:scale-105`}>
+                                    {s.icon}
+                                </div>
+                                <span className="font-mono text-xs font-black text-slate-300 group-hover:text-sanatorio-primary/60 transition-colors">
+                                    ETAPA {s.step}
+                                </span>
+                            </div>
+
+                            <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold border mb-2 ${s.accent}`}>
+                                {s.badge}
+                            </span>
+
+                            <h3 className="font-display font-bold text-slate-800 text-sm mb-1.5">
+                                {s.title}
+                            </h3>
+                            <p className="text-xs text-slate-500 leading-relaxed">
+                                {s.desc}
                             </p>
                         </div>
-                    </div>
 
-                    <div className="space-y-4 pt-2">
-                        <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                            <CheckCircle2 className="w-5 h-5 text-green-600" />
-                            Acciones Disponibles
-                        </h3>
-                        <ul className="space-y-3">
-                            <li className="flex items-start gap-2 text-sm text-gray-600">
-                                <div className="w-1.5 h-1.5 bg-sanatorio-primary rounded-full mt-1.5 shrink-0" />
-                                <span><strong>Derivar:</strong> Envía el caso al responsable por WhatsApp con tipo de gestión (Simple, Desvío, Evento Adverso).</span>
-                            </li>
-                            <li className="flex items-start gap-2 text-sm text-gray-600">
-                                <div className="w-1.5 h-1.5 bg-sanatorio-primary rounded-full mt-1.5 shrink-0" />
-                                <span><strong>Clasificar:</strong> Asigná prioridad (semáforo), origen y clasificación operativa.</span>
-                            </li>
-                            <li className="flex items-start gap-2 text-sm text-gray-600">
-                                <div className="w-1.5 h-1.5 bg-sanatorio-primary rounded-full mt-1.5 shrink-0" />
-                                <span><strong>Validar:</strong> Aprobá o devolvé resoluciones desde la pantalla de Validación de Calidad.</span>
-                            </li>
-                            <li className="flex items-start gap-2 text-sm text-gray-600">
-                                <div className="w-1.5 h-1.5 bg-sanatorio-primary rounded-full mt-1.5 shrink-0" />
-                                <span><strong>Apelar:</strong> Reabrí casos cerrados que necesiten corrección adicional.</span>
-                            </li>
-                            <li className="flex items-start gap-2 text-sm text-gray-600">
-                                <div className="w-1.5 h-1.5 bg-red-400 rounded-full mt-1.5 shrink-0" />
-                                <span><strong>Descartar:</strong> Archivá reportes que no ameriten gestión.</span>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div className="bg-blue-50/50 rounded-2xl p-5 border border-blue-100 flex items-start gap-4 mt-auto">
-                        <Info className="w-6 h-6 text-sanatorio-primary shrink-0" />
-                        <p className="text-xs text-blue-800 leading-relaxed font-medium italic">
-                            El sistema cierra el ciclo automáticamente: Reporte → Gestión → Solución → Validación → Feedback.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {/* Funcionalidades clave del admin */}
-        <div className="bg-white rounded-3xl shadow-card border border-gray-100 p-8">
-            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                <Sparkles className="w-6 h-6 text-purple-500" />
-                Funcionalidades Exclusivas del Administrador
-            </h3>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <FeatureCard
-                    icon={<Filter className="w-5 h-5 text-blue-600" />}
-                    title="Filtros Avanzados"
-                    description="Filtrá reportes por estado, sector y prioridad. Las pestañas muestran contadores en tiempo real."
-                    accent="bg-blue-100"
-                />
-                <FeatureCard
-                    icon={<AlertTriangle className="w-5 h-5 text-amber-600" />}
-                    title="Alertas de Tiempo de Respuesta"
-                    description="El sistema te avisa con bandas rojas cuando un caso supera los plazos establecidos."
-                    accent="bg-amber-100"
-                />
-                <FeatureCard
-                    icon={<Layers className="w-5 h-5 text-purple-600" />}
-                    title="Historial de Rechazos"
-                    description="Cada devolución se registra con timestamp, motivo y datos anteriores para auditoría completa."
-                    accent="bg-purple-100"
-                />
-                <FeatureCard
-                    icon={<ClipboardList className="w-5 h-5 text-teal-600" />}
-                    title="Gestión de Usuarios"
-                    description="Crear, editar roles y asignar sectores a responsables desde /admin/users."
-                    accent="bg-teal-100"
-                />
-            </div>
-        </div>
-    </div>
-);
-
-/* ══════════════════════════════════════════
-   3. GUÍA RESPONSABLE
-   ══════════════════════════════════════════ */
-const ResponsableGuide = () => (
-    <div className="space-y-8">
-        <div className="grid lg:grid-cols-2 gap-8">
-
-            {/* Card 1: ¿Qué estás viendo? */}
-            <div className="bg-white rounded-3xl shadow-card border border-gray-100 overflow-hidden flex flex-col">
-                <div className="bg-gradient-to-br from-green-500/10 to-transparent p-8 border-b border-gray-50">
-                    <div className="w-14 h-14 bg-green-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-green-500/20">
-                        <Eye className="w-8 h-8 text-white" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">¿Qué estás viendo?</h2>
-                    <p className="text-gray-500">Tu dashboard muestra los casos relacionados con tus sectores asignados.</p>
-                </div>
-                <div className="p-8 space-y-6 flex-grow">
-                    <StepItem number={1} title="Tus Casos">
-                        <p>Ves los reportes que afectan a los sectores que tenés asignados. Son filtrados automáticamente para vos.</p>
-                    </StepItem>
-                    <StepItem number={2} title="Vista de Solo Lectura">
-                        <p>Tu acceso es de <strong>consulta</strong>: podés ver toda la información, historial y estado de cada caso, pero las acciones de gestión están reservadas al equipo de Calidad.</p>
-                    </StepItem>
-                    <StepItem number={3} title="Seguimiento en Tiempo Real">
-                        <p>Los estados se actualizan automáticamente. Verás cuando un caso pasa de "Pendiente" a "En Gestión" o "Resuelto".</p>
-                    </StepItem>
-
-                    <div className="bg-blue-50 rounded-2xl p-5 border border-blue-100 flex items-start gap-4 mt-auto">
-                        <Info className="w-6 h-6 text-blue-600 shrink-0" />
-                        <p className="text-xs text-blue-700 leading-relaxed font-medium italic">
-                            Si recibiste un link por WhatsApp, podés resolver el caso directamente desde ahí sin necesidad de iniciar sesión.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Card 2: Significado de los estados */}
-            <div className="bg-white rounded-3xl shadow-card border border-gray-100 overflow-hidden flex flex-col animate-in slide-in-from-right-8 duration-500">
-                <div className="bg-gradient-to-br from-orange-500/5 to-transparent p-8 border-b border-gray-50">
-                    <div className="w-14 h-14 bg-orange-500 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-orange-500/20">
-                        <Layers className="w-8 h-8 text-white" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">¿Qué significa cada estado?</h2>
-                    <p className="text-gray-500">Guía rápida de los estados que verás en la tabla.</p>
-                </div>
-                <div className="p-8 space-y-4 flex-grow">
-                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
-                        <span className="w-3 h-3 rounded-full bg-blue-500 shrink-0"></span>
-                        <div>
-                            <p className="font-bold text-sm text-gray-800">Nuevo</p>
-                            <p className="text-xs text-gray-500">El reporte acaba de ingresar y está pendiente de revisión por Calidad.</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-xl border border-amber-100">
-                        <span className="w-3 h-3 rounded-full bg-amber-500 shrink-0"></span>
-                        <div>
-                            <p className="font-bold text-sm text-gray-800">En Gestión</p>
-                            <p className="text-xs text-gray-500">Fue derivado al responsable. Se espera la carga de la solución.</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-xl border border-purple-100">
-                        <span className="w-3 h-3 rounded-full bg-purple-500 shrink-0"></span>
-                        <div>
-                            <p className="font-bold text-sm text-gray-800">Validación Calidad</p>
-                            <p className="text-xs text-gray-500">El responsable respondió. Calidad revisa si la resolución es satisfactoria.</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-green-50 rounded-xl border border-green-100">
-                        <span className="w-3 h-3 rounded-full bg-green-500 shrink-0"></span>
-                        <div>
-                            <p className="font-bold text-sm text-gray-800">Resuelto</p>
-                            <p className="text-xs text-gray-500">Calidad aprobó la solución. El caso está cerrado y el reportante fue notificado.</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-red-50 rounded-xl border border-red-100">
-                        <span className="w-3 h-3 rounded-full bg-red-500 shrink-0"></span>
-                        <div>
-                            <p className="font-bold text-sm text-gray-800">Rechazado / Devuelto</p>
-                            <p className="text-xs text-gray-500">La resolución fue insuficiente. Se requiere una nueva respuesta.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {/* Insights disponibles */}
-        <div className="bg-white rounded-3xl shadow-card border border-gray-100 p-8">
-            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                <TrendingUp className="w-6 h-6 text-green-500" />
-                Insights Disponibles para Tu Perfil
-            </h3>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <FeatureCard
-                    icon={<BarChart3 className="w-5 h-5 text-blue-600" />}
-                    title="Métricas de tus Sectores"
-                    description="Accedé a /metrics para ver tendencias, volumen de reportes y tiempo promedio de resolución de tus áreas."
-                    accent="bg-blue-100"
-                />
-                <FeatureCard
-                    icon={<Clock className="w-5 h-5 text-amber-600" />}
-                    title="Tiempos de Respuesta"
-                    description="Observá cuánto tarda en resolverse cada caso y compará contra los tiempos de respuesta establecidos."
-                    accent="bg-amber-100"
-                />
-                <FeatureCard
-                    icon={<Eye className="w-5 h-5 text-green-600" />}
-                    title="Detalle Completo"
-                    description="Hacé clic en cualquier fila para abrir el detalle: descripción IA, evidencia, historial de actividad y resolución."
-                    accent="bg-green-100"
-                />
-            </div>
-        </div>
-
-        {/* Cómo resolver un caso */}
-        <div className="bg-white rounded-3xl shadow-card border border-gray-100 p-8">
-            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                <Send className="w-6 h-6 text-sanatorio-primary" />
-                ¿Cómo resolver un caso que te derivaron?
-            </h3>
-            <div className="space-y-4">
-                <div className="flex items-start gap-4 p-4 bg-gradient-to-r from-green-50 to-transparent rounded-xl border border-green-100">
-                    <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
-                        <Smartphone className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-gray-800 mb-1">1. Recibís un WhatsApp</h4>
-                        <p className="text-sm text-gray-600">Calidad te envía un mensaje con un <strong>link único</strong> para cargar la resolución del caso.</p>
-                    </div>
-                </div>
-                <div className="flex items-start gap-4 p-4 bg-gradient-to-r from-blue-50 to-transparent rounded-xl border border-blue-100">
-                    <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
-                        <ClipboardList className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-gray-800 mb-1">2. Completás el formulario</h4>
-                        <p className="text-sm text-gray-600">Cargá la acción inmediata, causa raíz (si aplica) y plan correctivo. Todo desde el celular.</p>
-                    </div>
-                </div>
-                <div className="flex items-start gap-4 p-4 bg-gradient-to-r from-purple-50 to-transparent rounded-xl border border-purple-100">
-                    <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
-                        <CheckCircle2 className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-gray-800 mb-1">3. Calidad valida tu respuesta</h4>
-                        <p className="text-sm text-gray-600">Si es aprobada, el caso se cierra. Si necesita mejoras, te lo devuelven con indicaciones.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-);
-
-/* ══════════════════════════════════════════
-   4. GUÍA DIRECTIVO
-   ══════════════════════════════════════════ */
-const DirectivoGuide = () => (
-    <div className="space-y-8">
-        <div className="grid lg:grid-cols-2 gap-8">
-
-            {/* Card 1: Tu rol en el sistema */}
-            <div className="bg-white rounded-3xl shadow-card border border-gray-100 overflow-hidden flex flex-col">
-                <div className="bg-gradient-to-br from-blue-500/10 to-transparent p-8 border-b border-gray-50">
-                    <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500/20">
-                        <Target className="w-8 h-8 text-white" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Tu Rol como Directivo</h2>
-                    <p className="text-gray-500">Acceso ejecutivo a los indicadores de calidad del Sanatorio.</p>
-                </div>
-                <div className="p-8 space-y-6 flex-grow">
-                    <StepItem number={1} title="Vista Ejecutiva">
-                        <p>Tu perfil tiene acceso a las <strong>métricas y KPIs</strong> del sistema sin intervenir en la operación diaria. Esto te permite monitorear sin interferir.</p>
-                    </StepItem>
-                    <StepItem number={2} title="¿Qué NO ves?">
-                        <p>No tenés acceso al tablero de casos operativos (Dashboard). Tu foco está en los resultados e indicadores estratégicos.</p>
-                    </StepItem>
-                    <StepItem number={3} title="¿Cómo acceder a las Métricas?">
-                        <p>Desde la barra de navegación, hacé clic en <span className="inline-flex items-center gap-1 bg-sanatorio-primary/10 text-sanatorio-primary text-xs px-2 py-0.5 rounded-md font-bold"><BarChart3 className="w-3 h-3" /> Métricas</span> para acceder al panel.</p>
-                    </StepItem>
-
-                    <div className="bg-blue-50 rounded-2xl p-5 border border-blue-100 flex items-start gap-4 mt-auto">
-                        <Info className="w-6 h-6 text-blue-600 shrink-0" />
-                        <p className="text-xs text-blue-700 leading-relaxed font-medium italic">
-                            Tus datos se actualizan en tiempo real. No necesitás solicitar reportes manuales: el sistema los genera automáticamente.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Card 2: Insights disponibles */}
-            <div className="bg-white rounded-3xl shadow-card border border-gray-100 overflow-hidden flex flex-col animate-in slide-in-from-right-8 duration-500">
-                <div className="bg-gradient-to-br from-indigo-500/5 to-transparent p-8 border-b border-gray-50">
-                    <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-indigo-500/20">
-                        <PieChart className="w-8 h-8 text-white" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">¿Qué insights podés obtener?</h2>
-                    <p className="text-gray-500">Indicadores clave para la toma de decisiones.</p>
-                </div>
-                <div className="p-8 space-y-4 flex-grow">
-                    <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-transparent rounded-xl border border-blue-100">
-                        <TrendingUp className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                        <div>
-                            <p className="font-bold text-sm text-gray-800">Tendencias Temporales</p>
-                            <p className="text-xs text-gray-500">Evolución de reportes por semana/mes. Detectá picos y patrones recurrentes.</p>
-                        </div>
-                    </div>
-                    <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-green-50 to-transparent rounded-xl border border-green-100">
-                        <Activity className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-                        <div>
-                            <p className="font-bold text-sm text-gray-800">Performance por Sector</p>
-                            <p className="text-xs text-gray-500">Qué sectores generan más hallazgos y cuáles resuelven más rápido.</p>
-                        </div>
-                    </div>
-                    <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-amber-50 to-transparent rounded-xl border border-amber-100">
-                        <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                        <div>
-                            <p className="font-bold text-sm text-gray-800">Tiempos de Resolución</p>
-                            <p className="text-xs text-gray-500">Promedio de días para cerrar un caso. Comparación contra los tiempos de respuesta establecidos.</p>
-                        </div>
-                    </div>
-                    <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-red-50 to-transparent rounded-xl border border-red-100">
-                        <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                        <div>
-                            <p className="font-bold text-sm text-gray-800">Alertas Críticas</p>
-                            <p className="text-xs text-gray-500">Casos de urgencia roja o eventos adversos que requieren atención directiva.</p>
-                        </div>
-                    </div>
-                    <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-purple-50 to-transparent rounded-xl border border-purple-100">
-                        <Zap className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
-                        <div>
-                            <p className="font-bold text-sm text-gray-800">Clasificación de Hallazgos</p>
-                            <p className="text-xs text-gray-500">Distribución de categorías: Infraestructura, Procesos, Atención al Paciente, etc.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {/* Cómo funciona el sistema (resumen para directivos) */}
-        <div className="bg-white rounded-3xl shadow-card border border-gray-100 p-8">
-            <h3 className="text-xl font-bold text-gray-800 mb-2">¿Cómo funciona DORA?</h3>
-            <p className="text-gray-500 mb-6 text-sm">Resumen del flujo completo para contexto estratégico.</p>
-            <div className="flex flex-col md:flex-row items-center gap-3 justify-center">
-                {[
-                    { label: 'Reporte Anónimo', icon: <MessageSquare className="w-4 h-4" />, color: 'bg-blue-100 text-blue-700' },
-                    { label: 'Análisis IA', icon: <BrainCircuit className="w-4 h-4" />, color: 'bg-purple-100 text-purple-700' },
-                    { label: 'Derivación Calidad', icon: <UserCog className="w-4 h-4" />, color: 'bg-orange-100 text-orange-700' },
-                    { label: 'Resolución', icon: <FileCheck className="w-4 h-4" />, color: 'bg-teal-100 text-teal-700' },
-                    { label: 'Validación', icon: <ShieldCheck className="w-4 h-4" />, color: 'bg-green-100 text-green-700' },
-                ].map((step, idx) => (
-                    <div key={idx} className="flex items-center gap-3">
-                        <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl ${step.color} font-bold text-xs`}>
-                            {step.icon} {step.label}
-                        </div>
-                        {idx < 4 && <ArrowRight className="w-4 h-4 text-gray-300 hidden md:block" />}
+                        {idx < stages.length - 1 && (
+                            <div className="hidden xl:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-6 rounded-full bg-white border border-slate-200 shadow-2xs items-center justify-center text-slate-400">
+                                <ArrowRight className="w-3.5 h-3.5" />
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>
         </div>
+    );
+};
+
+/* ──────────────────────────────────────────────────────────
+   2. CLASIFICACIÓN DE TIPOS DE GESTIÓN Y ESTADOS
+   ────────────────────────────────────────────────────────── */
+const ClassificationMatrix = () => {
+    const types = [
+        {
+            name: 'Hallazgo Simple',
+            pill: 'Simple',
+            pillClass: 'bg-blue-100 text-blue-700 border-blue-200',
+            cardBorder: 'border-blue-200/70',
+            requerimiento: 'Acción correctiva inmediata y evidencia de resolución.',
+            uso: 'Observaciones operativas puntuales, mantenimiento menor o ajustes rápidos.',
+        },
+        {
+            name: 'Desvío de Proceso',
+            pill: 'Desvío',
+            pillClass: 'bg-orange-100 text-orange-800 border-orange-200',
+            cardBorder: 'border-orange-200/70',
+            requerimiento: 'Acción inmediata + Análisis de Causa Raíz + Plan de Acción + Fecha de implementación.',
+            uso: 'Incumplimiento de protocolos, demoras inter-sectoriales o fallas recurrentes.',
+        },
+        {
+            name: 'Evento Adverso / Centinela',
+            pill: 'Evento Adverso',
+            pillClass: 'bg-red-100 text-red-700 border-red-200',
+            cardBorder: 'border-red-200/70',
+            requerimiento: 'Prioridad Crítica (Rojo) + Alerta inmediata + Investigación de Causa Raíz y barreras de seguridad.',
+            uso: 'Incidentes que afectaron o pudieron comprometer la seguridad clínica del paciente.',
+        },
+        {
+            name: 'Reconocimiento Institucional',
+            pill: '🌟 Felicitación',
+            pillClass: 'bg-amber-100 text-amber-800 border-amber-300',
+            cardBorder: 'border-amber-200/80',
+            requerimiento: 'Notificación positiva al equipo y emisión automática del Certificado de Felicitación en PDF.',
+            uso: 'Destacar la calidez humana, empatía y excelencia profesional de un sector o colaborador.',
+        },
+    ];
+
+    return (
+        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 sm:p-8">
+            <div className="mb-6">
+                <span className="text-[11px] font-extrabold uppercase tracking-widest text-sanatorio-primary">
+                    Tipología Clínica y Operativa
+                </span>
+                <h3 className="text-xl font-display font-black text-slate-800 mt-0.5">
+                    Modalidades de Gestión y Nivel de Profundidad Requerido
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                    Cada caso se clasifica según su impacto para solicitar únicamente la información necesaria al responsable del sector.
+                </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {types.map((t) => (
+                    <div
+                        key={t.name}
+                        className={`rounded-2xl border ${t.cardBorder} bg-slate-50/40 p-5 flex flex-col justify-between gap-3`}
+                    >
+                        <div>
+                            <div className="flex items-center justify-between gap-2 mb-3">
+                                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${t.pillClass}`}>
+                                    {t.pill}
+                                </span>
+                            </div>
+                            <h4 className="font-display font-bold text-slate-800 text-base mb-1.5">
+                                {t.name}
+                            </h4>
+                            <p className="text-xs text-slate-500 leading-relaxed mb-3">
+                                {t.uso}
+                            </p>
+                        </div>
+                        <div className="pt-3 border-t border-slate-200/70">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                                Requisito de Cierre
+                            </p>
+                            <p className="text-xs font-semibold text-slate-700 leading-snug">
+                                {t.requerimiento}
+                            </p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+/* ──────────────────────────────────────────────────────────
+   3. REUSABLE COMPONENTS FOR ROLE GUIDES
+   ────────────────────────────────────────────────────────── */
+const StepItem = ({ number, title, children }: { number: number; title: string; children: React.ReactNode }) => (
+    <div className="flex gap-3.5 items-start">
+        <div className="flex-shrink-0 w-7 h-7 bg-sanatorio-primary text-white rounded-lg flex items-center justify-center font-bold text-xs shadow-2xs mt-0.5">
+            {number}
+        </div>
+        <div>
+            <h4 className="font-bold text-slate-800 text-sm mb-0.5">{title}</h4>
+            <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">{children}</div>
+        </div>
     </div>
 );
 
-/* ══════════════════════════════════════════
-   MAIN COMPONENT — Routes by role
-   ══════════════════════════════════════════ */
+const FeatureCard = ({
+    icon,
+    title,
+    description,
+    accent,
+}: {
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+    accent: string;
+}) => (
+    <div className="bg-slate-50/60 hover:bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs hover:shadow-md transition-all">
+        <div className={`w-10 h-10 rounded-xl ${accent} flex items-center justify-center mb-3`}>
+            {icon}
+        </div>
+        <h4 className="font-display font-bold text-slate-800 text-sm mb-1">{title}</h4>
+        <p className="text-xs text-slate-500 leading-relaxed">{description}</p>
+    </div>
+);
+
+/* ══════════════════════════════════════════════════════════
+   GUÍA 1: PÚBLICA (SIN SESIÓN INICIADA)
+   ══════════════════════════════════════════════════════════ */
+const PublicGuide = () => (
+    <div className="grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
+            <div className="bg-gradient-to-r from-sanatorio-primary/8 via-sanatorio-secondary/8 to-transparent p-6 sm:p-8 border-b border-slate-100 flex items-center gap-4">
+                <div className="w-13 h-13 bg-sanatorio-primary rounded-2xl flex items-center justify-center shadow-md shadow-sanatorio-primary/20 shrink-0">
+                    <MessageSquare className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                    <h2 className="text-xl sm:text-2xl font-display font-bold text-slate-800">
+                        Guía para el Personal y Pacientes
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-500">
+                        Cómo registrar un hallazgo, sugerencia o felicitación en menos de 1 minuto.
+                    </p>
+                </div>
+            </div>
+
+            <div className="p-6 sm:p-8 space-y-6">
+                <StepItem number={1} title="Elegí el modo: Hallazgo o Felicitación">
+                    <p>
+                        En la pantalla de inicio podés reportar una oportunidad de mejora (<strong>Hallazgo</strong>) o destacar el desempeño de un equipo (<strong>Enviar Felicitación</strong>).
+                    </p>
+                </StepItem>
+                <StepItem number={2} title="Modo Identificado o Anónimo">
+                    <p>
+                        Si elegís <strong>Modo Identificado</strong> y dejás tu WhatsApp, recibirás notificaciones automáticas del avance y resolución de tu caso. También podés reportar en <strong>Modo Anónimo</strong> con total confidencialidad.
+                    </p>
+                </StepItem>
+                <StepItem number={3} title="Adjuntá fotos o dictá por voz">
+                    <p>
+                        Podés subir fotografías como evidencia visual o utilizar el grabador de voz integrado para que el sistema transcriba tu relato automáticamente.
+                    </p>
+                </StepItem>
+                <StepItem number={4} title="Descargá tu Comprobante o Certificado PDF">
+                    <p>
+                        Al enviar el formulario obtendrás un <strong>Código de Seguimiento (`#SA-2026-XXXX`)</strong> y podrás descargar en el acto tu comprobante o el <strong>Certificado Institucional de Felicitación en PDF</strong>.
+                    </p>
+                </StepItem>
+            </div>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 sm:p-8 flex flex-col justify-between gap-6">
+            <div className="space-y-4">
+                <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-sanatorio-primary">
+                    <Lock className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-display font-bold text-slate-800">
+                    ¿Sos Responsable de Sector o Integrante de Calidad?
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                    Iniciá sesión con tu cuenta institucional para acceder a las guías operativas de <strong>Mis Casos</strong>, <strong>Tablero de Control</strong>, <strong>Auditorías de Proceso</strong> e <strong>Inteligencia de Calidad</strong>.
+                </p>
+                <ul className="space-y-2 text-xs text-slate-600 pt-2">
+                    <li className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                        Gestión y seguimiento de casos de tu sector
+                    </li>
+                    <li className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                        Exportación de listados en Excel con formato y PDF
+                    </li>
+                    <li className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                        Indicadores y métricas en tiempo real
+                    </li>
+                </ul>
+            </div>
+
+            <Link
+                to="/login"
+                className="btn-primary w-full text-sm py-3"
+            >
+                Ingresar con Cuenta Institucional
+            </Link>
+        </div>
+    </div>
+);
+
+/* ══════════════════════════════════════════════════════════
+   GUÍA 2: ADMINISTRADOR (GESTIÓN DE CALIDAD)
+   ══════════════════════════════════════════════════════════ */
+const AdminGuide = () => (
+    <div className="space-y-6">
+        <div className="grid lg:grid-cols-2 gap-6">
+            {/* Card 1: Operación del Tablero de Casos */}
+            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
+                <div className="bg-gradient-to-r from-sanatorio-primary/8 to-transparent p-6 sm:p-7 border-b border-slate-100 flex items-center gap-4">
+                    <div className="w-12 h-12 bg-sanatorio-primary rounded-2xl flex items-center justify-center shadow-md shadow-sanatorio-primary/20 shrink-0">
+                        <UserCog className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <h2 className="text-lg sm:text-xl font-display font-bold text-slate-800">
+                            Administración del Tablero de Casos
+                        </h2>
+                        <p className="text-xs text-slate-500">
+                            Flujo operativo diario para el equipo de Gestión de Calidad.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="p-6 sm:p-7 space-y-5 flex-grow">
+                    <StepItem number={1} title="Clasificación y Semáforo de Prioridad">
+                        <p>
+                            Al abrir un ticket en <strong>Casos (`/dashboard`)</strong>, verificá la prioridad sugerida por IA (Verde, Amarillo, Rojo), el sector de origen/destino y el tipo de hallazgo (incluyendo <strong>🌟 Felicitación</strong>).
+                        </p>
+                    </StepItem>
+                    <StepItem number={2} title="Derivación Simple o Multi-Sector por WhatsApp">
+                        <p>
+                            Derivá el caso a un único responsable o activá la <strong>Derivación Multi-Sector (`MS`)</strong> cuando el problema involucre a varias áreas simultáneamente. Cada área recibe su propio link de resolución.
+                        </p>
+                    </StepItem>
+                    <StepItem number={3} title="Validación de Calidad o Devolución">
+                        <p>
+                            En la pestaña <strong>Por Validar</strong>, revisá la respuesta y evidencias del sector. Si es satisfactoria, aprobá el cierre; si está incompleta, devolvelo con observaciones (queda registrado en el historial de rechazos).
+                        </p>
+                    </StepItem>
+                    <StepItem number={4} title="Solicitudes de Información Adicional y Apelaciones">
+                        <p>
+                            Podés solicitar información complementaria a un tercero mediante un link dedicado o <strong>Reabrir / Apelar</strong> un caso cerrado si el reportante indica no conformidad.
+                        </p>
+                    </StepItem>
+                </div>
+            </div>
+
+            {/* Card 2: Exportaciones, Alertas y Gobernanza */}
+            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
+                <div className="bg-gradient-to-r from-purple-500/8 to-transparent p-6 sm:p-7 border-b border-slate-100 flex items-center gap-4">
+                    <div className="w-12 h-12 bg-purple-600 rounded-2xl flex items-center justify-center shadow-md shadow-purple-500/20 shrink-0">
+                        <Sparkles className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <h2 className="text-lg sm:text-xl font-display font-bold text-slate-800">
+                            Herramientas Avanzadas y Reportes Ejecutivos
+                        </h2>
+                        <p className="text-xs text-slate-500">
+                            Control de vencimientos, auditorías y exportaciones con diseño institucional.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="p-6 sm:p-7 space-y-4 flex-grow">
+                    <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex items-start gap-3.5">
+                        <Award className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                            <h4 className="text-xs font-extrabold uppercase tracking-wider text-amber-900 mb-0.5">
+                                Certificados de Felicitación en PDF
+                            </h4>
+                            <p className="text-xs text-amber-800 leading-relaxed">
+                                Cualquier caso clasificado como <strong>Felicitación</strong> permite descargar un <strong>Certificado Institucional A4</strong> con medalla de excelencia y marco dorado listo para imprimir o compartir con el sector.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex items-start gap-3.5">
+                        <FileSpreadsheet className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                        <div>
+                            <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-900 mb-0.5">
+                                Exportación Excel (.xlsx) y PDF con Identidad Institucional
+                            </h4>
+                            <p className="text-xs text-emerald-800 leading-relaxed">
+                                Tanto en <strong>Casos</strong> como en <strong>Mis Casos</strong> podés exportar la vista filtrada a Excel (con logo del Sanatorio, KPIs, autofiltros y celdas coloreadas) o a PDF A4 Horizontal.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-orange-50/70 border border-orange-200/80 flex items-start gap-3.5">
+                        <Bell className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+                        <div>
+                            <h4 className="text-xs font-extrabold uppercase tracking-wider text-orange-900 mb-0.5">
+                                Acordeón de Alertas de Vencimiento
+                            </h4>
+                            <p className="text-xs text-orange-800 leading-relaxed">
+                                El tablero monitorea las fechas de implementación comprometidas y agrupa en la barra desplegable superior los casos próximos a vencer (5 días) o vencidos.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/* Grid de 4 Módulos de Administración */}
+        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 sm:p-8">
+            <h3 className="text-base sm:text-lg font-display font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <Layers className="w-5 h-5 text-sanatorio-primary" />
+                Módulos Exclusivos del Perfil Administrador
+            </h3>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <FeatureCard
+                    icon={<Users className="w-5 h-5 text-blue-600" />}
+                    title="Gestión de Usuarios (/admin/users)"
+                    description="Aprobá nuevos registros, asigná roles (Admin, Responsable, Directivo) y vinculá múltiples sectores por referente."
+                    accent="bg-blue-100"
+                />
+                <FeatureCard
+                    icon={<Bell className="w-5 h-5 text-red-600" />}
+                    title="Destinatarios de Alertas (/admin/alertas)"
+                    description="Configurá qué números reciben alertas críticas inmediatas por WhatsApp cuando ingresa un hallazgo Rojo."
+                    accent="bg-red-100"
+                />
+                <FeatureCard
+                    icon={<ClipboardList className="w-5 h-5 text-emerald-600" />}
+                    title="Auditoría de Proceso"
+                    description="Ejecutá relevamientos estructurados por sector con cálculo de cumplimiento, experiencia del paciente y exportación."
+                    accent="bg-emerald-100"
+                />
+                <FeatureCard
+                    icon={<BrainCircuit className="w-5 h-5 text-purple-600" />}
+                    title="Informe Ejecutivo IA (/metrics)"
+                    description="Generá informes institucionales en PDF con análisis descriptivo, predictivo y prescriptivo asistido por IA."
+                    accent="bg-purple-100"
+                />
+            </div>
+        </div>
+    </div>
+);
+
+/* ══════════════════════════════════════════════════════════
+   GUÍA 3: RESPONSABLE DE SECTOR
+   ══════════════════════════════════════════════════════════ */
+const ResponsableGuide = () => (
+    <div className="space-y-6">
+        <div className="grid lg:grid-cols-2 gap-6">
+            {/* Card 1: Mis Casos vs Seguimientos */}
+            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
+                <div className="bg-gradient-to-r from-sanatorio-primary/8 to-transparent p-6 sm:p-7 border-b border-slate-100 flex items-center gap-4">
+                    <div className="w-12 h-12 bg-sanatorio-primary rounded-2xl flex items-center justify-center shadow-md shadow-sanatorio-primary/20 shrink-0">
+                        <Building2 className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <h2 className="text-lg sm:text-xl font-display font-bold text-slate-800">
+                            Cómo usar el módulo "Mis Casos"
+                        </h2>
+                        <p className="text-xs text-slate-500">
+                            Gestión de casos recibidos y monitoreo de reportes originados en tu sector.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="p-6 sm:p-7 space-y-5 flex-grow">
+                    <StepItem number={1} title="Pestaña 1: Casos Asignados (Para Resolver)">
+                        <p>
+                            Muestra todos los hallazgos o felicitaciones que Calidad derivó a tus sectores. Haciendo clic en <strong>Gestionar</strong> accedés al formulario de resolución para cargar tu descargo y plan de acción.
+                        </p>
+                    </StepItem>
+                    <StepItem number={2} title="Pestaña 2: Seguimientos (Monitoreo)">
+                        <p>
+                            Te permite seguir el estado en tiempo real de los reportes que <strong>tu propio sector envió hacia otras áreas</strong> del Sanatorio, visualizando la línea de tiempo de actividad y la respuesta final.
+                        </p>
+                    </StepItem>
+                    <StepItem number={3} title="Descarga en Excel (.xlsx) y PDF">
+                        <p>
+                            En ambas pestañas contás con los botones <strong>Excel</strong> (planilla con formato institucional, logo del Sanatorio y resumen de KPIs) y <strong>PDF</strong> (listado general o ficha individual por caso).
+                        </p>
+                    </StepItem>
+                </div>
+            </div>
+
+            {/* Card 2: Cómo responder un caso derivado */}
+            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
+                <div className="bg-gradient-to-r from-emerald-500/8 to-transparent p-6 sm:p-7 border-b border-slate-100 flex items-center gap-4">
+                    <div className="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-md shadow-emerald-500/20 shrink-0">
+                        <Send className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <h2 className="text-lg sm:text-xl font-display font-bold text-slate-800">
+                            Paso a Paso para Resolver un Caso
+                        </h2>
+                        <p className="text-xs text-slate-500">
+                            Desde el link de WhatsApp o desde tu panel web.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="p-6 sm:p-7 space-y-5 flex-grow">
+                    <StepItem number={1} title="Abrí el enlace desde WhatsApp o desde 'Mis Casos'">
+                        <p>
+                            Cuando Calidad te asigna un caso, recibís un WhatsApp con un enlace directo (`/resolver-caso/...`). Podés completarlo desde el celular sin siquiera necesitar recordar tu contraseña.
+                        </p>
+                    </StepItem>
+                    <StepItem number={2} title="Completá la Resolución según el Tipo de Caso">
+                        <p>
+                            Si es <strong>Simple</strong>, indicá la solución aplicada. Si es <strong>Desvío</strong> o <strong>Evento Adverso</strong>, detallá la <em>Acción Inmediata</em>, la <em>Causa Raíz</em>, el <em>Plan de Acción</em> y la <em>Fecha de Implementación</em>.
+                        </p>
+                    </StepItem>
+                    <StepItem number={3} title="¿El caso no corresponde a tu sector?">
+                        <p>
+                            Dentro de la página de resolución podés utilizar la opción de <strong>Rechazar Asignación</strong> indicando el motivo para que Calidad lo reasigne inmediatamente al área correcta.
+                        </p>
+                    </StepItem>
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
+/* ══════════════════════════════════════════════════════════
+   GUÍA 4: DIRECTIVO
+   ══════════════════════════════════════════════════════════ */
+const DirectivoGuide = () => (
+    <div className="grid lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
+            <div className="bg-gradient-to-r from-sanatorio-primary/8 to-transparent p-6 sm:p-7 border-b border-slate-100 flex items-center gap-4">
+                <div className="w-12 h-12 bg-sanatorio-primary rounded-2xl flex items-center justify-center shadow-md shadow-sanatorio-primary/20 shrink-0">
+                    <Target className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                    <h2 className="text-lg sm:text-xl font-display font-bold text-slate-800">
+                        Visión Ejecutiva para Dirección
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                        Monitoreo estratégico de seguridad del paciente y desempeño sectorial.
+                    </p>
+                </div>
+            </div>
+            <div className="p-6 sm:p-7 space-y-5 flex-grow">
+                <StepItem number={1} title="Tablero de Inteligencia de Calidad (/metrics)">
+                    <p>
+                        Visualizá el volumen de reportes recibidos, tasa global de resolución, hallazgos críticos activos, tiempos de respuesta promedio y felicitaciones por sector.
+                    </p>
+                </StepItem>
+                <StepItem number={2} title="Filtros Dinámicos por Fecha y Sector">
+                    <p>
+                        Analizá períodos específicos o compará el rendimiento entre diferentes servicios médicos y administrativos con un solo clic.
+                    </p>
+                </StepItem>
+                <StepItem number={3} title="Descarga del Executive Brief con IA (PDF)">
+                    <p>
+                        El botón <strong>Executive Brief</strong> genera un documento PDF de alta dirección con KPIs consolidados, matriz de eficiencia sectorial y recomendaciones estratégicas redactadas por IA.
+                    </p>
+                </StepItem>
+            </div>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 sm:p-7 flex flex-col justify-between gap-4">
+            <div>
+                <h3 className="text-lg font-display font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <PieChart className="w-5 h-5 text-sanatorio-secondary" />
+                    Indicadores Clave Monitoreados
+                </h3>
+                <div className="grid sm:grid-cols-2 gap-3.5">
+                    <FeatureCard
+                        icon={<TrendingUp className="w-5 h-5 text-blue-600" />}
+                        title="Evolución Temporal"
+                        description="Curva histórica de hallazgos y cierres para detectar estacionalidad o desvíos tempranos."
+                        accent="bg-blue-100"
+                    />
+                    <FeatureCard
+                        icon={<Activity className="w-5 h-5 text-emerald-600" />}
+                        title="Eficiencia por Sector"
+                        description="Ranking de áreas según tasa de resolución y velocidad de respuesta."
+                        accent="bg-emerald-100"
+                    />
+                    <FeatureCard
+                        icon={<AlertTriangle className="w-5 h-5 text-red-600" />}
+                        title="Riesgo Clínico (Rojo)"
+                        description="Seguimiento prioritario de eventos adversos e incidentes críticos."
+                        accent="bg-red-100"
+                    />
+                    <FeatureCard
+                        icon={<Award className="w-5 h-5 text-amber-600" />}
+                        title="Clima y Reconocimiento"
+                        description="Contabilización de felicitaciones recibidas por cada equipo de salud."
+                        accent="bg-amber-100"
+                    />
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
+/* ──────────────────────────────────────────────────────────
+   4. PREGUNTAS FRECUENTES (ACORDEÓN INTERACTIVO)
+   ────────────────────────────────────────────────────────── */
+const FAQSection = () => {
+    const [openIdx, setOpenIdx] = useState<number | null>(0);
+
+    const faqs = [
+        {
+            q: '¿Cómo descargo mis casos asignados en Excel o PDF?',
+            a: 'Ingresá a la sección "Mis Casos" desde el menú superior. Tanto en la pestaña "Casos Asignados" como en "Seguimientos (Monitoreo)" encontrarás a la derecha del buscador los botones "Excel" (que descarga una planilla con el logo del Sanatorio, colores institucionales, KPIs y pie de página de Innovación y Transformación Digital) y "PDF" (que genera el reporte en hoja A4 horizontal). Además, cada tarjeta tiene su propio botón PDF individual.',
+        },
+        {
+            q: '¿Cómo funciona el Certificado de Felicitación en PDF?',
+            a: 'Cuando un paciente o colaborador envía un reporte en modo "Felicitación" (o cuando Calidad clasifica un caso como Felicitación), el sistema habilita automáticamente un diseño especial de "Reconocimiento a la Excelencia" con marco dorado, medalla vectorial y firma institucional, listo para descargar e imprimir.',
+        },
+        {
+            q: '¿Qué diferencia hay entre Modo Identificado y Modo Anónimo?',
+            a: 'En el Modo Identificado ingresás tu nombre y número de WhatsApp para recibir notificaciones automáticas cuando el caso se deriva y cuando se resuelve, permitiendo además que Calidad te consulte si necesita más detalles. En el Modo Anónimo no se solicita ningún dato personal y aún así recibís un código de seguimiento (#SA-2026-XXXX) para consultar el avance en la pestaña "Seguimiento".',
+        },
+        {
+            q: '¿Qué hago si me derivaron un caso que no pertenece a mi sector?',
+            a: 'Al abrir el link de resolución del caso (desde WhatsApp o desde el botón "Gestionar" en Mis Casos), encontrarás la opción para rechazar la asignación indicando brevemente el motivo. El caso volverá inmediatamente a la bandeja de "⚡ Rechazados" de Calidad para su reasignación.',
+        },
+    ];
+
+    return (
+        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 sm:p-8">
+            <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-sanatorio-primary/10 text-sanatorio-primary flex items-center justify-center">
+                    <HelpCircle className="w-5 h-5" />
+                </div>
+                <div>
+                    <h3 className="text-lg sm:text-xl font-display font-black text-slate-800">
+                        Preguntas Frecuentes
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                        Respuestas rápidas a las consultas más habituales sobre el uso de la plataforma.
+                    </p>
+                </div>
+            </div>
+
+            <div className="space-y-3">
+                {faqs.map((item, idx) => {
+                    const isOpen = openIdx === idx;
+                    return (
+                        <div
+                            key={idx}
+                            className={`rounded-2xl border transition-all overflow-hidden ${
+                                isOpen
+                                    ? 'border-sanatorio-primary/30 bg-blue-50/20'
+                                    : 'border-slate-200/80 bg-slate-50/40 hover:bg-slate-50'
+                            }`}
+                        >
+                            <button
+                                type="button"
+                                onClick={() => setOpenIdx(isOpen ? null : idx)}
+                                className="w-full px-5 py-4 text-left flex items-center justify-between gap-4 cursor-pointer"
+                            >
+                                <span className="font-display font-bold text-sm text-slate-800">
+                                    {item.q}
+                                </span>
+                                <ChevronDown
+                                    className={`w-4 h-4 text-sanatorio-primary shrink-0 transition-transform duration-200 ${
+                                        isOpen ? 'rotate-180' : ''
+                                    }`}
+                                />
+                            </button>
+                            {isOpen && (
+                                <div className="px-5 pb-4 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
+                                    {item.a}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
+/* ══════════════════════════════════════════════════════════
+   MAIN COMPONENT — CENTRO DE AYUDA Y GUÍAS
+   ══════════════════════════════════════════════════════════ */
 export const HelpGuide = () => {
     const { session, role } = useAuth();
 
-    // Determine which role-specific label and accent to show
-    const roleConfig: Record<string, { label: string; accent: string; description: string }> = {
-        admin: { label: 'Administrador', accent: 'text-purple-600', description: 'Guía completa de gestión del sistema' },
-        responsable: { label: 'Responsable', accent: 'text-green-600', description: 'Todo lo que necesitás saber sobre tu panel de consulta' },
-        directivo: { label: 'Directivo', accent: 'text-blue-600', description: 'Acceso ejecutivo a métricas e indicadores' },
+    const roleConfig: Record<string, { label: string; badgeClass: string; description: string }> = {
+        admin: {
+            label: 'Administrador de Calidad',
+            badgeClass: 'bg-white/15 text-white border-white/25',
+            description: 'Guía integral de administración, derivación multi-sector, validación de casos y exportaciones ejecutivas.',
+        },
+        responsable: {
+            label: 'Responsable de Sector',
+            badgeClass: 'bg-emerald-400/20 text-emerald-100 border-emerald-300/30',
+            description: 'Guía práctica para gestionar tus casos asignados, monitorear seguimientos y descargar reportes en Excel y PDF.',
+        },
+        directivo: {
+            label: 'Directivo',
+            badgeClass: 'bg-sky-400/20 text-sky-100 border-sky-300/30',
+            description: 'Guía ejecutiva de indicadores estratégicos, tasas de resolución e informes de inteligencia con IA.',
+        },
     };
 
     const currentConfig = role ? roleConfig[role] : null;
 
     return (
-        <div className="space-y-12 pb-12 animate-in fade-in duration-500">
-            {/* Header Section */}
-            <div className="text-center space-y-4">
-                <h1 className="text-3xl md:text-5xl font-bold text-sanatorio-primary tracking-tight">Centro de Ayuda y Guías</h1>
-                {session && currentConfig ? (
-                    <div className="space-y-2">
-                        <p className="text-gray-500 max-w-2xl mx-auto text-lg leading-relaxed">
-                            {currentConfig.description}
-                        </p>
-                        <div className={`inline-flex items-center gap-2 px-4 py-1.5 bg-white border border-gray-200 rounded-full text-sm font-bold ${currentConfig.accent} shadow-sm`}>
-                            <ShieldCheck className="w-4 h-4" />
-                            Perfil: {currentConfig.label}
+        <div className="w-full space-y-8 pb-12 animate-in fade-in duration-300">
+            {/* Hero Header Card */}
+            <div className="relative rounded-3xl bg-gradient-to-br from-sanatorio-primary via-[#003E6B] to-slate-900 text-white p-6 sm:p-10 shadow-md overflow-hidden">
+                <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-sanatorio-secondary/20 blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-white/10 blur-3xl pointer-events-none" />
+
+                <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div className="space-y-3 max-w-3xl">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest bg-white/10 border border-white/15 text-sky-200">
+                                <BookOpen className="w-3.5 h-3.5 text-sanatorio-secondary" />
+                                Centro de Ayuda y Documentación Rápida
+                            </span>
+                            {session && currentConfig && (
+                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border ${currentConfig.badgeClass}`}>
+                                    <ShieldCheck className="w-3.5 h-3.5" />
+                                    Perfil: {currentConfig.label}
+                                </span>
+                            )}
                         </div>
+
+                        <h1 className="text-2xl sm:text-4xl font-display font-black text-white tracking-tight">
+                            Centro de Ayuda y Guías Operativas
+                        </h1>
+
+                        <p className="text-sm sm:text-base text-blue-100/90 leading-relaxed">
+                            {session && currentConfig
+                                ? currentConfig.description
+                                : 'Conocé cómo funciona el ecosistema de mejora continua y seguridad del paciente del Sanatorio Argentino, desde el reporte inicial hasta la validación y certificación final.'}
+                        </p>
                     </div>
-                ) : (
-                    <p className="text-gray-500 max-w-2xl mx-auto text-lg leading-relaxed">
-                        Conoce cómo funciona el ecosistema de mejora continua, desde el reporte inicial hasta la resolución confirmada.
-                    </p>
-                )}
+
+                    {/* Quick Action Shortcuts */}
+                    <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                        <Link
+                            to="/"
+                            className="px-4 py-2.5 rounded-xl bg-white text-sanatorio-primary font-bold text-xs shadow-sm hover:bg-blue-50 transition-all flex items-center gap-1.5"
+                        >
+                            <MessageSquare className="w-4 h-4" />
+                            Nuevo Reporte
+                        </Link>
+                        <Link
+                            to="/track"
+                            className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs transition-all flex items-center gap-1.5"
+                        >
+                            <Eye className="w-4 h-4" />
+                            Consultar Ticket
+                        </Link>
+                        {session && (
+                            <Link
+                                to="/manual"
+                                className="px-4 py-2.5 rounded-xl bg-sanatorio-secondary hover:bg-[#009388] text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5"
+                            >
+                                <Download className="w-4 h-4" />
+                                Manual Completo
+                            </Link>
+                        )}
+                    </div>
+                </div>
             </div>
 
-            {/* Visual Workflow Graph */}
-            <WorkflowGraph />
+            {/* 1. Visual 6-Stage Quality Cycle Pipeline */}
+            <QualityCyclePipeline />
 
-            {/* Role-based content */}
+            {/* 2. Classification & SLA Matrix */}
+            <ClassificationMatrix />
+
+            {/* 3. Role-specific Guide Content */}
             {!session || !role ? (
                 <PublicGuide />
             ) : role === 'admin' ? (
@@ -550,6 +841,9 @@ export const HelpGuide = () => {
             ) : (
                 <PublicGuide />
             )}
+
+            {/* 4. Interactive FAQ Section */}
+            <FAQSection />
         </div>
     );
 };
