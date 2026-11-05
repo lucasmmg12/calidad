@@ -1,42 +1,60 @@
 import { useState } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { BookOpen, Download, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import {
+  BookOpen,
+  Download,
+  Loader2,
+  CheckCircle2,
+  AlertTriangle,
+  ShieldCheck,
+  Layers,
+  BrainCircuit,
+  FileSpreadsheet,
+  FileText,
+  Users,
+  Wrench,
+  History,
+  Award,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 
-// ─── Paleta institucional ITAES / Grow Labs ──────────────────────────────────
+// ─── Paleta institucional Sanatorio Argentino / ITAES / Grow Labs ────────────
 const C = {
-  primary:      [30,  87, 153] as [number, number, number],
-  primaryMid:   [41, 128, 185] as [number, number, number],
-  primaryLight: [214, 234, 248] as [number, number, number],
-  accent:       [26,  82, 118] as [number, number, number],
+  primary:      [0,   84, 139] as [number, number, number], // #00548B
+  primaryMid:   [0,  118, 182] as [number, number, number],
+  primaryLight: [224, 242, 254] as [number, number, number],
+  teal:         [0,  169, 157] as [number, number, number], // #00A99D
+  accent:       [15,  23,  42] as [number, number, number],
   white:        [255, 255, 255] as [number, number, number],
-  grayLight:    [245, 247, 250] as [number, number, number],
-  grayMid:      [189, 195, 199] as [number, number, number],
-  grayDark:     [52,  73,  94] as [number, number, number],
-  textMain:     [30,  39,  46] as [number, number, number],
-  textSub:      [86, 101, 115] as [number, number, number],
-  tableHead:    [52,  73,  94] as [number, number, number],
-  tableRow2:    [235, 243, 252] as [number, number, number],
-  green:        [39, 174,  96] as [number, number, number],
-  red:          [192,  57,  43] as [number, number, number],
-  orange:       [211, 84,   0] as [number, number, number],
-  yellow:       [241, 196,  15] as [number, number, number],
+  grayLight:    [248, 250, 252] as [number, number, number],
+  grayMid:      [203, 213, 225] as [number, number, number],
+  grayDark:     [51,  65,  85] as [number, number, number],
+  textMain:     [30,  41,  59] as [number, number, number],
+  textSub:      [100, 116, 139] as [number, number, number],
+  tableHead:    [0,   84, 139] as [number, number, number],
+  tableRow2:    [241, 245, 249] as [number, number, number],
+  green:        [22, 163,  74] as [number, number, number],
+  red:          [220,  38,  38] as [number, number, number],
+  orange:       [217, 119,   6] as [number, number, number],
+  yellow:       [234, 179,   8] as [number, number, number],
 };
 
-// ─── Constantes del documento ─────────────────────────────────────────────────
+// ─── Constantes del documento (Versión 2.0 Actualizada) ──────────────────────
 const DOC = {
-  sistema:   'Sistema de Gestión de Calidad',
+  sistema:   'Sistema Integral de Gestión de Calidad y Seguridad del Paciente',
   sigla:     'QOAG',
   codigo:    'QOAG-MP-001',
-  version:   '1.0',
-  fecha:     '01/06/2026',
-  estado:    'VIGENTE',
-  elaboro:   'Área de Innovación y Transformación Digital / Grow Labs',
-  reviso:    'Departamento de Calidad',
-  aprobo:    'Dirección Médica',
+  version:   '2.0',
+  fecha:     new Date().toLocaleDateString('es-AR'),
+  estado:    'VIGENTE — EDICIÓN ACTUALIZADA',
+  elaboro:   'Innovación y Transformación Digital · Grow Labs',
+  reviso:    'Comité de Calidad y Seguridad del Paciente',
+  aprobo:    'Dirección Médica · Sanatorio Argentino',
   url:       'https://calidad.sanatorioargentino.com.ar',
   logo:      '/logosanatorio.png',
-  filename:  'Manual_QOAG_v1.0_01-06-2026.pdf',
+  filename:  'Manual_Procedimientos_Calidad_QOAG_v2.0.pdf',
 };
 
 const W = 210; // A4 ancho mm
@@ -104,13 +122,22 @@ function drawFooter(doc: jsPDF) {
   doc.setLineWidth(0.3);
   doc.line(0, H - 12, W, H - 12);
 
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(6.2);
+  doc.setTextColor(...C.primary);
+  doc.text(
+    'Sanatorio Argentino · Gestión de Calidad y Seguridad del Paciente · Innovación y Transformación Digital',
+    W / 2,
+    H - 7,
+    { align: 'center' }
+  );
   doc.setFont('helvetica', 'italic');
-  doc.setFontSize(6);
+  doc.setFontSize(5.8);
   doc.setTextColor(...C.textSub);
   doc.text(
-    `DOCUMENTO CONTROLADO - Prohibida su reproduccion sin autorizacion. ${DOC.codigo} | Emitido: ${DOC.fecha}`,
+    `DOCUMENTO CONTROLADO ITAES — ${DOC.codigo} v${DOC.version} | Emitido: ${DOC.fecha}`,
     W / 2,
-    H - 5,
+    H - 3.2,
     { align: 'center' }
   );
   doc.setTextColor(...C.textMain);
@@ -404,37 +431,40 @@ export async function generateManualPDF() {
     'reporte anonimo/identificado de un caso hasta su resolucion, validacion, derivacion y analisis estadistico.'
   );
   p = bulletList(doc, p, [
-    'Reporte de no conformidades, eventos adversos, sugerencias y felicitaciones',
-    'Seguimiento publico de casos por numero de ticket',
-    'Gestion y resolucion interna por Responsables y Administradores',
-    'Metricas e indicadores de calidad con filtros temporales',
-    'Notificaciones automaticas por correo y WhatsApp',
-    'Comunicacion directa con Dora (asistente IA institucional)',
-    'Administracion de usuarios, roles y permisos',
+    'Reporte de hallazgos, desvíos, oportunidades de mejora, eventos adversos/cuasi adversos y felicitaciones',
+    'Triage automático asistido por Inteligencia Artificial (severidad Verde, Amarillo, Rojo y categorización)',
+    'Seguimiento público por código único (#SA-XXXX) y encuesta de conformidad post-resolución',
+    'Gestión multi-sector (Derivación Simple con cierre directo o Desvío con análisis de causa raíz)',
+    'Panel Mis Casos y Seguimientos con descarga estilizada en Excel (.xlsx con logo institucional) y PDF',
+    'Emisión de Certificados Oficiales de Reconocimiento y Felicitación en PDF para el personal destacado',
+    'Observatorio de Inteligencia de Calidad: KPIs explicados, gráficos de línea y barras, ventana emergente por gravedad y Revista Institucional PDF con IA',
+    'Radar de Tiempo de Respuesta (SLA Operativo) priorizando casos recientes/por vencer sobre el pasivo histórico',
+    'Ciclo PDCA de Verificación de Efectividad (30, 60 y 90 días) sin límite de registros y con grupos desplegables',
+    'Módulos de Auditoría de Proceso en Terreno y Recorridas de Guardia, Fin de Semana y Feriados',
   ]);
 
   p = checkSpace(doc, p, 20, logoUrl);
   tocEntries.push({ titulo: '1.3 Acronimos y Definiciones', page: doc.getNumberOfPages(), level: 1 });
   p = subTitle(doc, p, '1.3 Acronimos y Definiciones');
 
-  p = checkSpace(doc, p, 50, logoUrl);
+  p = checkSpace(doc, p, 55, logoUrl);
   autoTable(doc, {
     startY: p,
     margin: { left: ML, right: MR },
     head: [['Termino / Sigla', 'Definicion']],
     body: [
-      ['QOAG',      'Sistema de Gestion de Calidad del Sanatorio Argentino'],
-      ['ITAES',     'Instituto Tecnico para la Acreditacion de Establecimientos de Salud'],
-      ['NC',        'No Conformidad: evento que no cumple con el estandar esperado'],
-      ['EA',        'Evento Adverso: incidente con consecuencias para el paciente o personal'],
-      ['SLA',       'Service Level Agreement: tiempo maximo de resolucion por tipo de caso'],
-      ['PDCA',      'Plan-Do-Check-Act: ciclo de mejora continua'],
-      ['Ticket',    'Numero unico asignado a cada caso al momento del reporte'],
-      ['Supabase',  'Plataforma BaaS (Backend as a Service) con PostgreSQL y auth'],
-      ['Dora',      'Asistente virtual institucional basado en IA (OpenAI / WhatsApp)'],
-      ['ROI',       'Responsable de area que gestiona los casos asignados'],
-      ['Admin',     'Administrador del sistema con acceso total'],
-      ['Directivo', 'Rol de solo lectura con acceso a metricas e indicadores'],
+      ['QOAG',         'Sistema Integral de Gestion de Calidad y Seguridad del Paciente del Sanatorio Argentino'],
+      ['ITAES',        'Instituto Tecnico para la Acreditacion de Establecimientos de Salud'],
+      ['Desvio / NC',  'Incumplimiento de un estandar o protocolo que requiere analisis de causa raiz y accion correctiva'],
+      ['EA / ECA',     'Evento Adverso / Evento Cuasi Adverso con impacto real o potencial en la seguridad del paciente'],
+      ['Felicitacion', 'Reconocimiento positivo de pacientes o colegas que genera un Certificado Oficial de Excelencia'],
+      ['Triage IA',    'Clasificacion automatica de severidad clinica en Rojo (Critico), Amarillo (Medio) o Verde (Leve)'],
+      ['SLA',          'Acuerdo de Tiempo de Respuesta: 24 hs para casos Criticos (Rojo) y 48 hs para Medios/Leves'],
+      ['PDCA',         'Ciclo Plan-Do-Check-Act con controles de efectividad a 30, 60 y 90 dias post-cierre'],
+      ['Revista IA',   'Informe Institucional en formato revista editorial con graficos explicativos y dossier IA'],
+      ['Dora',         'Asistente virtual institucional y motor de notificaciones via WhatsApp Cloud API'],
+      ['Responsable',  'Lider o referente de servicio que gestiona casos asignados y monitorea seguimientos'],
+      ['Directivo',    'Perfil ejecutivo con acceso a Inteligencia de Calidad, Executive Brief y tableros globales'],
     ],
     headStyles: { fillColor: C.tableHead, textColor: C.white, fontStyle: 'bold', fontSize: 8 },
     bodyStyles: { fontSize: 8, textColor: C.textMain },
@@ -453,11 +483,10 @@ export async function generateManualPDF() {
   tocEntries.push({ titulo: '2.1 Descripcion General', page: doc.getNumberOfPages(), level: 1 });
   p = subTitle(doc, p, '2.1 Descripcion General');
   p = paragraph(doc, p,
-    'El QOAG es una aplicacion web Single Page Application (SPA) desarrollada sobre Vite + React + TypeScript ' +
-    'con Tailwind CSS v4. Implementa un flujo completo de gestion de calidad hospitalaria con autenticacion ' +
-    'por roles, reporte anonimo o identificado de eventos, tablero de casos, metricas avanzadas, ' +
-    'notificaciones automaticas y asistencia por IA. La aplicacion esta desplegada en Vercel con acceso ' +
-    `en produccion: ${DOC.url}`
+    'El sistema QOAG v2.0 es una plataforma web clinica de pantalla completa desarrollada sobre Vite + React + TypeScript ' +
+    'y Tailwind CSS. Integra captura multicanal de hallazgos, Triage de Inteligencia Artificial, derivacion multi-sector, ' +
+    'auditoria de procesos, recorridas de fin de semana, generacion de hojas de calculo Excel (.xlsx) con diseno institucional, ' +
+    'certificados de felicitacion y una Revista de Inteligencia Clinica en PDF. Acceso en produccion: ' + DOC.url
   );
 
   p = checkSpace(doc, p, 20, logoUrl);
@@ -469,16 +498,16 @@ export async function generateManualPDF() {
     margin: { left: ML, right: MR },
     head: [['Capa', 'Tecnologia', 'Version', 'Proposito']],
     body: [
-      ['Frontend',    'Vite + React',      '7.x / 19.x',  'Framework de interfaz de usuario'],
-      ['Lenguaje',    'TypeScript',        '5.9.x',        'Tipado estatico'],
-      ['Estilos',     'Tailwind CSS',      'v4',           'Sistema de diseno utilitario'],
-      ['Backend',     'Supabase',          '2.x',          'Base de datos, Auth y Storage'],
-      ['Base de datos','PostgreSQL',       '15+',          'Motor relacional principal'],
-      ['PDF',         'jsPDF + AutoTable', '4.x / 5.x',   'Generacion de reportes PDF'],
-      ['Graficos',    'Chart.js',          '4.x',          'Visualizacion de metricas'],
-      ['IA',          'OpenAI / Dora',     'GPT-4o-mini',  'Asistente conversacional'],
-      ['Mensajeria',  'BuilderBot + WA',   'Cloud API',    'Notificaciones WhatsApp'],
-      ['Deploy',      'Vercel',            '-',            'Hosting y CI/CD automatico'],
+      ['Frontend',      'Vite + React',          '7.x / 19.x', 'Interfaz clinica reactiva de pantalla completa'],
+      ['Lenguaje',      'TypeScript',            '5.9.x',      'Tipado estatico estricto de extremo a extremo'],
+      ['Estilos',       'Tailwind CSS',          'v4',         'Estetica Limpia y Clinica (Calidad-QOAG)'],
+      ['Backend & DB',  'Supabase PostgreSQL',   '2.x / 15+',  'Base de datos relacional, RLS, Auth y Storage'],
+      ['Motor PDF',     'jsPDF + AutoTable',     '4.x / 5.x',  'Revista Institucional, Certificados y Fichas PDF'],
+      ['Motor Excel',   'ExcelJS',               '4.x',        'Planillas .xlsx con logo, KPIs y colores institucionales'],
+      ['Visualizacion', 'Chart.js + React-Chart','4.x',        'Graficos explicativos de linea y barras con etiquetas'],
+      ['Motor IA',      'Edge Functions + LLM',  'GPT-4o',     'Triage clinico automatico y Dossier Prescriptivo IA'],
+      ['Mensajeria',    'WhatsApp Cloud API',    'v2',         'Alertas de asignacion, recordatorios SLA y cierre'],
+      ['Deploy',        'Vercel Cloud',          'Edge',       'Despliegue continuo CI/CD desde rama main'],
     ],
     headStyles: { fillColor: C.tableHead, textColor: C.white, fontStyle: 'bold', fontSize: 8 },
     bodyStyles: { fontSize: 8, textColor: C.textMain },
@@ -587,136 +616,98 @@ export async function generateManualPDF() {
   tocEntries.push({ titulo: 'SECCION 4 - Modulos del Sistema', page: doc.getNumberOfPages(), level: 0 });
   p = sectionTitle(doc, p, 'SECCION 4 - MODULOS DEL SISTEMA');
 
-  // 4.1 Formulario de Reporte
-  tocEntries.push({ titulo: '4.1 Formulario de Reporte de Eventos', page: doc.getNumberOfPages(), level: 1 });
-  p = subTitle(doc, p, '4.1 Formulario de Reporte de Eventos (Inicio)');
+  // 4.1 Formulario de Reporte y Triage IA
+  tocEntries.push({ titulo: '4.1 Formulario de Reporte y Triage IA', page: doc.getNumberOfPages(), level: 1 });
+  p = subTitle(doc, p, '4.1 Formulario de Reporte y Triage Automatico IA (Inicio)');
   p = paragraph(doc, p,
-    'Modulo principal accesible sin autenticacion. Permite a cualquier empleado o colaborador reportar ' +
-    'un evento de calidad de forma anonima o identificada. Es la puerta de entrada al ciclo PDCA.'
+    'Modulo de acceso libre (sin requerir inicio de sesion) que permite a cualquier colaborador o paciente ' +
+    'notificar un hallazgo, sugerencia o felicitacion de forma anonima o identificada.'
   );
   p = bulletList(doc, p, [
-    'Seleccion de tipo de evento: No Conformidad, Evento Adverso, Sugerencia, Felicitacion',
-    'Campo de descripcion con soporte de grabacion de voz (Voice Recorder)',
-    'Seleccion de sector y area afectada',
-    'Adjunto de evidencia fotografica o documental',
-    'Notificacion automatica al responsable del area por correo y/o WhatsApp',
-    'Generacion de numero de ticket unico para seguimiento',
-    'Confirmacion visual con confetti y codigo de seguimiento',
+    'Tipologias: Desvio, Observacion, Oportunidad de Mejora, Evento Adverso / Cuasi Adverso y Felicitacion',
+    'Dictado por voz integrado y carga de evidencia fotografica o documental',
+    'Triage IA instantaneo: clasifica severidad en Rojo (Critico), Amarillo (Medio) o Verde (Leve) y genera resumen ejecutivo',
+    'Emision de codigo unico de seguimiento (#SA-XXXX) con descarga de comprobante oficial en PDF',
   ]);
 
   p = checkSpace(doc, p, 20, logoUrl);
-  // 4.2 Seguimiento
-  tocEntries.push({ titulo: '4.2 Seguimiento de Casos (Publico)', page: doc.getNumberOfPages(), level: 1 });
-  p = subTitle(doc, p, '4.2 Seguimiento de Casos (Publico)');
+  // 4.2 Seguimiento Publico
+  tocEntries.push({ titulo: '4.2 Seguimiento Publico y Conformidad', page: doc.getNumberOfPages(), level: 1 });
+  p = subTitle(doc, p, '4.2 Seguimiento Publico y Evaluacion de Conformidad');
   p = paragraph(doc, p,
-    'Modulo accesible sin autenticacion. Permite a cualquier usuario consultar el estado de su reporte ' +
-    'ingresando el numero de ticket recibido al momento del reporte.'
+    'Permite consultar la trazabilidad en tiempo real mediante el codigo #SA-XXXX y evaluar la conformidad ' +
+    'de la respuesta una vez cerrado el caso.'
   );
   p = bulletList(doc, p, [
-    'Busqueda por numero de ticket',
-    'Visualizacion del estado actual: Abierto, En proceso, Resuelto, Cerrado',
-    'Timeline de actividad del caso',
-    'Descarga de comprobante de reporte en PDF',
-    'Informacion de contacto del responsable (si aplica)',
+    'Consulta de estado actual: Pendiente, En Gestion, En Validacion de Calidad o Resuelto',
+    'Descarga de Ficha Oficial en PDF o Certificado de Reconocimiento (cuando se trata de una Felicitacion)',
+    'Retroalimentacion del reportante (Conforme / No Conforme) para auditoria del Comite de Calidad',
   ]);
 
   p = checkSpace(doc, p, 20, logoUrl);
-  // 4.3 Tablero de Casos
-  tocEntries.push({ titulo: '4.3 Tablero de Casos (Admin / Responsable)', page: doc.getNumberOfPages(), level: 1 });
-  p = subTitle(doc, p, '4.3 Tablero de Casos (Dashboard)');
+  // 4.3 Tablero Central de Casos
+  tocEntries.push({ titulo: '4.3 Tablero Central de Casos (Dashboard)', page: doc.getNumberOfPages(), level: 1 });
+  p = subTitle(doc, p, '4.3 Tablero Central de Casos (Dashboard de Calidad)');
   p = paragraph(doc, p,
-    'Modulo protegido para Administradores y Responsables. Centro operativo del ciclo de calidad. ' +
-    'Muestra todos los casos segun estado y permite gestionarlos de forma integral.'
+    'Centro de comando operativo para Administradores y Comité de Calidad en vista de pantalla completa.'
   );
   p = bulletList(doc, p, [
-    'Vista Kanban: Abiertos / En proceso / Resueltos / Cerrados',
-    'Filtros por sector, tipo, prioridad, responsable y periodo',
-    'Asignacion y reasignacion de casos a responsables',
-    'Indicadores SLA (semaforo verde/amarillo/rojo segun tiempo de resolucion)',
-    'Formulario de resolucion con acciones correctivas PDCA',
-    'Solicitud de informacion adicional al reportante',
-    'Exportacion de casos a Excel / PDF',
-    'Alertas de vencimiento de SLA',
-    'Comunicacion por WhatsApp desde el mismo caso',
+    'Acordeon colapsable de Alertas de Vencimiento para priorizar plazos sin saturar la vista',
+    'Derivacion simple o multiple a uno o varios sectores simultaneamente',
+    'Seleccion de modalidad de gestion: Gestion Simple (cierre directo) vs. Desvio (exige Causa Raiz, Plan Correctivo y Evidencia)',
+    'Validacion final de Calidad antes del cierre definitivo y notificacion automatica por WhatsApp',
+    'Exportacion institucional del listado filtrado a Excel (.xlsx con logo y KPIs) y PDF A4 apaisado',
   ]);
 
   p = newPage(doc, logoUrl);
-  // 4.4 Mis Casos
-  tocEntries.push({ titulo: '4.4 Mis Casos (Panel Personal)', page: doc.getNumberOfPages(), level: 1 });
-  p = subTitle(doc, p, '4.4 Mis Casos (Panel Personal del Responsable)');
+  // 4.4 Mis Casos y Seguimientos
+  tocEntries.push({ titulo: '4.4 Mis Casos y Seguimientos (Monitoreo)', page: doc.getNumberOfPages(), level: 1 });
+  p = subTitle(doc, p, '4.4 Mis Casos y Seguimientos (Panel del Responsable)');
   p = paragraph(doc, p,
-    'Vista personalizada para Responsables que muestra exclusivamente los casos asignados a su usuario. ' +
-    'Permite gestion rapida sin perderse en el tablero global.'
+    'Espacio de trabajo exclusivo para Responsables de Sector con dos pestanas operativas: Casos Asignados y Seguimientos.'
   );
   p = bulletList(doc, p, [
-    'Lista filtrada de casos propios con indicador de prioridad',
-    'Acceso rapido al formulario de resolucion',
-    'Estado SLA por caso (dias restantes / vencidos)',
-    'Notificaciones de nuevos casos asignados',
-    'Historial de casos resueltos propios',
+    'Pestana Casos Asignados: lista de casos derivados al sector con acceso directo a la pantalla de resolucion',
+    'Pestana Seguimientos (Monitoreo): trazabilidad de todos los hallazgos recibidos y emitidos por el servicio',
+    'Descarga directa de Mis Casos en Excel (.xlsx estilizado con logo del Sanatorio) y en PDF institucional',
+    'Descarga individual de Ficha PDF de cada caso o Certificado Oficial de Felicitacion',
   ]);
 
   p = checkSpace(doc, p, 20, logoUrl);
-  // 4.5 Metricas
-  tocEntries.push({ titulo: '4.5 Metricas e Indicadores', page: doc.getNumberOfPages(), level: 1 });
-  p = subTitle(doc, p, '4.5 Metricas e Indicadores');
+  // 4.5 Inteligencia de Calidad (Metricas)
+  tocEntries.push({ titulo: '4.5 Inteligencia de Calidad y Revista IA', page: doc.getNumberOfPages(), level: 1 });
+  p = subTitle(doc, p, '4.5 Inteligencia de Calidad (Metricas, SLA, PDCA y Revista PDF)');
   p = paragraph(doc, p,
-    'Dashboard analitico con indicadores clave de calidad. Accesible para Administradores, Responsables ' +
-    'y Directivos. Soporta filtros por periodo, sector y tipo de evento.'
+    'Observatorio estadistico y clinico para Administradores, Directivos y Responsables con lectura pedagogica de cada indicador.'
   );
   p = bulletList(doc, p, [
-    'KPIs principales: Total reportes / Tasa de resolucion / SLA cumplido / Tiempo promedio',
-    'Graficos de evolucion temporal (lineas)',
-    'Distribucion por tipo y sector (torta / barras)',
-    'Mapa de calor de eventos por area',
-    'Ranking de sectores con mas incidencias',
-    'Exportacion a PDF o Excel del reporte de metricas',
-    'Comparativo periodico (mes actual vs anterior)',
+    'Glosario de 6 KPIs explicados en pantalla (que mide cada metrica y cual es la meta institucional esperada)',
+    'Grafico de Linea Explicativo de Evolucion Temporal (Casos Ingresados vs. Resueltos vs. Criticos)',
+    'Graficos de Barras Explicativos por Sector (Recibidos y Emitidos), Clasificacion, Tipo de Hallazgo y Gravedad Triage IA',
+    'Ventana Emergente por Gravedad: al seleccionar Leves (Verdes), Medios (Amarillos), Criticos (Rojos) o Felicitaciones se abre un modal interactivo con buscador y descarga directa en PDF y Excel sin salir de Metricas',
+    'Radar de Tiempo de Respuesta (SLA Operativo) colapsable: prioriza casos Por Vencer y Recientes (<=30 dias) separandolos del Pasivo Historico (>30 dias / SA-LEG)',
+    'Explorador Desplegable del Ciclo PDCA (30, 60 y 90 dias): consulta el 100% de las verificaciones sin limite de 1000 filas y las agrupa en acordeones por Sector o Etapa para optimizar la memoria RAM',
+    'Exportacion de Revista Institucional / Sectorial / Executive Brief en PDF (5 paginas con diseno editorial, graficos de alta resolucion con etiquetas de datos y Dossier IA Descriptivo, Diagnostico, Predictivo y Prescriptivo)',
   ]);
 
   p = checkSpace(doc, p, 20, logoUrl);
-  // 4.6 Administracion de Usuarios
-  tocEntries.push({ titulo: '4.6 Administracion de Usuarios', page: doc.getNumberOfPages(), level: 1 });
-  p = subTitle(doc, p, '4.6 Administracion de Usuarios (Solo Admin)');
-  p = paragraph(doc, p,
-    'Modulo exclusivo del Administrador para gestionar las cuentas de usuario del sistema.'
-  );
+  // 4.6 Auditoria de Proceso y Recorridas
+  tocEntries.push({ titulo: '4.6 Auditoria de Proceso y Fin de Semana', page: doc.getNumberOfPages(), level: 1 });
+  p = subTitle(doc, p, '4.6 Auditoria de Proceso y Recorridas de Fin de Semana');
   p = bulletList(doc, p, [
-    'Listado de todos los usuarios registrados con filtros',
-    'Aprobacion o rechazo de nuevas cuentas pendientes',
-    'Asignacion y modificacion de roles',
-    'Desactivacion de cuentas',
-    'Busqueda por nombre, correo o sector',
+    'Auditoria de Proceso: relevamiento estructurado en terreno con calculo de adherencia y desvio automatico',
+    'Recorridas de Guardia y Fin de Semana: registro digital de novedades operativas y exportacion de informe ejecutivo',
   ]);
 
   p = checkSpace(doc, p, 20, logoUrl);
-  // 4.7 Alertas
-  tocEntries.push({ titulo: '4.7 Configuracion de Alertas', page: doc.getNumberOfPages(), level: 1 });
-  p = subTitle(doc, p, '4.7 Configuracion de Alertas (Solo Admin)');
+  // 4.7 Centro de Ayuda y Administracion
+  tocEntries.push({ titulo: '4.7 Centro de Ayuda, Usuarios y Alertas', page: doc.getNumberOfPages(), level: 1 });
+  p = subTitle(doc, p, '4.7 Centro de Ayuda (/guia), Usuarios y Alertas');
   p = bulletList(doc, p, [
-    'Gestion de destinatarios de alertas automaticas por correo',
-    'Configuracion de umbrales de notificacion por tipo y sector',
-    'Prueba de envio de alertas',
-    'Historial de notificaciones enviadas',
+    'Centro de Ayuda y Guias (/guia): flujo interactivo de 6 etapas, matriz de gestion Simple vs. Desvio, guias por rol y preguntas frecuentes',
+    'Gestion de Usuarios (/usuarios): aprobacion de altas, asignacion de multiples sectores y cambio de rol',
+    'Destinatarios de Alertas (/alertas): configuracion de telefonos WhatsApp y correos por servicio',
   ]);
-
-  p = checkSpace(doc, p, 20, logoUrl);
-  // 4.8 Guia de Uso
-  tocEntries.push({ titulo: '4.8 Guia de Uso', page: doc.getNumberOfPages(), level: 1 });
-  p = subTitle(doc, p, '4.8 Guia de Uso (Publica)');
-  p = paragraph(doc, p,
-    'Pagina informativa con instrucciones paso a paso para el reporte de eventos. Accesible sin ' +
-    'autenticacion. Incluye preguntas frecuentes, tipos de eventos y protocolo de accion.'
-  );
-
-  p = checkSpace(doc, p, 20, logoUrl);
-  // 4.9 Changelog
-  tocEntries.push({ titulo: '4.9 Registro de Actualizaciones', page: doc.getNumberOfPages(), level: 1 });
-  p = subTitle(doc, p, '4.9 Registro de Actualizaciones (Changelog)');
-  p = paragraph(doc, p,
-    'Pagina publica con el historial de versiones y mejoras del sistema. ' +
-    'Permite a los usuarios conocer las novedades de cada release.'
-  );
 
   // ══════════════════════════════════════
   // SECCIÓN 5: Integración con Sistemas
@@ -993,16 +984,14 @@ export async function generateManualPDF() {
     margin: { left: ML, right: MR },
     head: [['Version', 'Fecha', 'Descripcion de Cambios', 'Responsable']],
     body: [
+      ['2.0', DOC.fecha,    'Actualizacion integral v2.0: Revista Institucional PDF con IA, ventana emergente por gravedad (Verde/Amarillo/Rojo), Radar SLA priorizado, Ciclo PDCA desplegable sin limite de filas, exportacion Excel/PDF estilizada en Mis Casos, Certificados de Felicitacion y nueva Guia interactiva.', 'Innovacion y Transformacion Digital / Grow Labs'],
+      ['1.5', '25/10/2026', 'Incorporacion de Auditoria de Proceso y Recorridas de Guardia, Fin de Semana y Feriados.', 'Grow Labs / Calidad'],
       ['1.0', '01/06/2026', 'Version inicial del Manual de Procedimientos ITAES. Incluye todas las secciones 1-9.', 'Grow Labs / Calidad'],
       ['0.9', '15/05/2026', 'Incorporacion del modulo Mis Casos y mejoras en la derivacion multi-sector.',          'Grow Labs'],
       ['0.8', '20/04/2026', 'Integracion de Dora (IA) en chat web y WhatsApp bidireccional.',                       'Grow Labs'],
       ['0.7', '10/03/2026', 'Ciclo PDCA completo implementado. Formulario de resolucion con accion correctiva.',    'Grow Labs'],
-      ['0.6', '20/02/2026', 'Dashboard de metricas con Recharts. Exportacion a Excel y PDF.',                       'Grow Labs'],
+      ['0.6', '20/02/2026', 'Dashboard de metricas y exportacion inicial a Excel y PDF.',                           'Grow Labs'],
       ['0.5', '15/01/2026', 'Sistema de roles y permisos: Admin / Responsable / Directivo.',                        'Grow Labs'],
-      ['0.4', '10/12/2025', 'Notificaciones automaticas por correo y WhatsApp (BuilderBot).',                       'Grow Labs'],
-      ['0.3', '15/11/2025', 'Tablero de casos con filtros, estados Kanban y SLA.',                                  'Grow Labs'],
-      ['0.2', '01/10/2025', 'Formulario de reporte anonimo/identificado con generacion de ticket.',                 'Grow Labs'],
-      ['0.1', '01/09/2025', 'Prototipo inicial: formulario basico de reporte y seguimiento.',                       'Grow Labs'],
     ],
     headStyles: { fillColor: C.tableHead, textColor: C.white, fontStyle: 'bold', fontSize: 8 },
     bodyStyles: { fontSize: 8, textColor: C.textMain },
@@ -1010,7 +999,7 @@ export async function generateManualPDF() {
     columnStyles: {
       0: { cellWidth: 18, halign: 'center' },
       1: { cellWidth: 22, halign: 'center' },
-      3: { cellWidth: 38 },
+      3: { cellWidth: 42 },
     },
   });
   p = (doc as any).lastAutoTable.finalY + 8;
@@ -1212,10 +1201,11 @@ export async function generateManualPDF() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// COMPONENTE REACT — UI del Manual
+// COMPONENTE REACT — UI Interactiva del Manual de Procedimientos v2.0
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function ManualProcedimientos() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'done'>('idle');
+  const [openSection, setOpenSection] = useState<string>('sec-4');
 
   const handleDownload = async () => {
     if (status === 'loading') return;
@@ -1231,153 +1221,292 @@ export default function ManualProcedimientos() {
     }
   };
 
-  const contenido = [
-    'Portada con control documental ITAES y bloques de firma',
-    'Indice General con numeracion real de paginas',
-    'Seccion 1: Introduccion, alcance, acronimos y definiciones',
-    'Seccion 2: Descripcion del sistema, stack tecnologico y arquitectura',
-    'Seccion 3: Acceso, autenticacion y procedimientos de sesion',
-    'Seccion 4: Descripcion detallada de todos los modulos (9 modulos)',
-    'Seccion 5: Integraciones con Supabase, WhatsApp, OpenAI y Vercel',
-    'Seccion 6: Roles, permisos y matriz de acceso con colores ITAES',
-    'Seccion 7: Errores frecuentes, soporte y plan de contingencia',
-    'Seccion 8: Historial completo de versiones del sistema',
-    'Seccion 9: Firmas ITAES - Elaboro / Reviso / Aprobo',
+  const manualSections = [
+    {
+      id: 'sec-1',
+      code: 'SECCIÓN 01',
+      title: 'Propósito, Alcance Institucional y Glosario ITAES',
+      icon: ShieldCheck,
+      summary: 'Marco normativo de acreditación ITAES, objetivos de seguridad del paciente y definiciones clave.',
+      items: [
+        'Estandariza el ciclo completo desde la detección de un hallazgo o felicitación hasta la validación de efectividad PDCA.',
+        'Clasificación clínica automática por Triage IA: Crítico (Rojo - SLA 24 hs), Moderado (Amarillo - SLA 48 hs) y Leve (Verde - SLA 48 hs).',
+        'Abarca No Conformidades (Desvíos), Observaciones, Oportunidades de Mejora, Eventos Adversos/Cuasi Adversos y Felicitaciones al personal.',
+      ],
+    },
+    {
+      id: 'sec-2',
+      code: 'SECCIÓN 02',
+      title: 'Arquitectura Técnica y Motores de Exportación',
+      icon: Layers,
+      summary: 'Stack tecnológico Vite + React + TypeScript + Supabase + Motores editoriales PDF y ExcelJS.',
+      items: [
+        'Frontend SPA de pantalla completa con estética clínica institucional (#00548B / #00A99D) y diseño adaptable.',
+        'Motor ExcelJS: genera libros .xlsx estilizados con logo institucional, tarjetas KPI, celdas semánticas y pie oficial.',
+        'Motor Editorial PDF: genera Certificados de Reconocimiento, Fichas de Caso y la Revista Institucional de Inteligencia Clínica con gráficos de alta resolución.',
+      ],
+    },
+    {
+      id: 'sec-3',
+      code: 'SECCIÓN 03',
+      title: 'Acceso, Autenticación y Seguridad (RLS)',
+      icon: Users,
+      summary: 'Flujo de ingreso, registro con onboarding por sector y políticas Row Level Security.',
+      items: [
+        'Acceso libre para reportar eventos (/) y consultar estado por ticket (/seguimiento) o leer la guía (/guia).',
+        'Autenticación protegida por JWT en Supabase con aprobación administrativa para nuevos usuarios (/registro).',
+        'Aislamiento por rol: cada Responsable visualiza y gestiona únicamente los sectores asignados a su perfil.',
+      ],
+    },
+    {
+      id: 'sec-4',
+      code: 'SECCIÓN 04',
+      title: 'Módulos Operativos del Sistema (Actualización v2.0)',
+      icon: BrainCircuit,
+      summary: 'Detalle de los 9 módulos activos, incluyendo las nuevas herramientas de Inteligencia y Auditoría.',
+      items: [
+        '4.1 Reporte Público y Triage IA: grabación por voz, adjuntos y severidad automática.',
+        '4.2 Tablero Central (Dashboard): acordeón colapsable de alertas, derivación multi-sector y modalidad Simple vs. Desvío.',
+        '4.3 Mis Casos y Seguimientos: panel del responsable con exportación directa a Excel (.xlsx) y PDF institucional.',
+        '4.4 Inteligencia de Calidad (Métricas): KPIs explicados, gráficos de línea y barras, ventana emergente interactiva por gravedad (Verde/Amarillo/Rojo) con descarga PDF, Radar SLA Operativo priorizado y Ciclo PDCA desplegable sin límite de registros.',
+        '4.5 Revista Institucional PDF: publicación de 5 páginas con análisis Descriptivo, Diagnóstico, Predictivo y Prescriptivo.',
+        '4.6 Auditoría de Proceso y Recorridas de Guardia/Fin de Semana: control de terreno y exportación ejecutiva.',
+      ],
+    },
+    {
+      id: 'sec-5',
+      code: 'SECCIÓN 05',
+      title: 'Integraciones: WhatsApp Cloud API, IA y Certificados',
+      icon: Award,
+      summary: 'Notificaciones automáticas a responsables, recordatorios SLA y diplomas de reconocimiento.',
+      items: [
+        'Envío automático de enlace de resolución por WhatsApp al derivar un caso a un responsable de sector.',
+        'Recordatorio de SLA con un clic desde el Radar de Tiempo de Respuesta.',
+        'Generación automática de Certificados Oficiales de Felicitación con estética dorada/institucional.',
+      ],
+    },
+    {
+      id: 'sec-6',
+      code: 'SECCIÓN 06',
+      title: 'Plan de Contingencia, Soporte y Control Documental ITAES',
+      icon: Wrench,
+      summary: 'Protocolo ante indisponibilidad, contactos de soporte e historial de versiones hasta v2.0.',
+      items: [
+        'Protocolo de contingencia física (Formulario QOAG-F-001) ante eventuales cortes de conectividad.',
+        'Soporte técnico gestionado por Innovación y Transformación Digital · Grow Labs.',
+        'Bloques de firma controlada ITAES (Elaboró / Revisó / Aprobó) listos para impresión y archivo oficial.',
+      ],
+    },
   ];
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4 font-sans">
-      {/* Card principal */}
-      <div className="rounded-2xl shadow-xl overflow-hidden border border-blue-100">
-
-        {/* Header azul */}
+    <div className="w-full py-2 sm:py-4 space-y-6 font-sans animate-in fade-in duration-500">
+      {/* Hero Banner Principal */}
+      <div className="rounded-2xl shadow-sm overflow-hidden border border-slate-200/90 bg-white">
         <div
-          className="relative px-8 py-8"
-          style={{ background: 'linear-gradient(135deg, #1E5799 0%, #2980B9 100%)' }}
+          className="relative px-6 sm:px-10 py-8 sm:py-10 text-white"
+          style={{ background: 'linear-gradient(135deg, #003E6B 0%, #00548B 60%, #0076B6 100%)' }}
         >
-          {/* Badge ITAES */}
-          <div className="absolute top-5 right-6 bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border border-white/30">
-            ITAES COMPLIANT
-          </div>
-
-          <div className="flex items-start gap-4">
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl flex-shrink-0 mt-1">
-              <BookOpen className="w-8 h-8 text-white" />
-            </div>
-            <div className="flex-grow">
-              <p className="text-blue-200 text-xs font-semibold uppercase tracking-widest mb-1">{DOC.codigo}</p>
-              <h1 className="text-white font-bold text-2xl leading-tight mb-1">Manual de Procedimientos</h1>
-              <p className="text-blue-100 text-sm font-medium">{DOC.sistema}</p>
-              <p className="text-blue-200/70 text-xs mt-1">Sistema de Reporte y Gestion de No Conformidades · Sanatorio Argentino</p>
-            </div>
-          </div>
-
-          {/* Chips de metadata */}
-          <div className="flex flex-wrap gap-2 mt-6">
-            {[
-              { label: 'Version', value: DOC.version },
-              { label: 'Emision', value: DOC.fecha },
-              { label: 'Estado',  value: DOC.estado },
-            ].map(chip => (
-              <div key={chip.label} className="bg-white/15 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-white/20">
-                <span className="text-blue-200 text-[10px] font-semibold uppercase tracking-wider block">{chip.label}</span>
-                <span className="text-white text-xs font-bold">{chip.value}</span>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-2 max-w-3xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 border border-white/25 text-[11px] font-black uppercase tracking-widest">
+                <BookOpen className="w-3.5 h-3.5 text-[#00D1FF]" />
+                Documento Controlado ITAES · {DOC.codigo} · Versión {DOC.version}
               </div>
-            ))}
+              <h1 className="text-2xl sm:text-4xl font-display font-black tracking-tight">
+                Manual de Procedimientos y Calidad
+              </h1>
+              <p className="text-sky-100 text-sm sm:text-base font-medium leading-relaxed">
+                {DOC.sistema} — Documentación oficial actualizada con todos los módulos operativos, motores de exportación Excel/PDF, Radar SLA, Ciclo PDCA y Revista de Inteligencia Clínica.
+              </p>
+            </div>
+
+            {/* Botón de Descarga Oficial */}
+            <div className="shrink-0 flex flex-col sm:items-end gap-2">
+              <button
+                id="btn-descargar-manual"
+                onClick={handleDownload}
+                disabled={status === 'loading'}
+                className={`w-full sm:w-auto inline-flex items-center justify-center gap-3 py-4 px-7 rounded-xl font-black text-sm transition-all duration-300 shadow-lg cursor-pointer ${
+                  status === 'idle'
+                    ? 'bg-white text-sanatorio-primary hover:bg-sky-50 hover:scale-[1.01]'
+                    : status === 'loading'
+                      ? 'bg-white/20 text-white cursor-not-allowed'
+                      : 'bg-emerald-500 text-white'
+                }`}
+              >
+                {status === 'idle' && (
+                  <>
+                    <Download className="w-5 h-5 text-sanatorio-primary" />
+                    <div className="text-left">
+                      <span className="block leading-none">Descargar Manual Oficial PDF</span>
+                      <span className="block text-[10px] font-semibold text-slate-500 mt-1">
+                        {DOC.filename} (9 Secciones ITAES)
+                      </span>
+                    </div>
+                  </>
+                )}
+                {status === 'loading' && (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Maquetando Manual v{DOC.version}...</span>
+                  </>
+                )}
+                {status === 'done' && (
+                  <>
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span>¡Manual PDF Descargado!</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Metadata Strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-7 pt-6 border-t border-white/15">
+            <div className="bg-white/10 backdrop-blur-xs rounded-xl px-4 py-2.5 border border-white/15">
+              <span className="text-sky-200 text-[10px] font-bold uppercase tracking-wider block">Código / Versión</span>
+              <span className="text-white text-xs sm:text-sm font-black">{DOC.codigo} · v{DOC.version}</span>
+            </div>
+            <div className="bg-white/10 backdrop-blur-xs rounded-xl px-4 py-2.5 border border-white/15">
+              <span className="text-sky-200 text-[10px] font-bold uppercase tracking-wider block">Fecha de Emisión</span>
+              <span className="text-white text-xs sm:text-sm font-black">{DOC.fecha}</span>
+            </div>
+            <div className="bg-white/10 backdrop-blur-xs rounded-xl px-4 py-2.5 border border-white/15">
+              <span className="text-sky-200 text-[10px] font-bold uppercase tracking-wider block">Estado Normativo</span>
+              <span className="text-emerald-300 text-xs sm:text-sm font-black">{DOC.estado}</span>
+            </div>
+            <div className="bg-white/10 backdrop-blur-xs rounded-xl px-4 py-2.5 border border-white/15">
+              <span className="text-sky-200 text-[10px] font-bold uppercase tracking-wider block">Elaboración Técnica</span>
+              <span className="text-white text-xs sm:text-sm font-black">Innovación y Transformación Digital</span>
+            </div>
           </div>
         </div>
 
-        {/* Cuerpo */}
-        <div className="bg-white px-8 py-7">
-          <p className="text-slate-600 text-sm leading-relaxed mb-5">
-            Este manual cumple con los requisitos del proceso de acreditacion{' '}
-            <span className="font-semibold text-blue-700">ITAES</span> e incluye toda la documentacion
-            necesaria para la evaluacion institucional. Generado programaticamente con estructura
-            de 9 secciones, encabezados, pie de pagina, indice con paginacion real y bloques de firma.
-          </p>
-
-          {/* Lista de contenido */}
-          <div className="bg-slate-50 rounded-xl p-5 mb-6 border border-slate-100">
-            <h2 className="text-slate-700 font-bold text-sm mb-3 flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-blue-500 inline-block"></span>
-              Contenido del documento PDF
+        {/* Resumen de Novedades de la Versión 2.0 */}
+        <div className="p-6 sm:p-8 bg-slate-50/70 border-b border-slate-200/80">
+          <div className="flex items-center gap-2 mb-4">
+            <History className="w-4 h-4 text-sanatorio-primary" />
+            <h2 className="text-xs font-black uppercase tracking-widest text-sanatorio-primary">
+              Actualizaciones Incorporadas en el Manual v2.0
             </h2>
-            <ul className="space-y-1.5">
-              {contenido.map((item, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-slate-600 text-xs">
-                  <span className="text-green-500 font-bold mt-0.5 flex-shrink-0">✓</span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+              <div className="flex items-center gap-2 text-sanatorio-primary font-black text-xs mb-1.5">
+                <FileText className="w-4 h-4" />
+                Revista Institucional IA
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Informe de 5 páginas con KPIs explicados, gráficos de línea y barras con valores directos y Dossier IA en 4 dimensiones.
+              </p>
+            </div>
 
-          {/* Boton de descarga */}
-          <button
-            id="btn-descargar-manual"
-            onClick={handleDownload}
-            disabled={status === 'loading'}
-            className={`w-full flex items-center justify-center gap-3 py-4 px-6 rounded-xl font-bold text-sm transition-all duration-300 shadow-md cursor-pointer
-              ${status === 'idle'    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-lg hover:-translate-y-0.5' : ''}
-              ${status === 'loading' ? 'bg-blue-100 text-blue-400 cursor-not-allowed' : ''}
-              ${status === 'done'    ? 'bg-gradient-to-r from-green-500 to-green-600 text-white' : ''}
-            `}
-          >
-            {status === 'idle' && (
-              <>
-                <Download className="w-5 h-5" />
-                Descargar Manual ({DOC.filename})
-              </>
-            )}
-            {status === 'loading' && (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Generando PDF... esto puede tomar unos segundos
-              </>
-            )}
-            {status === 'done' && (
-              <>
-                <CheckCircle2 className="w-5 h-5" />
-                ¡PDF Descargado Exitosamente!
-              </>
-            )}
-          </button>
+            <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+              <div className="flex items-center gap-2 text-emerald-700 font-black text-xs mb-1.5">
+                <FileSpreadsheet className="w-4 h-4" />
+                Exportación Excel & PDF
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Descarga en Mis Casos, Seguimientos y Métricas con logo del Sanatorio, colores institucionales y pie oficial.
+              </p>
+            </div>
 
-          <p className="text-center text-slate-400 text-xs mt-2">
-            El archivo se guardara como: <span className="font-mono text-slate-500">{DOC.filename}</span>
-          </p>
-        </div>
+            <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+              <div className="flex items-center gap-2 text-amber-700 font-black text-xs mb-1.5">
+                <BrainCircuit className="w-4 h-4" />
+                Modal por Gravedad & Radar SLA
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Ventana emergente para auditar y bajar en PDF casos Verdes, Amarillos y Rojos, más Radar SLA que prioriza casos recientes.
+              </p>
+            </div>
 
-        {/* Card de aviso ITAES */}
-        <div className="bg-amber-50 border-t border-amber-200 px-8 py-5">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-amber-800 font-bold text-sm mb-1">Proceso de Aprobacion Institucional ITAES</p>
-              <p className="text-amber-700 text-xs leading-relaxed">
-                Este manual debe ser impreso, firmado por los responsables (Elaboro / Reviso / Aprobo)
-                y archivado en el Departamento de Calidad. La version digital en el sistema prevalece
-                sobre cualquier copia impresa. Ante actualizaciones, el Administrador debe incrementar
-                el numero de version y generar un nuevo PDF.
+            <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+              <div className="flex items-center gap-2 text-teal-700 font-black text-xs mb-1.5">
+                <Award className="w-4 h-4" />
+                PDCA Sin Límites & Certificados
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Verificaciones PDCA (30/60/90d) sin tope de 1000 filas en acordeones de bajo consumo RAM y Diplomas de Felicitación.
               </p>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Metadatos adicionales */}
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        {[
-          { label: 'Elaboro',  value: DOC.elaboro },
-          { label: 'Reviso',   value: DOC.reviso },
-          { label: 'Aprobo',   value: DOC.aprobo },
-          { label: 'URL',      value: DOC.url },
-        ].map(item => (
-          <div key={item.label} className="bg-white rounded-xl px-4 py-3 border border-slate-100 shadow-sm">
-            <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider">{item.label}</p>
-            <p className="text-slate-700 text-xs font-medium mt-0.5 break-words">{item.value}</p>
+        {/* Explorador Interactivo de Capítulos del Manual */}
+        <div className="p-6 sm:p-8 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+            <div>
+              <h2 className="text-lg font-black text-slate-800">
+                Índice Interactivo de Procedimientos (Lectura en Pantalla)
+              </h2>
+              <p className="text-xs text-slate-500">
+                Hacé clic en cada capítulo para consultar los procedimientos vigentes o descargá el documento completo en PDF arriba.
+              </p>
+            </div>
           </div>
-        ))}
+
+          <div className="space-y-3">
+            {manualSections.map(sec => {
+              const Icon = sec.icon;
+              const isOpen = openSection === sec.id;
+              return (
+                <div
+                  key={sec.id}
+                  className="rounded-xl border border-slate-200/90 bg-white overflow-hidden transition-all"
+                >
+                  <div
+                    onClick={() => setOpenSection(isOpen ? '' : sec.id)}
+                    className="p-4 sm:p-5 bg-slate-50/60 hover:bg-slate-100/70 cursor-pointer flex items-center justify-between gap-4 transition-colors"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-sanatorio-primary/10 text-sanatorio-primary flex items-center justify-center shrink-0">
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-sanatorio-primary block">
+                          {sec.code}
+                        </span>
+                        <h3 className="text-sm sm:text-base font-black text-slate-800">{sec.title}</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">{sec.summary}</p>
+                      </div>
+                    </div>
+                    <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-500 shrink-0">
+                      {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </div>
+                  </div>
+
+                  {isOpen && (
+                    <div className="p-5 bg-white border-t border-slate-100 space-y-2.5 animate-in fade-in duration-200">
+                      {sec.items.map((item, idx) => (
+                        <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700 leading-relaxed">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Aviso de Validez Normativa ITAES */}
+        <div className="bg-amber-50/80 border-t border-amber-200/80 px-6 sm:px-8 py-5">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-amber-900 font-bold text-sm mb-0.5">
+                Control Documental ITAES — Vigencia y Validez
+              </p>
+              <p className="text-amber-800/90 text-xs leading-relaxed">
+                El PDF generado incluye portada oficial, tabla de control documental, índice paginado automáticamente y bloques de firma para <strong>Elaboró ({DOC.elaboro})</strong>, <strong>Revisó ({DOC.reviso})</strong> y <strong>Aprobó ({DOC.aprobo})</strong>. La versión digital publicada en el sistema prevalece sobre cualquier copia impresa.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
