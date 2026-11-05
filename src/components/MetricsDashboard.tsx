@@ -8,28 +8,26 @@ import {
     TrendingUp,
     Clock,
     CheckCircle2,
-    AlertOctagon,
-    ArrowUpRight,
     Zap,
     FileDown,
     BrainCircuit,
     Loader2,
     Tag,
     ClipboardCheck,
-    Star,
     Send
 } from 'lucide-react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import confetti from 'canvas-confetti';
 import { Chart, registerables } from 'chart.js';
-import { Bar } from 'react-chartjs-2';
+import { Bar, Line } from 'react-chartjs-2';
 import { AdvancedAnalytics } from './AdvancedAnalytics';
 import { SlaAlertBanner } from './SlaAlerts';
 import { PdcaPanel } from './PdcaPanel';
 import { MetricsFilters, type MetricsFilterState } from './MetricsFilters';
 import { SECTOR_OPTIONS } from '../constants/sectors';
-import { PDF_COLORS, loadLogoImage, drawLogoBadge, sanitizePdfText, cleanMarkdownForPdf, applyInstitutionalFooters } from '../utils/pdfTheme';
+import {
+    generateIntelligenceMagazinePDF,
+    computeTimeSeries,
+} from '../utils/intelligenceMagazinePdf';
 
 Chart.register(...registerables);
 
@@ -318,35 +316,7 @@ export const MetricsDashboard = () => {
         setLoading(false);
     };
 
-    const renderChartToImage = (config: any): Promise<string> => {
-        return new Promise((resolve) => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 600;
-            canvas.height = 400;
-            canvas.style.visibility = 'hidden';
-            document.body.appendChild(canvas);
-
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return resolve('');
-
-            new Chart(ctx, {
-                ...config,
-                options: {
-                    ...config.options,
-                    animation: false,
-                    responsive: false,
-                    devicePixelRatio: 2, // High resolution
-                }
-            });
-
-            // Wait a bit for Chart.js to render
-            setTimeout(() => {
-                const imgData = canvas.toDataURL('image/png');
-                document.body.removeChild(canvas);
-                resolve(imgData);
-            }, 100);
-        });
-    };
+    const timeSeries = useMemo(() => computeTimeSeries(rawReports), [rawReports]);
 
     const handleExportIntelligenceReport = async () => {
         if (rawReports.length === 0) return;
@@ -357,507 +327,59 @@ export const MetricsDashboard = () => {
             const userRole = role || 'responsable';
             const userSectors = sectors || [];
 
-            // Role-based context for AI prompt
             const roleContextMap: Record<string, string> = {
                 admin: 'Genera un informe completo institucional con visión global de todos los sectores. Incluye análisis profundo de causas raíz, correlaciones entre sectores y recomendaciones operativas detalladas.',
                 responsable: `Genera un informe de gestión sectorial enfocado EXCLUSIVAMENTE en los sectores: ${userSectors.join(', ')}. El tono debe ser operativo y práctico, con pasos concretos de mejora para estos sectores específicos.`,
                 directivo: 'Genera un executive brief estratégico. El tono debe ser conciso, ejecutivo, orientado a KPIs y decisiones de alto nivel. Usa bullet points. Evita detalles operativos, enfócate en tendencias, riesgos institucionales y recomendaciones estratégicas.'
             };
 
-            // 1. Get AI Analysis and Proportional Logo
-            const [{ data: aiAnalysis, error: aiError }, logoObj] = await Promise.all([
-                supabase.functions.invoke('generate-intelligence-report', {
+            const topSector = stats.bySector.length > 0 ? stats.bySector[0].sector : 'General';
+            const topCat = stats.byClassification.length > 0 ? stats.byClassification[0].category : 'Procesos Asistenciales';
+            const resPct = stats.total - stats.felicitaciones > 0
+                ? Math.round((stats.resolved / (stats.total - stats.felicitaciones)) * 100)
+                : 100;
+
+            let aiAnalysisData: any = null;
+            try {
+                const { data, error } = await supabase.functions.invoke('generate-intelligence-report', {
                     body: {
                         reports: rawReports,
                         startDate: new Date(Math.min(...rawReports.map(r => new Date(r.created_at).getTime()))).toLocaleDateString(),
                         endDate: new Date().toLocaleDateString(),
                         roleContext: roleContextMap[userRole] || roleContextMap.admin
                     }
-                }),
-                loadLogoImage('/logosanatorio.png')
-            ]);
-
-            if (aiError) throw aiError;
-
-            // 2. Generate Charts for PDF
-            const sectorColors = ['#00548B', '#00A99D', '#00385c', '#FACC15', '#FF3131', '#00D1FF', '#6366f1', '#a855f7'];
-
-            const sectorChartImg = await renderChartToImage({
-                type: 'doughnut',
-                data: {
-                    labels: stats.bySector.map(s => s.sector),
-                    datasets: [{ data: stats.bySector.map(s => s.count), backgroundColor: sectorColors, borderWidth: 0 }]
-                },
-                options: {
-                    plugins: {
-                        legend: { position: 'right', labels: { font: { size: 14, weight: 'bold' } } },
-                        title: { display: true, text: 'Distribución por Sector', font: { size: 18, weight: 'bold' }, padding: 20 }
-                    }
-                }
-            });
-
-            const urgencyChartImg = await renderChartToImage({
-                type: 'bar',
-                data: {
-                    labels: ['Leve (Verde)', 'Medio (Amarillo)', 'Crítico (Rojo)'],
-                    datasets: [{
-                        label: 'Número de Reportes',
-                        data: [stats.byUrgency.Verdes, stats.byUrgency.Amarillos, stats.byUrgency.Rojos],
-                        backgroundColor: ['#22c55e', '#eab308', '#ef4444'],
-                        borderRadius: 10
-                    }]
-                },
-                options: {
-                    plugins: { legend: { display: false }, title: { display: true, text: 'Análisis de Triage (Riesgo)', font: { size: 18, weight: 'bold' }, padding: 20 } },
-                    scales: { y: { beginAtZero: true, border: { display: false }, grid: { display: true, color: '#f1f5f9' } }, x: { border: { display: false }, grid: { display: false } } }
-                }
-            });
-
-            const classificationChartImg = stats.byClassification.length > 0 ? await renderChartToImage({
-                type: 'doughnut',
-                data: {
-                    labels: stats.byClassification.map(c => c.category),
-                    datasets: [{ data: stats.byClassification.map(c => c.count), backgroundColor: ['#6366f1', '#00A99D', '#00548B', '#FACC15', '#FF3131', '#a855f7', '#00D1FF', '#f97316'], borderWidth: 0 }]
-                },
-                options: {
-                    plugins: {
-                        legend: { position: 'right', labels: { font: { size: 12, weight: 'bold' } } },
-                        title: { display: true, text: 'Distribución por Clasificación', font: { size: 18, weight: 'bold' }, padding: 20 }
-                    }
-                }
-            }) : null;
-
-            // 3. Initialize PDF
-            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const pageWidth = doc.internal.pageSize.getWidth();
-            const pageHeight = doc.internal.pageSize.getHeight();
-            const primaryColor: [number, number, number] = PDF_COLORS.primary;
-            const secondaryColor: [number, number, number] = PDF_COLORS.secondary;
-
-            // ─── HELPER: Cover page ───
-            const buildCover = (title: string, subtitle: string, roleBadge: string, badgeColor: [number, number, number]) => {
-                // Full-width header band
-                doc.setFillColor(...primaryColor);
-                doc.rect(0, 0, pageWidth, 56, 'F');
-
-                // Accent bar
-                doc.setFillColor(...secondaryColor);
-                doc.rect(0, 56, pageWidth, 2.8, 'F');
-
-                // Proportional Logo in crisp white badge
-                drawLogoBadge(doc, logoObj, 16, 11, 38, 32, 3);
-
-                const tx = 60;
-                doc.setTextColor(186, 230, 253);
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(7.5);
-                doc.text('DEPARTAMENTO DE GESTIÓN DE CALIDAD · SANATORIO ARGENTINO', tx, 17);
-
-                doc.setTextColor(255, 255, 255);
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(17.5);
-                doc.text(sanitizePdfText(title), tx, 26);
-
-                doc.setFontSize(10.5);
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(224, 242, 254);
-                doc.text(sanitizePdfText(subtitle), tx, 34);
-
-                const periodStart = rawReports.length > 0
-                    ? new Date(Math.min(...rawReports.map(r => new Date(r.created_at).getTime()))).toLocaleDateString('es-AR')
-                    : new Date().toLocaleDateString('es-AR');
-                doc.setFontSize(9);
-                doc.text(`Período Analizado: ${periodStart} al ${new Date().toLocaleDateString('es-AR')}`, tx, 42);
-
-                // Metadata strip below header
-                doc.setFillColor(...PDF_COLORS.slate50);
-                doc.setDrawColor(...PDF_COLORS.slate200);
-                doc.setLineWidth(0.35);
-                doc.roundedRect(16, 65, pageWidth - 32, 20, 3, 3, 'FD');
-
-                // Role badge
-                doc.setFillColor(...badgeColor);
-                doc.roundedRect(pageWidth - 64, 69, 44, 12, 2.5, 2.5, 'F');
-                doc.setTextColor(255, 255, 255);
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(8);
-                doc.text(sanitizePdfText(roleBadge), pageWidth - 42, 76.5, { align: 'center' });
-
-                // User info
-                doc.setTextColor(...PDF_COLORS.slate800);
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(9.5);
-                doc.text(`Generado por: ${sanitizePdfText(userName)}`, 22, 73);
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(8.5);
-                doc.setTextColor(...PDF_COLORS.slate500);
-                doc.text(`Emisión: ${new Date().toLocaleString('es-AR')}`, 22, 79.5);
-
-                if (userRole === 'responsable' && userSectors.length > 0) {
-                    doc.setFont('helvetica', 'bold');
-                    doc.setFontSize(8.5);
-                    doc.setTextColor(...primaryColor);
-                    doc.text(sanitizePdfText(`Sectores Asignados: ${userSectors.join(', ')}`), 20, 93);
-                }
-            };
-
-            // ─── HELPER: Section title  ───
-            const sectionTitle = (text: string, y: number, num?: number) => {
-                doc.setTextColor(...primaryColor);
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(13.5);
-                doc.text(sanitizePdfText(num ? `${num}. ${text}` : text), 16, y);
-                doc.setDrawColor(...secondaryColor);
-                doc.setLineWidth(0.7);
-                doc.line(16, y + 2.2, 105, y + 2.2);
-            };
-
-            // ─── HELPER: AI text block (Clean Markdown + Clinical Card) ───
-            const aiTextBlock = (text: string, y: number) => {
-                const cleaned = cleanMarkdownForPdf(text || 'Análisis no disponible.');
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(9.5);
-                const maxW = pageWidth - 44;
-                const lines = doc.splitTextToSize(cleaned, maxW);
-                const lineH = 4.8;
-                const boxH = lines.length * lineH + 10;
-
-                if (y + boxH > pageHeight - 20) {
-                    doc.addPage();
-                    y = 22;
-                }
-
-                doc.setFillColor(...PDF_COLORS.slate50);
-                doc.setDrawColor(...PDF_COLORS.slate200);
-                doc.setLineWidth(0.3);
-                doc.roundedRect(16, y - 4, pageWidth - 32, boxH, 2.5, 2.5, 'FD');
-
-                doc.setFillColor(...primaryColor);
-                doc.roundedRect(16, y - 4, 2.5, boxH, 1, 1, 'F');
-
-                doc.setTextColor(...PDF_COLORS.slate800);
-                lines.forEach((line: string, idx: number) => {
-                    doc.text(line, 22, y + 2.5 + idx * lineH);
                 });
-                return y + boxH + 4;
-            };
-
-            const styleKpiIndicatorCell = (hookData: any) => {
-                if (hookData.section === 'body' && hookData.column.index === 2) {
-                    const val = hookData.cell.raw;
-                    hookData.cell.styles.fontStyle = 'bold';
-                    if (val === 'ÓPTIMO' || val === 'COMPLETADO') {
-                        hookData.cell.styles.textColor = PDF_COLORS.emerald;
-                        hookData.cell.styles.fillColor = PDF_COLORS.emeraldBg;
-                    } else if (val === 'ATENCIÓN') {
-                        hookData.cell.styles.textColor = PDF_COLORS.amber;
-                        hookData.cell.styles.fillColor = PDF_COLORS.amberBg;
-                    } else if (val === 'CRÍTICO') {
-                        hookData.cell.styles.textColor = PDF_COLORS.red;
-                        hookData.cell.styles.fillColor = PDF_COLORS.redBg;
-                    } else if (val === 'DESTACADO') {
-                        hookData.cell.styles.textColor = PDF_COLORS.gold;
-                        hookData.cell.styles.fillColor = PDF_COLORS.goldBg;
-                    } else {
-                        hookData.cell.styles.textColor = PDF_COLORS.primary;
-                        hookData.cell.styles.fillColor = PDF_COLORS.primaryLight;
-                    }
+                if (!error && data) {
+                    aiAnalysisData = data;
                 }
-            };
-
-            // ════════════════════════════════════════════
-            //  ADMIN REPORT — Full Institutional Intelligence
-            // ════════════════════════════════════════════
-            if (userRole === 'admin') {
-                // PAGE 1: COVER + KPIs
-                buildCover('INFORME DE INTELIGENCIA INSTITUCIONAL', 'Análisis Integral de Gestión de Calidad y Trazabilidad', 'ADMINISTRADOR', [109, 40, 217]);
-
-                sectionTitle('RESUMEN EJECUTIVO DE INDICADORES', 98, 1);
-
-                autoTable(doc, {
-                    startY: 105,
-                    head: [['Métrica Institucional', 'Valor Registrado', 'Estado / Nivel']],
-                    body: [
-                        ['Total Hallazgos Operativos', stats.total.toString(), 'REGISTRO'],
-                        ['Casos Resueltos y Cerrados', stats.resolved.toString(), 'COMPLETADO'],
-                        ['Tasa de Resolución Efectiva', `${stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}%`, stats.total > 0 && (stats.resolved / stats.total) >= 0.7 ? 'ÓPTIMO' : 'ATENCIÓN'],
-                        ['Alertas Críticas (Riesgo Rojo)', stats.urgentCount.toString(), stats.urgentCount > 0 ? 'CRÍTICO' : 'ÓPTIMO'],
-                        ['Tiempo Promedio de Resolución', `${stats.avgResolutionTimeDays} días`, Number(stats.avgResolutionTimeDays) <= 2 ? 'ÓPTIMO' : 'ATENCIÓN'],
-                        ['Casos Pendientes en Gestión', stats.pending.toString(), stats.pending > 5 ? 'ATENCIÓN' : 'ÓPTIMO'],
-                        ['Felicitaciones y Reconocimientos al Personal', (stats.felicitaciones || 0).toString(), 'DESTACADO'],
-                    ],
-                    theme: 'striped',
-                    headStyles: { fillColor: primaryColor, fontSize: 9.5, fontStyle: 'bold', cellPadding: 3.5 },
-                    styles: { fontSize: 9, cellPadding: 3.5, textColor: PDF_COLORS.slate800 },
-                    columnStyles: {
-                        0: { fontStyle: 'bold' },
-                        1: { halign: 'center', fontStyle: 'bold' },
-                        2: { halign: 'center', cellWidth: 38 }
-                    },
-                    didParseCell: styleKpiIndicatorCell,
-                    margin: { left: 16, right: 16 },
-                });
-
-                // Sector chart on page 1
-                if (sectorChartImg) {
-                    const chartY = (doc as any).lastAutoTable.finalY + 8;
-                    doc.addImage(sectorChartImg, 'PNG', 16, chartY, pageWidth - 32, 74);
-                }
-
-                // PAGE 2: ANALYSIS
-                doc.addPage();
-                if (urgencyChartImg) doc.addImage(urgencyChartImg, 'PNG', 16, 15, pageWidth - 32, 74);
-
-                sectionTitle('ANÁLISIS DESCRIPTIVO', 102, 2);
-                let nextY = aiTextBlock(aiAnalysis.descriptive, 112);
-
-                nextY = Math.max(nextY + 8, 175);
-                sectionTitle('ANÁLISIS DIAGNÓSTICO', nextY, 3);
-                aiTextBlock(aiAnalysis.diagnostic, nextY + 10);
-
-                // PAGE 3: PREDICTIVE + PRESCRIPTIVE
-                doc.addPage();
-                sectionTitle('ANÁLISIS PREDICTIVO Y TENDENCIAS', 25, 4);
-                let presY = aiTextBlock(aiAnalysis.predictive, 35);
-
-                presY = Math.max(presY + 10, 115);
-                sectionTitle('ANÁLISIS PRESCRIPTIVO Y PLAN DE MEJORA', presY, 5);
-                aiTextBlock(aiAnalysis.prescriptive, presY + 10);
-
-                // PAGE 4: CLASSIFICATION + PERSONNEL
-                doc.addPage();
-                if (classificationChartImg) {
-                    doc.addImage(classificationChartImg, 'PNG', 16, 15, pageWidth - 32, 74);
-                }
-
-                sectionTitle('EQUIPO Y GESTIÓN POR SECTOR', classificationChartImg ? 102 : 25, 6);
-
-                const { data: allProfiles } = await supabase.from('user_profiles').select('display_name, role, assigned_sectors');
-                if (allProfiles && allProfiles.length > 0) {
-                    autoTable(doc, {
-                        startY: classificationChartImg ? 110 : 33,
-                        head: [['Nombre del Profesional', 'Rol en Sistema', 'Sectores Asignados']],
-                        body: allProfiles.map(p => [
-                            sanitizePdfText(p.display_name || 'Sin nombre'),
-                            p.role === 'admin' ? 'Administrador' : p.role === 'directivo' ? 'Directivo' : 'Responsable',
-                            sanitizePdfText((p.assigned_sectors || []).join(', ') || '-')
-                        ]),
-                        theme: 'striped',
-                        headStyles: { fillColor: secondaryColor, fontSize: 9, fontStyle: 'bold' },
-                        styles: { fontSize: 8, cellPadding: 3, textColor: PDF_COLORS.slate800 },
-                        margin: { left: 16, right: 16 },
-                    });
-                }
-
-                // PAGE 5: CRITICAL CASES ANNEX
-                doc.addPage();
-                sectionTitle('ANEXO: CASOS CRÍTICOS Y FELICITACIONES DESTACADAS', 25);
-
-                const criticalCases = rawReports.filter(r => r.ai_urgency === 'Rojo').slice(0, 15);
-                if (criticalCases.length > 0) {
-                    autoTable(doc, {
-                        startY: 33,
-                        head: [['Ticket ID', 'Sector', 'Clasificación', 'Resumen del Caso Crítico', 'Estado']],
-                        body: criticalCases.map(r => [
-                            sanitizePdfText(r.tracking_id),
-                            sanitizePdfText(r.sector || '-'),
-                            sanitizePdfText(r.ai_category || '-'),
-                            sanitizePdfText(r.ai_summary || r.content || '').substring(0, 68),
-                            r.status === 'resolved' ? 'Resuelto' : r.status === 'cancelled' ? 'Cancelado' : 'Pendiente'
-                        ]),
-                        theme: 'grid',
-                        headStyles: { fillColor: PDF_COLORS.red, fontSize: 8, fontStyle: 'bold' },
-                        styles: { fontSize: 7.5, cellPadding: 3, textColor: PDF_COLORS.slate800 },
-                        margin: { left: 16, right: 16 },
-                    });
-                } else {
-                    doc.setFont('helvetica', 'italic');
-                    doc.setFontSize(9.5);
-                    doc.setTextColor(...PDF_COLORS.slate500);
-                    doc.text('No se registraron alertas de riesgo crítico (Rojo) en el período analizado.', 16, 38);
-                }
-
-                // ════════════════════════════════════════════
-                //  RESPONSABLE REPORT — Sectoral Management
-                // ════════════════════════════════════════════
-            } else if (userRole === 'responsable') {
-                // PAGE 1: COVER
-                buildCover('INFORME DE GESTIÓN SECTORIAL', `Responsable: ${userName}`, 'RESPONSABLE', [21, 128, 61]);
-
-                sectionTitle('MIS INDICADORES DE SECTOR', 102, 1);
-
-                autoTable(doc, {
-                    startY: 110,
-                    head: [['Métrica de Mi Gestión', 'Valor']],
-                    body: [
-                        ['Total Casos Operativos en Mis Sectores', stats.total.toString()],
-                        ['Casos Resueltos', stats.resolved.toString()],
-                        ['Tasa de Resolución', `${stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}%`],
-                        ['Casos Pendientes de Resolución', stats.pending.toString()],
-                        ['Alertas Críticas', stats.urgentCount.toString()],
-                        ['Tiempo Promedio de Respuesta', `${stats.avgResolutionTimeDays} días`],
-                        ['Felicitaciones Recibidas', (stats.felicitaciones || 0).toString()],
-                        ['Sectores Asignados', sanitizePdfText(userSectors.join(', ') || 'Ninguno')],
-                    ],
-                    theme: 'striped',
-                    headStyles: { fillColor: PDF_COLORS.emerald, fontSize: 9.5, fontStyle: 'bold' },
-                    styles: { fontSize: 9, cellPadding: 3.5, textColor: PDF_COLORS.slate800 },
-                    columnStyles: { 0: { fontStyle: 'bold' } },
-                    margin: { left: 16, right: 16 },
-                });
-
-                // PAGE 2: CHARTS
-                doc.addPage();
-                if (sectorChartImg) doc.addImage(sectorChartImg, 'PNG', 16, 15, pageWidth - 32, 74);
-                if (urgencyChartImg) doc.addImage(urgencyChartImg, 'PNG', 16, 102, pageWidth - 32, 74);
-
-                // PAGE 3: MY CASES TABLE
-                doc.addPage();
-                sectionTitle('MIS CASOS DETALLADOS', 25, 2);
-
-                autoTable(doc, {
-                    startY: 33,
-                    head: [['Ticket', 'Sector', 'Clasificación', 'Urgencia', 'Estado', 'Fecha']],
-                    body: rawReports.slice(0, 30).map(r => [
-                        sanitizePdfText(r.tracking_id),
-                        sanitizePdfText(r.sector || '-'),
-                        sanitizePdfText(r.ai_category || r.finding_type || '-'),
-                        sanitizePdfText(r.ai_urgency || '-'),
-                        r.status === 'resolved' ? 'Resuelto' : r.status === 'cancelled' ? 'Cancelado' : r.status === 'pending_resolution' ? 'En Gestión' : r.status === 'quality_validation' ? 'Validación Calidad' : 'Pendiente',
-                        new Date(r.created_at).toLocaleDateString('es-AR')
-                    ]),
-                    theme: 'striped',
-                    headStyles: { fillColor: primaryColor, fontSize: 8, fontStyle: 'bold' },
-                    styles: { fontSize: 7.5, cellPadding: 3, textColor: PDF_COLORS.slate800 },
-                    margin: { left: 16, right: 16 },
-                });
-
-                // PAGE 4: AI ANALYSIS (Focused)
-                doc.addPage();
-                sectionTitle('ANÁLISIS DE MI GESTIÓN', 25, 3);
-                let rNextY = aiTextBlock(aiAnalysis.descriptive, 35);
-
-                rNextY = Math.max(rNextY + 10, 105);
-                sectionTitle('DIAGNÓSTICO SECTORIAL', rNextY, 4);
-                rNextY = aiTextBlock(aiAnalysis.diagnostic, rNextY + 10);
-
-                // PAGE 5: RECOMMENDATIONS
-                doc.addPage();
-                sectionTitle('RECOMENDACIONES PARA MIS SECTORES', 25, 5);
-                let recY = aiTextBlock(aiAnalysis.prescriptive, 35);
-
-                recY = Math.max(recY + 15, 110);
-                sectionTitle('PROYECCIÓN', recY, 6);
-                aiTextBlock(aiAnalysis.predictive, recY + 10);
-
-                // ════════════════════════════════════════════
-                //  DIRECTIVO REPORT — Executive Intelligence Brief
-                // ════════════════════════════════════════════
-            } else {
-                // PAGE 1: COVER
-                buildCover('EXECUTIVE INTELLIGENCE BRIEF', 'Resumen Estratégico de Gestión de Calidad Institucional', 'DIRECCIÓN', primaryColor);
-
-                // Big KPI blocks (2x3 grid including Felicitaciones)
-                const kpiStartY = 98;
-                const kpiBoxW = (pageWidth - 42) / 2;
-                const kpiBoxH = 30;
-
-                const kpis = [
-                    { label: 'TOTAL HALLAZGOS', value: stats.total.toString(), color: primaryColor },
-                    { label: 'TASA DE RESOLUCIÓN', value: `${stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}%`, color: secondaryColor },
-                    { label: 'ALERTAS CRÍTICAS', value: stats.urgentCount.toString(), color: PDF_COLORS.red },
-                    { label: 'TIEMPO PROMEDIO', value: `${stats.avgResolutionTimeDays}d`, color: PDF_COLORS.purple },
-                    { label: 'FELICITACIONES RECIBIDAS', value: (stats.felicitaciones || 0).toString(), color: PDF_COLORS.gold },
-                    { label: 'CASOS PENDIENTES', value: stats.pending.toString(), color: PDF_COLORS.slate700 },
-                ];
-
-                kpis.forEach((kpi, i) => {
-                    const col = i % 2;
-                    const row = Math.floor(i / 2);
-                    const x = 16 + col * (kpiBoxW + 10);
-                    const y = kpiStartY + row * (kpiBoxH + 7);
-
-                    doc.setFillColor(...kpi.color);
-                    doc.roundedRect(x, y, kpiBoxW, kpiBoxH, 3.5, 3.5, 'F');
-
-                    doc.setTextColor(255, 255, 255);
-                    doc.setFont('helvetica', 'bold');
-                    doc.setFontSize(7.5);
-                    doc.text(kpi.label, x + 8, y + 10);
-
-                    doc.setFont('helvetica', 'bold');
-                    doc.setFontSize(21);
-                    doc.text(kpi.value, x + 8, y + 23.5);
-                });
-
-                // PAGE 2: STRATEGIC ANALYSIS
-                doc.addPage();
-                sectionTitle('VISIÓN ESTRATÉGICA', 25, 1);
-                let dNextY = aiTextBlock(aiAnalysis.descriptive, 35);
-
-                dNextY = Math.max(dNextY + 10, 115);
-                sectionTitle('DIAGNÓSTICO INSTITUCIONAL', dNextY, 2);
-                aiTextBlock(aiAnalysis.diagnostic, dNextY + 10);
-
-                // PAGE 3: CHARTS
-                doc.addPage();
-                sectionTitle('INDICADORES VISUALES', 25, 3);
-                if (sectorChartImg) doc.addImage(sectorChartImg, 'PNG', 16, 35, pageWidth - 32, 74);
-                if (urgencyChartImg) doc.addImage(urgencyChartImg, 'PNG', 16, 120, pageWidth - 32, 74);
-
-                // PAGE 4: CLASSIFICATION + STATUS
-                doc.addPage();
-                if (classificationChartImg) {
-                    doc.addImage(classificationChartImg, 'PNG', 16, 15, pageWidth - 32, 74);
-                }
-
-                sectionTitle('ESTADO DE GESTIÓN', classificationChartImg ? 102 : 25, 4);
-                autoTable(doc, {
-                    startY: classificationChartImg ? 110 : 33,
-                    head: [['Estado de Casos', 'Cantidad', 'Participación']],
-                    body: [
-                        ['Resueltos', stats.byStatus.resolved.toString(), `${stats.total > 0 ? Math.round((stats.byStatus.resolved / stats.total) * 100) : 0}%`],
-                        ['Pendientes', stats.byStatus.pending.toString(), `${stats.total > 0 ? Math.round((stats.byStatus.pending / stats.total) * 100) : 0}%`],
-                        ['En Proceso', stats.byStatus.waiting.toString(), `${stats.total > 0 ? Math.round((stats.byStatus.waiting / stats.total) * 100) : 0}%`],
-                        ['Cancelados / Descartados', stats.byStatus.cancelled.toString(), `${stats.total > 0 ? Math.round((stats.byStatus.cancelled / stats.total) * 100) : 0}%`],
-                        ['Felicitaciones / Reconocimientos', (stats.felicitaciones || 0).toString(), 'Destacado Positivo'],
-                    ],
-                    theme: 'striped',
-                    headStyles: { fillColor: primaryColor, fontSize: 9.5, fontStyle: 'bold' },
-                    styles: { fontSize: 9, cellPadding: 4, textColor: PDF_COLORS.slate800 },
-                    margin: { left: 16, right: 16 },
-                });
-
-                // PAGE 5: STRATEGIC RECOMMENDATIONS
-                doc.addPage();
-                sectionTitle('PROYECCIÓN Y TENDENCIAS', 25, 5);
-                let stratY = aiTextBlock(aiAnalysis.predictive, 35);
-
-                stratY = Math.max(stratY + 10, 115);
-                sectionTitle('RECOMENDACIONES ESTRATÉGICAS', stratY, 6);
-                aiTextBlock(aiAnalysis.prescriptive, stratY + 10);
+            } catch (invokeErr) {
+                console.warn('[IntelligenceReport] AI edge function fallback activated:', invokeErr);
             }
 
-            // Add institutional footers to all pages
-            applyInstitutionalFooters(doc, { margin: 16 });
+            if (!aiAnalysisData) {
+                aiAnalysisData = {
+                    descriptive: `Durante el período evaluado se registraron ${stats.total} casos totales en el sistema (${stats.total - stats.felicitaciones} hallazgos operativos y ${stats.felicitaciones} felicitaciones al equipo). Se alcanzó una tasa de resolución validada del ${resPct}% (${stats.resolved} casos cerrados y ${stats.pending} en curso), con un tiempo promedio de respuesta de ${stats.avgResolutionTimeDays} días.`,
+                    diagnostic: `La mayor demanda operativa se concentró en el sector ${topSector} y en la categoría "${topCat}". Se contabilizaron ${stats.urgentCount} eventos de prioridad crítica (Rojo), ${stats.byUrgency.Amarillos} de riesgo moderado (Amarillo) y ${stats.byUrgency.Verdes} de nivel leve (Verde).`,
+                    predictive: `De mantenerse el ritmo actual de resolución (${stats.avgResolutionTimeDays} días promedio), los sectores con mayor carga acumulada podrían experimentar saturación si no se priorizan los ${stats.pending} casos pendientes en bandeja.`,
+                    prescriptive: `1. Priorizar el cierre de los ${stats.urgentCount} hallazgos críticos activos.\n2. Reforzar el seguimiento en ${topSector} para estandarizar las barreras de prevención sobre "${topCat}".\n3. Socializar las ${stats.felicitaciones} felicitaciones recibidas para fortalecer el clima laboral y el reconocimiento positivo.`,
+                };
+            }
 
-            // Role-based filename
-            const roleNames: Record<string, string> = {
-                admin: 'Institucional',
-                responsable: 'Sectorial',
-                directivo: 'Executive_Brief'
-            };
+            await generateIntelligenceMagazinePDF({
+                rawReports,
+                stats,
+                aiAnalysis: aiAnalysisData,
+                userName,
+                userRole,
+                userSectors,
+            });
 
-            doc.save(`SA_Informe_${roleNames[userRole] || 'Calidad'}_${new Date().toISOString().split('T')[0]}.pdf`);
-
-            // Success Feedback
             confetti({
                 particleCount: 150,
                 spread: 70,
                 origin: { y: 0.6 },
                 colors: ['#00548B', '#00A99D', '#FFFFFF']
             });
-
         } catch (err) {
             console.error('Error exporting PDF:', err);
             alert('Error al generar el informe inteligente. Intente nuevamente.');
@@ -873,32 +395,47 @@ export const MetricsDashboard = () => {
     return (
         <div className="w-full py-2 sm:py-4 space-y-8 animate-in fade-in duration-500">
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h1 className="text-4xl font-display font-black text-sanatorio-primary tracking-tight">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                <div className="space-y-1.5">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sanatorio-primary/10 text-sanatorio-primary text-[11px] font-black uppercase tracking-widest">
+                        <BrainCircuit className="w-3.5 h-3.5" />
+                        Observatorio Clínico & Gestión de Calidad
+                    </div>
+                    <h1 className="text-3xl sm:text-4xl font-display font-black text-sanatorio-primary tracking-tight">
                         Inteligencia de Calidad
                     </h1>
-                    <p className="text-slate-500 font-medium">Análisis avanzado y detección de patrones en tiempo real.</p>
+                    <p className="text-slate-500 text-sm sm:text-base font-medium max-w-2xl">
+                        Lectura explicativa de indicadores hospitalarios, curvas de evolución temporal y diagnóstico asistido por IA.
+                    </p>
                 </div>
 
-                <button
-                    onClick={handleExportIntelligenceReport}
-                    disabled={isExporting}
-                    className="btn-primary w-full md:w-auto px-8"
-                >
-                    {isExporting ? (
-                        <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            Generando Informe...
-                        </>
-                    ) : (
-                        <>
-                            <FileDown className="w-5 h-5" />
-                            <BrainCircuit className="w-5 h-5 text-sanatorio-secondary" />
-                            {role === 'admin' ? 'Informe Institucional' : role === 'directivo' ? 'Executive Brief' : 'Informe Sectorial'}
-                        </>
-                    )}
-                </button>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+                    <button
+                        onClick={handleExportIntelligenceReport}
+                        disabled={isExporting}
+                        className="btn-primary w-full sm:w-auto px-6 py-3.5 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2.5"
+                    >
+                        {isExporting ? (
+                            <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span>Maquetando Revista Institucional...</span>
+                            </>
+                        ) : (
+                            <>
+                                <FileDown className="w-5 h-5" />
+                                <BrainCircuit className="w-5 h-5 text-[#00D1FF]" />
+                                <div className="text-left">
+                                    <span className="block text-xs font-black uppercase tracking-wider leading-none">
+                                        {role === 'admin' ? 'Revista Institucional PDF' : role === 'directivo' ? 'Executive Brief PDF' : 'Revista Sectorial PDF'}
+                                    </span>
+                                    <span className="block text-[10px] text-sky-100 font-normal mt-0.5">
+                                        Edición explicativa con gráficos de línea, barras e IA
+                                    </span>
+                                </div>
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {/* ─── Filter Bar ─── */}
@@ -918,258 +455,455 @@ export const MetricsDashboard = () => {
                 </div>
             )}
 
-            {/* KPI Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group">
-                    <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <BarChart3 className="w-24 h-24 text-blue-600" />
-                    </div>
-                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Reportes Recibidos</p>
-                    <p className="text-4xl font-black text-gray-800 mt-2">{stats.totalReceived}</p>
-                    <div className="mt-4 flex items-center gap-1 text-xs text-blue-600 font-medium">
-                        <span>Como Sector Destino</span>
-                    </div>
-                </div>
-
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group">
-                    <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <CheckCircle2 className="w-24 h-24 text-green-600" />
-                    </div>
-                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Tasa de Resolución</p>
-                    <p className="text-4xl font-black text-gray-800 mt-2">
-                        {stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0}%
-                    </p>
-                    <div className="mt-4 w-full bg-gray-100 rounded-full h-1.5">
-                        <div
-                            className="bg-green-500 h-1.5 rounded-full transition-all duration-1000"
-                            style={{ width: `${stats.total > 0 ? (stats.resolved / stats.total) * 100 : 0}%` }}
-                        ></div>
+            {/* KPI Grid — Con Explicación Pedagógica de cada Métrica */}
+            <div>
+                <div className="flex items-center justify-between mb-3 px-1">
+                    <div>
+                        <h2 className="text-sm font-black uppercase tracking-widest text-sanatorio-primary">
+                            Glosario de Indicadores Clave (KPIs)
+                        </h2>
+                        <p className="text-xs text-slate-500">
+                            Cada tarjeta explica qué mide el indicador y cuál es el estándar institucional esperado.
+                        </p>
                     </div>
                 </div>
 
-                <div 
-                    onClick={() => handleMetricClick({ urgency: 'Rojo' })}
-                    className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group cursor-pointer hover:border-red-200 transition-all"
-                >
-                    <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <AlertOctagon className="w-24 h-24 text-red-600" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                    {/* KPI 1: Recibidos */}
+                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 border-t-4 border-t-sanatorio-primary relative overflow-hidden group flex flex-col justify-between">
+                        <div>
+                            <div className="flex items-center justify-between gap-2">
+                                <p className="text-slate-500 text-[11px] font-black uppercase tracking-wider">Reportes Recibidos</p>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-sanatorio-primary">Demanda</span>
+                            </div>
+                            <p className="text-3xl font-black text-slate-800 mt-2">{stats.totalReceived}</p>
+                            <p className="text-[11px] font-semibold text-sanatorio-primary mt-1">Como Sector Destino</p>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-3 pt-2.5 border-t border-slate-100 leading-relaxed">
+                            <strong className="text-slate-700">¿Qué mide?</strong> Total de desvíos, eventos y sugerencias asignados al sector para su análisis y resolución.
+                        </p>
                     </div>
-                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Hallazgos Críticos</p>
-                    <p className="text-4xl font-black text-gray-800 mt-2">{stats.urgentCount}</p>
-                    <p className="text-xs text-red-500 mt-2 font-medium">Requiren atención inmediata</p>
-                </div>
 
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group">
-                    <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <Clock className="w-24 h-24 text-purple-600" />
+                    {/* KPI 2: Tasa de Resolución */}
+                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 border-t-4 border-t-emerald-600 relative overflow-hidden group flex flex-col justify-between">
+                        <div>
+                            <div className="flex items-center justify-between gap-2">
+                                <p className="text-slate-500 text-[11px] font-black uppercase tracking-wider">Tasa de Resolución</p>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">Meta ≥ 80%</span>
+                            </div>
+                            <p className="text-3xl font-black text-slate-800 mt-2">
+                                {stats.total - stats.felicitaciones > 0
+                                    ? Math.round((stats.resolved / (stats.total - stats.felicitaciones)) * 100)
+                                    : 100}%
+                            </p>
+                            <div className="mt-2 w-full bg-slate-100 rounded-full h-1.5">
+                                <div
+                                    className="bg-emerald-500 h-1.5 rounded-full transition-all duration-1000"
+                                    style={{
+                                        width: `${stats.total - stats.felicitaciones > 0
+                                            ? Math.min(100, Math.round((stats.resolved / (stats.total - stats.felicitaciones)) * 100))
+                                            : 100}%`
+                                    }}
+                                />
+                            </div>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-3 pt-2.5 border-t border-slate-100 leading-relaxed">
+                            <strong className="text-slate-700">¿Qué mide?</strong> Porcentaje de casos gestionables que ya cuentan con análisis de causa raíz y cierre validado.
+                        </p>
                     </div>
-                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Tiempo Promedio</p>
-                    <p className="text-4xl font-black text-gray-800 mt-2">{stats.avgResolutionTimeDays}d</p>
-                    <p className="text-xs text-gray-400 mt-2">Desde reporte hasta cierre</p>
-                </div>
 
-                <div 
-                    onClick={() => handleMetricClick({ category: 'Felicitación' })}
-                    className="bg-gradient-to-br from-amber-50 to-yellow-50 p-6 rounded-2xl shadow-sm border border-amber-200 relative overflow-hidden group cursor-pointer hover:border-amber-300 transition-all"
-                >
-                    <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Star className="w-24 h-24 text-amber-400" />
+                    {/* KPI 3: Hallazgos Críticos */}
+                    <div
+                        onClick={() => handleMetricClick({ urgency: 'Rojo' })}
+                        className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 border-t-4 border-t-red-600 relative overflow-hidden group cursor-pointer hover:border-red-300 transition-all flex flex-col justify-between"
+                    >
+                        <div>
+                            <div className="flex items-center justify-between gap-2">
+                                <p className="text-slate-500 text-[11px] font-black uppercase tracking-wider">Riesgo Crítico (Rojo)</p>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700">Meta: 0</span>
+                            </div>
+                            <p className="text-3xl font-black text-red-600 mt-2">{stats.urgentCount}</p>
+                            <p className="text-[11px] text-red-600 mt-1 font-semibold">Click para filtrar casos urgentes →</p>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-3 pt-2.5 border-t border-slate-100 leading-relaxed">
+                            <strong className="text-slate-700">¿Qué mide?</strong> Eventos clasificados por Triage IA con alto impacto asistencial o seguridad del paciente.
+                        </p>
                     </div>
-                    <p className="text-amber-600 text-xs font-bold uppercase tracking-wider">Felicitaciones</p>
-                    <p className="text-4xl font-black text-amber-600 mt-2">{stats.felicitaciones}</p>
-                    <p className="text-xs text-amber-500 mt-2 font-medium">Reconocimientos positivos 🎉</p>
-                </div>
 
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group">
-                    <div className="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <ArrowUpRight className="w-24 h-24 text-indigo-600" />
+                    {/* KPI 4: Tiempo Promedio */}
+                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 border-t-4 border-t-purple-600 relative overflow-hidden group flex flex-col justify-between">
+                        <div>
+                            <div className="flex items-center justify-between gap-2">
+                                <p className="text-slate-500 text-[11px] font-black uppercase tracking-wider">Tiempo de Respuesta</p>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700">SLA ≤ 7d</span>
+                            </div>
+                            <p className="text-3xl font-black text-slate-800 mt-2">{stats.avgResolutionTimeDays}d</p>
+                            <p className="text-[11px] text-purple-600 mt-1 font-semibold">Promedio desde ingreso a cierre</p>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-3 pt-2.5 border-t border-slate-100 leading-relaxed">
+                            <strong className="text-slate-700">¿Qué mide?</strong> Velocidad media de resolución en días corridos. Menos de 5 días refleja alta agilidad operativa.
+                        </p>
                     </div>
-                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Reportes Emitidos</p>
-                    <p className="text-4xl font-black text-gray-800 mt-2">{stats.totalEmitted}</p>
-                    <div className="mt-4 flex items-center gap-1 text-xs text-indigo-600 font-medium">
-                        <span>Como Sector Origen</span>
+
+                    {/* KPI 5: Felicitaciones */}
+                    <div
+                        onClick={() => handleMetricClick({ category: 'Felicitación' })}
+                        className="bg-gradient-to-br from-amber-50/70 to-yellow-50/40 p-5 rounded-2xl shadow-sm border border-amber-200/80 border-t-4 border-t-amber-500 relative overflow-hidden group cursor-pointer hover:border-amber-300 transition-all flex flex-col justify-between"
+                    >
+                        <div>
+                            <div className="flex items-center justify-between gap-2">
+                                <p className="text-amber-700 text-[11px] font-black uppercase tracking-wider">Felicitaciones</p>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">Humanización</span>
+                            </div>
+                            <p className="text-3xl font-black text-amber-600 mt-2">{stats.felicitaciones}</p>
+                            <p className="text-[11px] text-amber-700 mt-1 font-semibold">Reconocimientos positivos 🎉</p>
+                        </div>
+                        <p className="text-[11px] text-amber-900/70 mt-3 pt-2.5 border-t border-amber-200/60 leading-relaxed">
+                            <strong className="text-amber-900">¿Qué mide?</strong> Destacos de pacientes y colegas hacia el trato humano y excelencia del equipo de salud.
+                        </p>
+                    </div>
+
+                    {/* KPI 6: Emitidos */}
+                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 border-t-4 border-t-teal-600 relative overflow-hidden group flex flex-col justify-between">
+                        <div>
+                            <div className="flex items-center justify-between gap-2">
+                                <p className="text-slate-500 text-[11px] font-black uppercase tracking-wider">Reportes Emitidos</p>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-700">Proactividad</span>
+                            </div>
+                            <p className="text-3xl font-black text-slate-800 mt-2">{stats.totalEmitted}</p>
+                            <p className="text-[11px] text-teal-600 mt-1 font-semibold">Como Sector Origen</p>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-3 pt-2.5 border-t border-slate-100 leading-relaxed">
+                            <strong className="text-slate-700">¿Qué mide?</strong> Cultura de reporte activo: cantidad de hallazgos detectados y notificados por el sector.
+                        </p>
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Sector Breakwodn Chart */}
-                <div className="bg-white p-8 rounded-3xl shadow-card border border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
-                        <PieChart className="w-5 h-5 text-sanatorio-secondary" />
-                        Hallazgos Recibidos por Sector
-                    </h3>
-                    <div className="space-y-2">
-                        {stats.bySector.length > 0 ? (
-                            <div className="h-[400px] w-full mt-4">
-                                <Bar 
-                                    data={{
-                                        labels: stats.bySector.map(c => c.sector),
-                                        datasets: [{
-                                            label: 'Reportes',
-                                            data: stats.bySector.map(c => c.count),
-                                            backgroundColor: (context: any) => {
-                                                const chart = context.chart;
-                                                const { ctx, chartArea } = chart;
-                                                if (!chartArea || !chartArea.right || !isFinite(chartArea.right)) return 'rgba(99, 102, 241, 0.8)';
-                                                const gradient = ctx.createLinearGradient(0, 0, chartArea.right, 0);
-                                                gradient.addColorStop(0, 'rgba(99, 102, 241, 0.8)'); // Indigo
-                                                gradient.addColorStop(1, 'rgba(168, 85, 247, 0.9)'); // Purple
-                                                return gradient;
-                                            },
-                                            hoverBackgroundColor: (context: any) => {
-                                                const chart = context.chart;
-                                                const { ctx, chartArea } = chart;
-                                                if (!chartArea || !chartArea.right || !isFinite(chartArea.right)) return 'rgba(79, 70, 229, 1)';
-                                                const gradient = ctx.createLinearGradient(0, 0, chartArea.right, 0);
-                                                gradient.addColorStop(0, 'rgba(79, 70, 229, 1)'); // Indigo Darker
-                                                gradient.addColorStop(1, 'rgba(147, 51, 234, 1)'); // Purple Darker
-                                                return gradient;
-                                            },
-                                            borderRadius: 6,
-                                            borderSkipped: false,
-                                            barThickness: 'flex',
-                                            maxBarThickness: 32,
-                                            borderWidth: 1,
-                                            borderColor: 'rgba(255,255,255,0.2)',
-                                        }]
-                                    }}
-                                    options={{
-                                        indexAxis: 'y',
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        onClick: (_event, elements, chart) => {
-                                            if (elements.length > 0) {
-                                                const index = elements[0].index;
-                                                const label = chart.data.labels![index] as string;
-                                                handleMetricClick({ sector: label });
-                                            }
-                                        },
-                                        animation: {
-                                            duration: 1500,
-                                            easing: 'easeOutQuart',
-                                        },
-                                        layout: {
-                                            padding: { right: 30 }
-                                        },
-                                        plugins: {
-                                            legend: { display: false },
-                                            tooltip: {
-                                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                                titleColor: '#1f2937',
-                                                bodyColor: '#4b5563',
-                                                borderColor: '#e5e7eb',
-                                                borderWidth: 1,
-                                                padding: 12,
-                                                boxPadding: 6,
-                                                usePointStyle: true,
-                                                callbacks: {
-                                                    label: (context: any) => {
-                                                        const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-                                                        const percentage = Math.round((context.raw / total) * 100);
-                                                        return ` ${context.raw} Reportes (${percentage}%)`;
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        scales: {
-                                            x: {
-                                                grid: { display: true, color: '#f3f4f6', drawTicks: false },
-                                                border: { display: false },
-                                                ticks: { font: { family: "'Inter', sans-serif" }, color: '#9ca3af', padding: 10 }
-                                            },
-                                            y: {
-                                                grid: { display: false },
-                                                border: { display: false },
-                                                ticks: { font: { family: "'Inter', sans-serif", weight: 'bold' }, color: '#4b5563', padding: 10 }
-                                            }
-                                        }
-                                    }}
-                                />
-                            </div>
-                        ) : (
-                            <div className="text-center py-10 text-gray-400">
-                                <PieChart className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                                <p className="text-sm">No hay sectores registrados.</p>
-                            </div>
-                        )}
+            {/* ── GRÁFICO DE LÍNEA EXPLICATIVO: Evolución Temporal (Ingresos vs. Resueltos) ── */}
+            <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200/80">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <span className="text-[11px] font-black uppercase tracking-widest text-sanatorio-primary">
+                            Tendencia Histórica · Gráfico de Línea Comparativo
+                        </span>
+                        <h3 className="text-xl font-black text-slate-800 mt-0.5 flex items-center gap-2">
+                            <TrendingUp className="w-5 h-5 text-sanatorio-primary" />
+                            Evolución Temporal: Casos Ingresados vs. Casos Resueltos
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1">
+                            Compara el flujo de entrada de reportes con la capacidad real de cierre en cada período.
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs font-bold">
+                        <span className="flex items-center gap-1.5 text-sanatorio-primary">
+                            <span className="w-3 h-3 rounded-full bg-[#00548B] inline-block"></span>
+                            Casos Ingresados ({stats.total})
+                        </span>
+                        <span className="flex items-center gap-1.5 text-emerald-600">
+                            <span className="w-3 h-3 rounded-full bg-[#16A34A] inline-block"></span>
+                            Casos Resueltos ({stats.resolved})
+                        </span>
+                        <span className="flex items-center gap-1.5 text-red-600">
+                            <span className="w-3 h-3 rounded-full bg-[#DC2626] inline-block"></span>
+                            Riesgo Crítico ({stats.urgentCount})
+                        </span>
                     </div>
                 </div>
 
-                {/* Urgency Donut Chart */}
-                <div className="bg-white p-8 rounded-3xl shadow-card border border-gray-100 flex flex-col">
-                    <h3 className="text-lg font-bold text-gray-800 mb-1 flex items-center gap-2">
-                        <Zap className="w-5 h-5 text-yellow-500" />
-                        Gravedad de Hallazgos
-                    </h3>
-                    <p className="text-[11px] text-gray-400 mb-6 leading-tight">
-                        * No se incluyen {stats.total - (stats.byUrgency.Verdes + stats.byUrgency.Amarillos + stats.byUrgency.Rojos)} reportes sin riesgo clínico asignado (ej. históricos o felicitaciones).
+                <div className="h-[320px] w-full">
+                    <Line
+                        data={{
+                            labels: timeSeries.labels,
+                            datasets: [
+                                {
+                                    label: 'Casos Ingresados',
+                                    data: timeSeries.totalSeries,
+                                    borderColor: '#00548B',
+                                    backgroundColor: 'rgba(0, 84, 139, 0.10)',
+                                    fill: true,
+                                    tension: 0.35,
+                                    borderWidth: 3,
+                                    pointRadius: 5,
+                                    pointHoverRadius: 7,
+                                    pointBackgroundColor: '#FFFFFF',
+                                    pointBorderColor: '#00548B',
+                                    pointBorderWidth: 2.5,
+                                },
+                                {
+                                    label: 'Casos Resueltos',
+                                    data: timeSeries.resolvedSeries,
+                                    borderColor: '#16A34A',
+                                    backgroundColor: 'rgba(22, 163, 74, 0.08)',
+                                    fill: true,
+                                    tension: 0.35,
+                                    borderWidth: 3,
+                                    pointRadius: 5,
+                                    pointHoverRadius: 7,
+                                    pointBackgroundColor: '#FFFFFF',
+                                    pointBorderColor: '#16A34A',
+                                    pointBorderWidth: 2.5,
+                                },
+                                {
+                                    label: 'Críticos (Rojo)',
+                                    data: timeSeries.criticalSeries,
+                                    borderColor: '#DC2626',
+                                    backgroundColor: 'rgba(220, 38, 38, 0.04)',
+                                    borderDash: [5, 4],
+                                    fill: false,
+                                    tension: 0.3,
+                                    borderWidth: 2,
+                                    pointRadius: 4,
+                                    pointHoverRadius: 6,
+                                    pointBackgroundColor: '#DC2626',
+                                    pointBorderColor: '#FFFFFF',
+                                    pointBorderWidth: 1.5,
+                                }
+                            ]
+                        }}
+                        options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                    titleColor: '#F8FAFC',
+                                    bodyColor: '#E2E8F0',
+                                    padding: 12,
+                                    cornerRadius: 10,
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: { color: '#F1F5F9' },
+                                    ticks: { font: { family: "'Inter', sans-serif", weight: 'bold', size: 11 }, color: '#475569' }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    grid: { color: '#F1F5F9' },
+                                    ticks: { precision: 0, font: { family: "'Inter', sans-serif", size: 11 }, color: '#64748B' }
+                                }
+                            }
+                        }}
+                    />
+                </div>
+
+                <div className="mt-5 p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
+                    <div className="w-1.5 self-stretch rounded-full bg-sanatorio-primary shrink-0" />
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                        <strong className="text-slate-800">Cómo interpretar este gráfico de línea:</strong> La curva azul muestra la demanda de reportes recibidos y la curva verde los cierres efectivos. Cuando ambas curvas se mantienen próximas, el sanatorio absorbe la demanda sin acumular pasivo pendiente; si la brecha se amplía, indica acumulación de casos abiertos en ese período.
                     </p>
+                </div>
+            </div>
 
-                    {(() => {
-                        const green = stats.byUrgency.Verdes;
-                        const yellow = stats.byUrgency.Amarillos;
-                        const red = stats.byUrgency.Rojos;
-                        const total = green + yellow + red || 1;
-                        const pGreen = (green / total) * 100;
-                        const pYellow = (yellow / total) * 100;
-                        const pRed = (red / total) * 100;
-
-                        const segments = [
-                            { label: 'Leve', count: green, pct: pGreen, color: '#22c55e', bg: 'bg-green-50', border: 'border-green-100', text: 'text-green-700', barBg: 'bg-green-200', barFill: 'bg-green-500' },
-                            { label: 'Medio', count: yellow, pct: pYellow, color: '#eab308', bg: 'bg-yellow-50', border: 'border-yellow-100', text: 'text-yellow-700', barBg: 'bg-yellow-200', barFill: 'bg-yellow-500' },
-                            { label: 'Crítico', count: red, pct: pRed, color: '#ef4444', bg: 'bg-red-50', border: 'border-red-100', text: 'text-red-700', barBg: 'bg-red-200', barFill: 'bg-red-500' },
-                        ];
-
-                        // Build conic-gradient stops
-                        let cumulative = 0;
-                        const stops = segments.map(s => {
-                            const start = cumulative;
-                            cumulative += s.pct;
-                            return `${s.color} ${start}% ${cumulative}%`;
-                        }).join(', ');
-
-                        return (
-                            <div className="flex flex-col sm:flex-row items-center gap-8 flex-1">
-                                {/* Donut */}
-                                <div className="relative w-44 h-44 shrink-0">
-                                    <div
-                                        className="w-full h-full rounded-full shadow-inner"
-                                        style={{
-                                            background: total > 1
-                                                ? `conic-gradient(${stops})`
-                                                : '#e5e7eb',
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Sector Breakdown Horizontal Bar Chart */}
+                <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
+                    <div>
+                        <span className="text-[11px] font-black uppercase tracking-widest text-sanatorio-primary">
+                            Demanda por Servicio · Gráfico de Barras
+                        </span>
+                        <h3 className="text-lg font-black text-slate-800 mt-0.5 mb-1 flex items-center gap-2">
+                            <BarChart3 className="w-5 h-5 text-sanatorio-primary" />
+                            Hallazgos Recibidos por Sector (Destino)
+                        </h3>
+                        <p className="text-xs text-slate-500 mb-4">
+                            Identifica qué áreas concentran mayor carga de reportes asignados. Hacé click en una barra para auditar sus casos.
+                        </p>
+                        <div className="space-y-2">
+                            {stats.bySector.length > 0 ? (
+                                <div className="h-[360px] w-full mt-2">
+                                    <Bar
+                                        data={{
+                                            labels: stats.bySector.map(c => c.sector),
+                                            datasets: [{
+                                                label: 'Reportes Recibidos',
+                                                data: stats.bySector.map(c => c.count),
+                                                backgroundColor: '#00548B',
+                                                hoverBackgroundColor: '#003C66',
+                                                borderRadius: 6,
+                                                borderSkipped: false,
+                                                barThickness: 'flex',
+                                                maxBarThickness: 28,
+                                            }]
+                                        }}
+                                        options={{
+                                            indexAxis: 'y',
+                                            responsive: true,
+                                            maintainAspectRatio: false,
+                                            onClick: (_event, elements, chart) => {
+                                                if (elements.length > 0) {
+                                                    const index = elements[0].index;
+                                                    const label = chart.data.labels![index] as string;
+                                                    handleMetricClick({ sector: label });
+                                                }
+                                            },
+                                            layout: { padding: { right: 24 } },
+                                            plugins: {
+                                                legend: { display: false },
+                                                tooltip: {
+                                                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                                    titleColor: '#F8FAFC',
+                                                    bodyColor: '#E2E8F0',
+                                                    padding: 12,
+                                                    callbacks: {
+                                                        label: (context: any) => {
+                                                            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                                                            const percentage = total > 0 ? Math.round((context.raw / total) * 100) : 0;
+                                                            return ` ${context.raw} Reportes (${percentage}% del total)`;
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            scales: {
+                                                x: {
+                                                    beginAtZero: true,
+                                                    grid: { display: true, color: '#F1F5F9' },
+                                                    ticks: { precision: 0, font: { family: "'Inter', sans-serif" }, color: '#64748B' }
+                                                },
+                                                y: {
+                                                    grid: { display: false },
+                                                    ticks: { font: { family: "'Inter', sans-serif", weight: 'bold', size: 11 }, color: '#334155' }
+                                                }
+                                            }
                                         }}
                                     />
-                                    {/* Inner white circle (donut hole) */}
-                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[65%] h-[65%] bg-white rounded-full shadow-sm flex flex-col items-center justify-center">
-                                        <span className="text-3xl font-black text-gray-800 leading-none">{green + yellow + red}</span>
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Total</span>
-                                    </div>
                                 </div>
+                            ) : (
+                                <div className="text-center py-10 text-gray-400">
+                                    <BarChart3 className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                                    <p className="text-sm">No hay sectores registrados.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
-                                {/* Legend */}
-                                <div className="flex-1 space-y-3 w-full">
-                                    {segments.map(s => (
-                                        <div key={s.label} className={`flex items-center gap-3 p-3 rounded-xl ${s.bg} border ${s.border} transition-all hover:scale-[1.02]`}>
-                                            <div className="w-3.5 h-3.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-baseline justify-between mb-1">
-                                                    <span className={`text-sm font-bold ${s.text}`}>{s.label}</span>
-                                                    <span className="text-xs font-bold text-gray-500">{s.count} <span className="text-gray-400 font-medium">({s.pct.toFixed(0)}%)</span></span>
-                                                </div>
-                                                <div className={`w-full h-1.5 rounded-full ${s.barBg}`}>
-                                                    <div className={`h-full rounded-full ${s.barFill} transition-all duration-700`} style={{ width: `${s.pct}%` }} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
+                    <div className="mt-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                            <strong className="text-slate-800">Lectura del indicador:</strong> Un volumen alto en un servicio no implica necesariamente menor calidad; suele reflejar mayor complejidad asistencial o mayor flujo de pacientes. Debe evaluarse junto con su tasa de resolución.
+                        </p>
+                    </div>
+                </div>
+
+                {/* Urgency / Triage Explanatory Bar Chart (replaces old Donut) */}
+                <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
+                    <div>
+                        <span className="text-[11px] font-black uppercase tracking-widest text-sanatorio-primary">
+                            Matriz de Riesgo Clínico · Gráfico de Barras Explicativo
+                        </span>
+                        <h3 className="text-lg font-black text-slate-800 mt-0.5 mb-1 flex items-center gap-2">
+                            <Zap className="w-5 h-5 text-amber-500" />
+                            Estratificación por Gravedad (Triage IA) y Felicitaciones
+                        </h3>
+                        <p className="text-xs text-slate-500 mb-4">
+                            Comparativa directa por nivel de severidad clínica asignado automáticamente por Inteligencia Artificial.
+                        </p>
+
+                        <div className="h-[230px] w-full">
+                            <Bar
+                                data={{
+                                    labels: ['Crítico (Rojo)', 'Moderado (Amarillo)', 'Leve (Verde)', 'Felicitaciones'],
+                                    datasets: [{
+                                        label: 'Cantidad de Casos',
+                                        data: [
+                                            stats.byUrgency.Rojos,
+                                            stats.byUrgency.Amarillos,
+                                            stats.byUrgency.Verdes,
+                                            stats.felicitaciones,
+                                        ],
+                                        backgroundColor: ['#DC2626', '#D97706', '#16A34A', '#00A99D'],
+                                        borderRadius: 8,
+                                        maxBarThickness: 54,
+                                    }]
+                                }}
+                                options={{
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: { display: false },
+                                        tooltip: {
+                                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                            padding: 12,
+                                            callbacks: {
+                                                label: (context: any) => {
+                                                    const pct = stats.total > 0 ? Math.round((context.raw / stats.total) * 100) : 0;
+                                                    return ` ${context.raw} casos (${pct}% del volumen total)`;
+                                                }
+                                            }
+                                        }
+                                    },
+                                    scales: {
+                                        x: {
+                                            grid: { display: false },
+                                            ticks: { font: { family: "'Inter', sans-serif", weight: 'bold', size: 11 }, color: '#334155' }
+                                        },
+                                        y: {
+                                            beginAtZero: true,
+                                            grid: { color: '#F1F5F9' },
+                                            ticks: { precision: 0, font: { family: "'Inter', sans-serif", size: 11 }, color: '#64748B' }
+                                        }
+                                    }
+                                }}
+                            />
+                        </div>
+
+                        {/* Explanatory Severity Legend Cards */}
+                        <div className="grid grid-cols-2 gap-2.5 mt-4">
+                            <div
+                                onClick={() => handleMetricClick({ urgency: 'Rojo' })}
+                                className="p-3 rounded-xl bg-red-50/70 border border-red-200/80 cursor-pointer hover:bg-red-50 transition-colors"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-black text-red-700">🔴 Crítico (Rojo)</span>
+                                    <span className="text-sm font-black text-red-700">{stats.byUrgency.Rojos}</span>
                                 </div>
+                                <p className="text-[11px] text-red-800/80 mt-1 leading-snug">
+                                    Riesgo asistencial directo. Requiere contención en &lt; 24-48 hs.
+                                </p>
                             </div>
-                        );
-                    })()}
 
-                    <p className="text-center text-xs text-gray-400 mt-6">Distribución basada en Triage AI</p>
+                            <div
+                                onClick={() => handleMetricClick({ urgency: 'Amarillo' })}
+                                className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 cursor-pointer hover:bg-amber-50 transition-colors"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-black text-amber-700">🟡 Moderado (Amarillo)</span>
+                                    <span className="text-sm font-black text-amber-700">{stats.byUrgency.Amarillos}</span>
+                                </div>
+                                <p className="text-[11px] text-amber-800/80 mt-1 leading-snug">
+                                    Desvío operativo o demora que afecta la calidad percibida.
+                                </p>
+                            </div>
+
+                            <div
+                                onClick={() => handleMetricClick({ urgency: 'Verde' })}
+                                className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/80 cursor-pointer hover:bg-emerald-50 transition-colors"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-black text-emerald-700">🟢 Leve (Verde)</span>
+                                    <span className="text-sm font-black text-emerald-700">{stats.byUrgency.Verdes}</span>
+                                </div>
+                                <p className="text-[11px] text-emerald-800/80 mt-1 leading-snug">
+                                    Observación menor u oportunidad de mejora preventiva.
+                                </p>
+                            </div>
+
+                            <div
+                                onClick={() => handleMetricClick({ category: 'Felicitación' })}
+                                className="p-3 rounded-xl bg-teal-50/70 border border-teal-200/80 cursor-pointer hover:bg-teal-50 transition-colors"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-black text-teal-700">🌟 Felicitaciones</span>
+                                    <span className="text-sm font-black text-teal-700">{stats.felicitaciones}</span>
+                                </div>
+                                <p className="text-[11px] text-teal-800/80 mt-1 leading-snug">
+                                    Reconocimientos positivos al equipo que fortalecen el clima laboral.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
