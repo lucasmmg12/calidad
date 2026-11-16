@@ -50,6 +50,7 @@ import { generateId } from '../utils/compat';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { ChatWindow } from './ChatWindow';
+import { ResolutionForm } from './ResolutionForm';
 import { generateValidationPDF, isFelicitacionReport } from '../utils/validationPdfExport';
 import { PDF_COLORS, loadLogoImage, drawLogoBadge, sanitizePdfText, applyInstitutionalFooters } from '../utils/pdfTheme';
 import { exportCasesToExcel } from '../utils/institutionalExport';
@@ -1195,6 +1196,13 @@ export const Dashboard = () => {
     const [editedAiSummary, setEditedAiSummary] = useState('');
     const [isSavingAiSummary, setIsSavingAiSummary] = useState(false);
 
+    // Inline Resolution State (so Sector Responsables / Admins can respond directly inside the Dashboard modal)
+    const [showInlineResolution, setShowInlineResolution] = useState(false);
+    const [inlineAssignmentTarget, setInlineAssignmentTarget] = useState<any | null>(null);
+    const [showInlineRejectModal, setShowInlineRejectModal] = useState(false);
+    const [inlineRejectReason, setInlineRejectReason] = useState('');
+    const [isRejectingInline, setIsRejectingInline] = useState(false);
+
     // Sync observation text & AI summary when a report is selected
     useEffect(() => {
         if (selectedReport) {
@@ -1202,8 +1210,193 @@ export const Dashboard = () => {
             setObservationSaved(false);
             setEditedAiSummary(selectedReport.ai_summary || '');
             setIsEditingAiSummary(false);
+            setShowInlineResolution(false);
+            setInlineAssignmentTarget(null);
+            setShowInlineRejectModal(false);
+            setInlineRejectReason('');
         }
     }, [selectedReport?.id]);
+
+    const buildInlineResolutionReportData = (report: any, assignment?: any | null) => {
+        const isFelicitacionCase =
+            report.finding_type === 'Felicitación' ||
+            report.ai_category === 'Felicitación' ||
+            assignment?.management_type === 'felicitacion' ||
+            report.management_type === 'felicitacion';
+
+        if (assignment) {
+            const getAssignmentStep = () => {
+                if (isFelicitacionCase && !assignment.immediate_action) return 'step1_pending';
+                if (assignment.status === 'resolved' || assignment.status === 'quality_validation') return 'step2_submitted';
+                if (report.resolution_step === 'step2_draft') return 'step2_draft';
+                if (report.resolution_step === 'step1_completed') return 'step1_completed';
+                if (assignment.immediate_action) return 'step1_completed';
+                return 'step1_pending';
+            };
+
+            const needsRCA = !isFelicitacionCase && (assignment.management_type === 'desvio' || assignment.management_type === 'adverse');
+            const assignmentDraft = (assignment.root_cause || assignment.corrective_plan || assignment.implementation_date)
+                ? {
+                    rootCause: assignment.root_cause || '',
+                    correctivePlan: assignment.corrective_plan || '',
+                    implementationDate: assignment.implementation_date || '',
+                }
+                : null;
+
+            return {
+                id: report.id,
+                trackingId: report.tracking_id,
+                description: report.content,
+                isAdverseEvent: needsRCA,
+                sector: assignment.sector || report.sector,
+                originSector: report.origin_sector || report.reporter_sector || '',
+                reporterSector: report.reporter_sector || '',
+                contactNumber: report.contact_number,
+                isAnonymous: report.is_anonymous || false,
+                assignmentId: assignment.id,
+                status: assignment.status,
+                resolutionStep: getAssignmentStep(),
+                draftData: assignmentDraft || report.draft_data || null,
+                draftUpdatedAt: report.draft_updated_at || null,
+                immediateAction: assignment.immediate_action || report.resolution_notes || '',
+                step1EvidenceUrls: assignment.resolution_evidence_urls || report.step1_evidence_urls || [],
+                evidenceUrls: report.evidence_urls || [],
+                qualityObservations: report.quality_observations || '',
+                managementType: isFelicitacionCase ? 'felicitacion' : (assignment.management_type || 'simple'),
+            };
+        }
+
+        return {
+            id: report.id,
+            trackingId: report.tracking_id,
+            description: report.content,
+            isAdverseEvent: !isFelicitacionCase && (report.is_adverse_event || report.ai_urgency === 'Rojo'),
+            sector: report.sector,
+            originSector: report.origin_sector || report.reporter_sector || '',
+            reporterSector: report.reporter_sector || '',
+            contactNumber: report.contact_number,
+            isAnonymous: report.is_anonymous || false,
+            assignmentId: undefined,
+            status: report.status,
+            resolutionStep: report.resolution_step || 'step1_pending',
+            draftData: report.draft_data || null,
+            draftUpdatedAt: report.draft_updated_at || null,
+            immediateAction: report.resolution_notes || '',
+            step1EvidenceUrls: report.step1_evidence_urls || [],
+            evidenceUrls: report.evidence_urls || [],
+            qualityObservations: report.quality_observations || '',
+            managementType: isFelicitacionCase ? 'felicitacion' : (report.management_type || 'simple'),
+        };
+    };
+
+    const refreshSelectedReportAndAssignments = async (reportId: string) => {
+        const [{ data: updatedReport }, { data: updatedAssignments }] = await Promise.all([
+            supabase.from('reports').select('*').eq('id', reportId).single(),
+            supabase.from('sector_assignments').select('*').eq('report_id', reportId).order('created_at', { ascending: true }),
+        ]);
+
+        if (updatedReport) {
+            setSelectedReport(updatedReport);
+            setReports(prev => prev.map(r => (r.id === reportId ? updatedReport : r)));
+        }
+        if (updatedAssignments) {
+            setSectorAssignmentsData(updatedAssignments);
+        }
+    };
+
+    const handleInlineResolutionSubmit = async (formData: any, assignment?: any | null) => {
+        if (!selectedReport) return;
+        try {
+            if (assignment?.id) {
+                const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+                const sectorNote = assignment.sector || selectedReport.sector || 'sector';
+
+                if (formData.isStep1Only) {
+                    const { error: assignErr } = await supabase
+                        .from('sector_assignments')
+                        .update({
+                            immediate_action: formData.immediateAction,
+                            resolution_evidence_urls: formData.evidenceUrls || [],
+                        })
+                        .eq('id', assignment.id);
+                    if (assignErr) throw assignErr;
+
+                    const logEntry = `[${timestamp}] 📝 PASO 1 COMPLETADO: ${sectorNote} registró acción inmediata (pendiente análisis profundo)`;
+                    const currentNotes = selectedReport.notes || '';
+                    const updatedNotes = currentNotes ? `${currentNotes}\n\n${logEntry}` : logEntry;
+                    await supabase.from('reports').update({ notes: updatedNotes }).eq('id', selectedReport.id);
+                } else {
+                    const { error: assignErr } = await supabase
+                        .from('sector_assignments')
+                        .update({
+                            status: 'resolved',
+                            immediate_action: formData.immediateAction,
+                            root_cause: formData.rootCause || null,
+                            corrective_plan: formData.correctivePlan || null,
+                            implementation_date: formData.implementationDate || null,
+                            resolution_evidence_urls: formData.evidenceUrls || [],
+                            resolved_at: new Date().toISOString(),
+                        })
+                        .eq('id', assignment.id);
+                    if (assignErr) throw assignErr;
+
+                    const logEntry = `[${timestamp}] ✅ RESOLUCIÓN RECIBIDA: ${sectorNote} completó su gestión`;
+                    const currentNotes = selectedReport.notes || '';
+                    const updatedNotes = currentNotes ? `${currentNotes}\n\n${logEntry}` : logEntry;
+                    await supabase.from('reports').update({ notes: updatedNotes }).eq('id', selectedReport.id);
+                }
+            }
+
+            await refreshSelectedReportAndAssignments(selectedReport.id);
+        } catch (err: any) {
+            console.error('[InlineResolution] Error:', err);
+            alert('Error al guardar la resolución: ' + (err.message || 'Intente nuevamente'));
+        }
+    };
+
+    const handleInlineRejectConfirm = async (assignment?: any | null) => {
+        if (!selectedReport || !inlineRejectReason.trim()) return;
+        setIsRejectingInline(true);
+        try {
+            const timestamp = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+            const rejectionLog = `[${timestamp}] 🔴 RECHAZO DE ASIGNACIÓN: ${inlineRejectReason.trim()}`;
+            const currentNotes = selectedReport.notes || '';
+            const updatedNotes = currentNotes ? `${currentNotes}\n\n${rejectionLog}` : rejectionLog;
+
+            if (assignment?.id) {
+                const { error: assignErr } = await supabase
+                    .from('sector_assignments')
+                    .update({
+                        status: 'rejected',
+                        notes: inlineRejectReason.trim(),
+                        resolved_at: new Date().toISOString(),
+                    })
+                    .eq('id', assignment.id);
+                if (assignErr) throw assignErr;
+            }
+
+            const { error } = await supabase
+                .from('reports')
+                .update({
+                    status: 'assignment_rejected',
+                    notes: updatedNotes,
+                })
+                .eq('id', selectedReport.id);
+
+            if (error) throw error;
+
+            setShowInlineRejectModal(false);
+            setInlineRejectReason('');
+            setShowInlineResolution(false);
+            setInlineAssignmentTarget(null);
+            await refreshSelectedReportAndAssignments(selectedReport.id);
+        } catch (err: any) {
+            console.error('[InlineReject] Error:', err);
+            alert('Error al rechazar la asignación: ' + (err.message || 'Intente nuevamente'));
+        } finally {
+            setIsRejectingInline(false);
+        }
+    };
 
     const [feedbackModal, setFeedbackModal] = useState<{
         isOpen: boolean;
@@ -3933,6 +4126,43 @@ export const Dashboard = () => {
                                                                             Enviar Recordatorio
                                                                         </button>
                                                                     )}
+
+                                                                    {/* Responder desde acá — for sector responsables (or admins) */}
+                                                                    {assignment.status === 'pending' && (sectors?.includes(assignment.sector) || isAdmin) && (
+                                                                        <div className="mt-2.5 flex flex-col gap-2">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => {
+                                                                                    if (inlineAssignmentTarget?.id === assignment.id && showInlineResolution) {
+                                                                                        setShowInlineResolution(false);
+                                                                                        setInlineAssignmentTarget(null);
+                                                                                    } else {
+                                                                                        setInlineAssignmentTarget(assignment);
+                                                                                        setShowInlineResolution(true);
+                                                                                    }
+                                                                                }}
+                                                                                className="w-full py-2.5 px-3 bg-sanatorio-primary text-white font-bold text-xs rounded-lg hover:opacity-90 transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                                                                            >
+                                                                                <Edit2 className="w-3.5 h-3.5" />
+                                                                                {inlineAssignmentTarget?.id === assignment.id && showInlineResolution
+                                                                                    ? 'Ocultar Formulario de Respuesta'
+                                                                                    : `Responder desde acá (${sectorLabel})`}
+                                                                            </button>
+
+                                                                            {inlineAssignmentTarget?.id === assignment.id && showInlineResolution && (
+                                                                                <div className="mt-2 pt-3 border-t border-slate-200">
+                                                                                    <ResolutionForm
+                                                                                        reportData={buildInlineResolutionReportData(selectedReport, assignment)}
+                                                                                        onSubmit={(fd) => handleInlineResolutionSubmit(fd, assignment)}
+                                                                                        onReject={() => {
+                                                                                            setInlineAssignmentTarget(assignment);
+                                                                                            setShowInlineRejectModal(true);
+                                                                                        }}
+                                                                                    />
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             );
                                                         });
@@ -4165,25 +4395,110 @@ export const Dashboard = () => {
                                             );
                                         }
 
+                                        const activeAssignmentForSector =
+                                            sectorAssignmentsData.find(a => a.status === 'pending' && sectors?.includes(a.sector)) ||
+                                            sectorAssignmentsData.find(a => a.status !== 'rejected' && sectors?.includes(a.sector)) ||
+                                            sectorAssignmentsData.find(a => a.status === 'pending') ||
+                                            null;
+
+                                        const isUserResponsibleForThisCase = Boolean(
+                                            (selectedReport.sector && sectors?.includes(selectedReport.sector)) ||
+                                            sectorAssignmentsData.some(a => a.status === 'pending' && sectors?.includes(a.sector))
+                                        );
+
+                                        const fullScreenResolutionUrl = activeAssignmentForSector?.id
+                                            ? `/resolver-caso/${selectedReport.tracking_id}/${activeAssignmentForSector.id}`
+                                            : `/resolver-caso/${selectedReport.tracking_id}`;
+
                                         return (
-                                            // VISTA ESPERANDO RESPUESTA — con historial de soluciones rechazadas
+                                            // VISTA ESPERANDO RESPUESTA — permite responder directamente al Responsable del sector (y Admin)
                                             <div className="space-y-4">
-                                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 text-center">
-                                                    <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-3" />
-                                                    <h4 className="font-bold text-blue-900">Esperando Resolución</h4>
-                                                    <p className="text-sm text-blue-700 mt-1 mb-4">
-                                                        La solicitud ha sido enviada al responsable. <br />
-                                                        El sistema te notificará cuando haya respuesta.
-                                                    </p>
-                                                    {isAdmin && (
-                                                        <button
-                                                            onClick={() => setShowReferralModal(true)}
-                                                            className="text-xs font-bold text-blue-600 hover:underline"
-                                                        >
-                                                            Reenviar Solicitud
-                                                        </button>
-                                                    )}
-                                                </div>
+                                                {isUserResponsibleForThisCase || showInlineResolution ? (
+                                                    <div className="space-y-3">
+                                                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                            <div>
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-sanatorio-primary block">
+                                                                    Gestión Directa de Sector
+                                                                </span>
+                                                                <h4 className="font-bold text-slate-800 text-sm">
+                                                                    Responder y Resolver Caso #{selectedReport.tracking_id}
+                                                                </h4>
+                                                                <p className="text-xs text-slate-600 mt-0.5">
+                                                                    Completá la resolución directamente desde esta ventana.
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 shrink-0">
+                                                                <a
+                                                                    href={fullScreenResolutionUrl}
+                                                                    className="px-3 py-1.5 bg-white border border-blue-200 text-sanatorio-primary rounded-lg text-xs font-bold hover:bg-blue-50 transition-all flex items-center gap-1.5 shadow-2xs"
+                                                                    title="Abrir en vista de pantalla completa"
+                                                                >
+                                                                    <ExternalLink className="w-3.5 h-3.5" />
+                                                                    Pantalla completa
+                                                                </a>
+                                                                {!isUserResponsibleForThisCase && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setShowInlineResolution(false)}
+                                                                        className="px-2.5 py-1.5 bg-white border border-slate-200 text-slate-500 rounded-lg text-xs font-bold hover:bg-slate-100"
+                                                                    >
+                                                                        Ocultar
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {isAdmin && (
+                                                            <div className="flex justify-end">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setShowReferralModal(true)}
+                                                                    className="text-xs font-bold text-sanatorio-primary hover:underline flex items-center gap-1"
+                                                                >
+                                                                    <Send className="w-3 h-3" /> Reenviar / Derivar a otro sector
+                                                                </button>
+                                                            </div>
+                                                        )}
+
+                                                        <ResolutionForm
+                                                            reportData={buildInlineResolutionReportData(selectedReport, activeAssignmentForSector)}
+                                                            onSubmit={(fd) => handleInlineResolutionSubmit(fd, activeAssignmentForSector)}
+                                                            onReject={() => {
+                                                                setInlineAssignmentTarget(activeAssignmentForSector);
+                                                                setShowInlineRejectModal(true);
+                                                            }}
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 text-center space-y-3">
+                                                        <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-1" />
+                                                        <h4 className="font-bold text-blue-900">Esperando Resolución</h4>
+                                                        <p className="text-sm text-blue-700">
+                                                            La solicitud ha sido enviada al responsable del sector. <br />
+                                                            El sistema notificará cuando se registre la respuesta.
+                                                        </p>
+                                                        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setShowInlineResolution(true)}
+                                                                className="w-full sm:w-auto px-4 py-2.5 bg-sanatorio-primary text-white font-bold text-xs rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                                                            >
+                                                                <Edit2 className="w-3.5 h-3.5" />
+                                                                Responder / Resolver desde acá
+                                                            </button>
+                                                            {isAdmin && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setShowReferralModal(true)}
+                                                                    className="w-full sm:w-auto px-4 py-2.5 bg-white border border-blue-200 text-blue-700 font-bold text-xs rounded-xl hover:bg-blue-100/60 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                                                >
+                                                                    <Send className="w-3.5 h-3.5" />
+                                                                    Reenviar Solicitud
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
 
                                                 {/* Historial de Soluciones Rechazadas (resolution_history) */}
                                                 {selectedReport.resolution_history && selectedReport.resolution_history.length > 0 && (
@@ -4916,13 +5231,93 @@ export const Dashboard = () => {
                                                             </button>
                                                         </div>
                                                     </>
+                                                ) : (selectedReport.sector && sectors?.includes(selectedReport.sector)) || showInlineResolution ? (
+                                                    <div className="space-y-3">
+                                                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between gap-3">
+                                                            <div>
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-sanatorio-primary block">
+                                                                    Responsable de Sector
+                                                                </span>
+                                                                <h4 className="font-bold text-slate-800 text-sm">
+                                                                    Responder Caso #{selectedReport.tracking_id}
+                                                                </h4>
+                                                            </div>
+                                                            <a
+                                                                href={`/resolver-caso/${selectedReport.tracking_id}`}
+                                                                className="px-3 py-1.5 bg-white border border-blue-200 text-sanatorio-primary rounded-lg text-xs font-bold hover:bg-blue-50 transition-all flex items-center gap-1.5"
+                                                            >
+                                                                <ExternalLink className="w-3.5 h-3.5" />
+                                                                Pantalla completa
+                                                            </a>
+                                                        </div>
+                                                        <ResolutionForm
+                                                            reportData={buildInlineResolutionReportData(selectedReport, null)}
+                                                            onSubmit={(fd) => handleInlineResolutionSubmit(fd, null)}
+                                                            onReject={() => {
+                                                                setInlineAssignmentTarget(null);
+                                                                setShowInlineRejectModal(true);
+                                                            }}
+                                                        />
+                                                    </div>
                                                 ) : (
-                                                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 text-center space-y-2">
+                                                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 text-center space-y-3">
                                                         <Eye className="w-8 h-8 text-blue-400 mx-auto" />
                                                         <h4 className="font-bold text-blue-800 text-sm">Modo Visualización</h4>
                                                         <p className="text-xs text-blue-600">Este caso está pendiente de derivación por el equipo de Calidad. Aquí podrás seguir su progreso.</p>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowInlineResolution(true)}
+                                                            className="px-4 py-2 bg-sanatorio-primary text-white font-bold text-xs rounded-xl hover:opacity-90 transition-all inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
+                                                        >
+                                                            <Edit2 className="w-3.5 h-3.5" />
+                                                            Responder este caso desde acá
+                                                        </button>
                                                     </div>
                                                 )}
+                                            </div>
+                                        )}
+
+                                        {/* Modal para Rechazar Asignación desde el formulario inline */}
+                                        {showInlineRejectModal && (
+                                            <div className="mt-4 p-4 rounded-xl bg-orange-50 border border-orange-200 space-y-3 animate-in fade-in duration-200">
+                                                <div className="flex items-center justify-between">
+                                                    <h5 className="text-xs font-black uppercase tracking-wider text-orange-800 flex items-center gap-1.5">
+                                                        <XCircle className="w-4 h-4 text-orange-600" />
+                                                        Indicar que no corresponde al sector
+                                                    </h5>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowInlineRejectModal(false)}
+                                                        className="text-orange-500 hover:text-orange-700"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                                <textarea
+                                                    rows={3}
+                                                    value={inlineRejectReason}
+                                                    onChange={e => setInlineRejectReason(e.target.value)}
+                                                    placeholder="Explicá brevemente por qué este caso corresponde a otro sector..."
+                                                    className="w-full p-3 rounded-lg bg-white border border-orange-200 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                                />
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowInlineRejectModal(false)}
+                                                        className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 text-xs font-bold"
+                                                    >
+                                                        Cancelar
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        disabled={!inlineRejectReason.trim() || isRejectingInline}
+                                                        onClick={() => handleInlineRejectConfirm(inlineAssignmentTarget)}
+                                                        className="px-3.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold disabled:opacity-50 flex items-center gap-1.5"
+                                                    >
+                                                        {isRejectingInline && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                                                        Confirmar Rechazo
+                                                    </button>
+                                                </div>
                                             </div>
                                         )}
                             </div>
