@@ -226,32 +226,38 @@ export const computeSectorPerformance = (reports: any[]) => {
     >();
 
     reports.forEach((r) => {
-        const code = r.sector || 'Sin asignar';
-        const label = getSectorLabel(code);
-        const curr = map.get(code) || {
-            sectorCode: code,
-            sectorLabel: label,
-            received: 0,
-            resolved: 0,
-            pending: 0,
-            critical: 0,
-            felicitaciones: 0,
-        };
+        const effSectors: string[] =
+            Array.isArray(r.effective_sectors) && r.effective_sectors.length > 0
+                ? r.effective_sectors
+                : [r.sector || 'Sin asignar'];
 
         const isFelic =
             r.finding_type?.startsWith('Felicitaci') || r.ai_category?.startsWith('Felicitaci');
 
-        curr.received += 1;
-        if (isFelic) {
-            curr.felicitaciones += 1;
-        } else if (r.status === 'resolved') {
-            curr.resolved += 1;
-        } else {
-            curr.pending += 1;
-        }
-        if (r.ai_urgency === 'Rojo') curr.critical += 1;
+        effSectors.forEach((code) => {
+            const label = getSectorLabel(code);
+            const curr = map.get(code) || {
+                sectorCode: code,
+                sectorLabel: label,
+                received: 0,
+                resolved: 0,
+                pending: 0,
+                critical: 0,
+                felicitaciones: 0,
+            };
 
-        map.set(code, curr);
+            curr.received += 1;
+            if (isFelic) {
+                curr.felicitaciones += 1;
+            } else if (r.status === 'resolved') {
+                curr.resolved += 1;
+            } else {
+                curr.pending += 1;
+            }
+            if (r.ai_urgency === 'Rojo') curr.critical += 1;
+
+            map.set(code, curr);
+        });
     });
 
     return Array.from(map.values()).sort((a, b) => b.received - a.received);

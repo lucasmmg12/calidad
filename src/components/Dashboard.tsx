@@ -1576,27 +1576,97 @@ export const Dashboard = () => {
 
     const fetchReports = async () => {
         setLoading(true);
-        let query = supabase
-            .from('reports')
-            .select('*')
-            .order('created_at', { ascending: false });
+        if (role === 'responsable' && sectors.length === 0) {
+            setReports([]);
+            setLoading(false);
+            return;
+        }
 
-        // Role-based filtering
-        if (role === 'responsable') {
-            if (sectors.length > 0) {
-                query = query.in('sector', sectors);
-            } else {
-                // If responsible has no sectors, return empty
-                setReports([]);
+        const pageSize = 1000;
+        let allReports: any[] = [];
+        let from = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+            const { data: batch, error } = await supabase
+                .from('reports')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .range(from, from + pageSize - 1);
+
+            if (error) {
+                console.error('Error fetching reports:', error);
                 setLoading(false);
                 return;
             }
+
+            if (batch && batch.length > 0) {
+                allReports = allReports.concat(batch);
+                if (batch.length < pageSize) {
+                    hasMore = false;
+                } else {
+                    from += pageSize;
+                }
+            } else {
+                hasMore = false;
+            }
         }
 
-        const { data, error } = await query;
+        // Also fetch active sector_assignments so multi-sector or re-derived cases are linked to their destination sectors
+        let allAssignments: any[] = [];
+        let assignFrom = 0;
+        let assignHasMore = true;
+        while (assignHasMore) {
+            const { data: assignBatch, error: assignErr } = await supabase
+                .from('sector_assignments')
+                .select('report_id, sector, status')
+                .range(assignFrom, assignFrom + pageSize - 1);
 
-        if (error) console.error('Error fetching reports:', error);
-        else setReports(data || []);
+            if (assignErr || !assignBatch || assignBatch.length === 0) {
+                assignHasMore = false;
+            } else {
+                allAssignments = allAssignments.concat(assignBatch);
+                if (assignBatch.length < pageSize) {
+                    assignHasMore = false;
+                } else {
+                    assignFrom += pageSize;
+                }
+            }
+        }
+
+        const assignedSectorsByReport = new Map<string, Set<string>>();
+        allAssignments.forEach(a => {
+            if (!a.report_id || !a.sector || a.status === 'rejected') return;
+            if (!assignedSectorsByReport.has(a.report_id)) {
+                assignedSectorsByReport.set(a.report_id, new Set());
+            }
+            assignedSectorsByReport.get(a.report_id)!.add(a.sector);
+        });
+
+        const enriched = allReports.map(r => {
+            const fromAssignments = Array.from(assignedSectorsByReport.get(r.id) || []);
+            const effectiveSectors = Array.from(
+                new Set([r.sector, ...fromAssignments].filter(Boolean))
+            );
+            return {
+                ...r,
+                effective_sectors: effectiveSectors,
+            };
+        });
+
+        // Role-based filtering
+        if (role === 'responsable') {
+            setReports(
+                enriched.filter(r =>
+                    (Array.isArray(r.effective_sectors) && r.effective_sectors.some((s: string) => sectors.includes(s))) ||
+                    (r.sector && sectors.includes(r.sector)) ||
+                    (r.reporter_sector && sectors.includes(r.reporter_sector)) ||
+                    (r.origin_sector && sectors.includes(r.origin_sector))
+                )
+            );
+        } else {
+            setReports(enriched);
+        }
         setLoading(false);
     };
 
@@ -1792,11 +1862,13 @@ export const Dashboard = () => {
 
         // Felicitaciones go straight to resolved (no corrective action needed)
         const newStatus = isFelicitacion ? 'resolved' : (isMultiSector ? 'multi_sector_pending' : 'pending_resolution');
+        const updatedPrimarySector = validRows[0]?.sector || selectedReport.sector;
 
         const { error: dbError } = await supabase
             .from('reports')
             .update({
                 status: newStatus,
+                sector: updatedPrimarySector,
                 notes: updatedNotes,
                 is_adverse_event: isAdverse,
                 assigned_to: isMultiSector ? `${validRows.length} sectores` : validRows[0]?.phone || responsiblePhone,
@@ -1806,9 +1878,12 @@ export const Dashboard = () => {
             .eq('id', selectedReport.id);
 
         if (!dbError) {
+            const derivedSectors = validRows.map(vr => vr.sector).filter(Boolean);
             setReports(reports.map(r => r.id === selectedReport.id ? {
                 ...r,
                 status: newStatus,
+                sector: updatedPrimarySector,
+                effective_sectors: Array.from(new Set([updatedPrimarySector, ...(r.effective_sectors || []), ...derivedSectors].filter(Boolean))),
                 notes: updatedNotes,
                 assigned_to: isMultiSector ? `${validRows.length} sectores` : validRows[0]?.phone || responsiblePhone,
                 last_whatsapp_status: (allSuccess || isFelicitacion) ? 'sent' : 'failed',
@@ -2047,25 +2122,27 @@ export const Dashboard = () => {
             report.content?.toLowerCase().includes(searchLower) ||
             report.ai_summary?.toLowerCase().includes(searchLower);
 
-        // Filtro por Sector (multi-select)
+        // Filtro por Sector (multi-select — contempla sector principal, derivaciones en sector_assignments y sector origen)
+        const effSectors: string[] = Array.isArray(report.effective_sectors) ? report.effective_sectors : [report.sector].filter(Boolean);
         const matchesSector = listSectorFilter.length === 0 || 
+            effSectors.some(s => listSectorFilter.includes(s)) ||
             listSectorFilter.includes(report.sector) || 
             (report.reporter_sector && listSectorFilter.includes(report.reporter_sector)) ||
             (report.origin_sector && listSectorFilter.includes(report.origin_sector));
 
-        // Filtro por Fecha Desde
+        // Filtro por Fecha Desde (en zona horaria local para evitar desfase UTC-3)
         let matchesDateFrom = true;
         if (listDateFrom) {
-            const from = new Date(listDateFrom);
-            from.setHours(0, 0, 0, 0);
+            const [y, m, d] = listDateFrom.split('-').map(Number);
+            const from = new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0);
             matchesDateFrom = new Date(report.created_at) >= from;
         }
 
-        // Filtro por Fecha Hasta
+        // Filtro por Fecha Hasta (en zona horaria local para evitar desfase UTC-3)
         let matchesDateTo = true;
         if (listDateTo) {
-            const to = new Date(listDateTo);
-            to.setHours(23, 59, 59, 999);
+            const [y, m, d] = listDateTo.split('-').map(Number);
+            const to = new Date(y, (m || 1) - 1, d || 1, 23, 59, 59, 999);
             matchesDateTo = new Date(report.created_at) <= to;
         }
 

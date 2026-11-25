@@ -111,8 +111,12 @@ export const MetricsDashboard = () => {
                         return false;
                     }
                 }
-                if (caseModalFilter.sector && (r.sector || 'Otros') !== caseModalFilter.sector) {
-                    return false;
+                if (caseModalFilter.sector) {
+                    const effectiveSectors: string[] =
+                        Array.isArray(r.effective_sectors) && r.effective_sectors.length > 0
+                            ? r.effective_sectors
+                            : [r.sector || 'Otros'];
+                    if (!effectiveSectors.includes(caseModalFilter.sector)) return false;
                 }
                 if (
                     caseModalFilter.reporter_sector &&
@@ -282,32 +286,35 @@ export const MetricsDashboard = () => {
     const applyUserFilters = useCallback((reports: any[]) => {
         let result = reports;
 
-        // Multi-sector filter (assigned sector)
+        // Multi-sector filter (assigned sector via r.sector OR sector_assignments, plus origin/reporter sector)
         if (filters.sectors.length > 0) {
-            result = result.filter(r => 
-                filters.sectors.includes(r.sector) ||
-                (r.reporter_sector && filters.sectors.includes(r.reporter_sector)) ||
-                (r.origin_sector && filters.sectors.includes(r.origin_sector))
-            );
-        }
-
-        // Date range: from
-        if (filters.dateFrom) {
-            const from = new Date(filters.dateFrom);
-            from.setHours(0, 0, 0, 0);
             result = result.filter(r => {
-                const d = new Date(r.created_at);
-                return d >= from;
+                const effSectors: string[] = Array.isArray(r.effective_sectors) ? r.effective_sectors : [r.sector].filter(Boolean);
+                return (
+                    effSectors.some(s => filters.sectors.includes(s)) ||
+                    (r.reporter_sector && filters.sectors.includes(r.reporter_sector)) ||
+                    (r.origin_sector && filters.sectors.includes(r.origin_sector))
+                );
             });
         }
 
-        // Date range: to
-        if (filters.dateTo) {
-            const to = new Date(filters.dateTo);
-            to.setHours(23, 59, 59, 999);
+        // Date range: from (parsed in local timezone to avoid UTC-3 shift)
+        if (filters.dateFrom) {
+            const [y, m, d] = filters.dateFrom.split('-').map(Number);
+            const from = new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0);
             result = result.filter(r => {
-                const d = new Date(r.created_at);
-                return d <= to;
+                const rd = new Date(r.created_at);
+                return rd >= from;
+            });
+        }
+
+        // Date range: to (parsed in local timezone to avoid UTC-3 shift)
+        if (filters.dateTo) {
+            const [y, m, d] = filters.dateTo.split('-').map(Number);
+            const to = new Date(y, (m || 1) - 1, d || 1, 23, 59, 59, 999);
+            result = result.filter(r => {
+                const rd = new Date(r.created_at);
+                return rd <= to;
             });
         }
 
@@ -333,37 +340,89 @@ export const MetricsDashboard = () => {
         }
     }, [filters, roleFilteredReports]);
 
-    // ─── Step 1: Fetch all reports and apply ROLE-BASED filter ───
+    // ─── Step 1: Fetch all reports + sector_assignments without 1000-row cap and apply ROLE-BASED filter ───
     const fetchAndFilterByRole = async () => {
         setLoading(true);
-        const { data: reports, error } = await supabase
-            .from('reports')
-            .select('*');
 
-        if (error || !reports) {
-            console.error('Error fetching metrics', error);
-            setLoading(false);
-            return;
+        const pageSize = 1000;
+        let allReports: any[] = [];
+        let from = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+            const { data: batch, error } = await supabase
+                .from('reports')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .range(from, from + pageSize - 1);
+
+            if (error) {
+                console.error('Error fetching metrics reports:', error);
+                setLoading(false);
+                return;
+            }
+
+            if (batch && batch.length > 0) {
+                allReports = allReports.concat(batch);
+                if (batch.length < pageSize) {
+                    hasMore = false;
+                } else {
+                    from += pageSize;
+                }
+            } else {
+                hasMore = false;
+            }
         }
 
-        // Admin & Directivo: View All
-        // Responsable: View ONLY cases assigned to sector (via reports.sector OR sector_assignments)
-        // Outbound reports created BY the sector (reporter_sector) are excluded per business requirements.
-        let roleFiltered = reports;
+        // Fetch all active sector_assignments so multi-sector or re-derived cases are accurately linked to their destination sectors
+        let allAssignments: any[] = [];
+        let assignFrom = 0;
+        let assignHasMore = true;
+        while (assignHasMore) {
+            const { data: assignBatch, error: assignErr } = await supabase
+                .from('sector_assignments')
+                .select('report_id, sector, status')
+                .range(assignFrom, assignFrom + pageSize - 1);
+
+            if (assignErr || !assignBatch || assignBatch.length === 0) {
+                assignHasMore = false;
+            } else {
+                allAssignments = allAssignments.concat(assignBatch);
+                if (assignBatch.length < pageSize) {
+                    assignHasMore = false;
+                } else {
+                    assignFrom += pageSize;
+                }
+            }
+        }
+
+        const assignedSectorsByReport = new Map<string, Set<string>>();
+        allAssignments.forEach(a => {
+            if (!a.report_id || !a.sector || a.status === 'rejected') return;
+            if (!assignedSectorsByReport.has(a.report_id)) {
+                assignedSectorsByReport.set(a.report_id, new Set());
+            }
+            assignedSectorsByReport.get(a.report_id)!.add(a.sector);
+        });
+
+        const enrichedReports = allReports.map(r => {
+            const fromAssignments = Array.from(assignedSectorsByReport.get(r.id) || []);
+            const effectiveSectors = Array.from(
+                new Set([r.sector, ...fromAssignments].filter(Boolean))
+            );
+            return {
+                ...r,
+                effective_sectors: effectiveSectors.length > 0 ? effectiveSectors : ['Otros'],
+            };
+        });
+
+        let roleFiltered = enrichedReports;
 
         if (role === 'responsable' && sectors && sectors.length > 0) {
-            const { data: assignments } = await supabase
-                .from('sector_assignments')
-                .select('report_id, sector')
-                .in('sector', sectors);
-
-            const assignedReportIds = new Set((assignments || []).map(a => a.report_id));
-
-            roleFiltered = reports.filter(r =>
-                (r.sector && sectors.includes(r.sector)) ||
+            roleFiltered = enrichedReports.filter(r =>
+                r.effective_sectors.some((s: string) => sectors.includes(s)) ||
                 (r.reporter_sector && sectors.includes(r.reporter_sector)) ||
-                (r.origin_sector && sectors.includes(r.origin_sector)) ||
-                assignedReportIds.has(r.id)
+                (r.origin_sector && sectors.includes(r.origin_sector))
             );
         } else if (role === 'responsable') {
             roleFiltered = [];
@@ -392,7 +451,8 @@ export const MetricsDashboard = () => {
 
         if (activeSectors.length > 0) {
             filteredReports.forEach(r => {
-                if (r.sector && activeSectors.includes(r.sector)) {
+                const effSectors: string[] = Array.isArray(r.effective_sectors) ? r.effective_sectors : [r.sector].filter(Boolean);
+                if (effSectors.some(s => activeSectors.includes(s))) {
                     totalReceived++;
                 }
                 if ((r.reporter_sector && activeSectors.includes(r.reporter_sector)) || 
@@ -425,13 +485,18 @@ export const MetricsDashboard = () => {
             ? (totalTimeMs / resolvedCountWithDates / (1000 * 60 * 60 * 24)).toFixed(1)
             : 0;
 
-        // By Sector
+        // By Sector (includes both primary sector and active sector_assignments)
         const sectorMap: Record<string, number> = {};
         filteredReports.forEach(r => {
-            const s = r.sector || 'Otros';
-            if (canViewAll || sectors.includes(s)) {
-                sectorMap[s] = (sectorMap[s] || 0) + 1;
-            }
+            const effSectors: string[] =
+                Array.isArray(r.effective_sectors) && r.effective_sectors.length > 0
+                    ? r.effective_sectors
+                    : [r.sector || 'Otros'];
+            effSectors.forEach(s => {
+                if (canViewAll || sectors.includes(s)) {
+                    sectorMap[s] = (sectorMap[s] || 0) + 1;
+                }
+            });
         });
         const bySectorTotal = Object.values(sectorMap).reduce((acc, val) => acc + val, 0);
         const bySector = Object.entries(sectorMap)
