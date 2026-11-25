@@ -1,29 +1,31 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { ReportingForm } from './components/ReportingForm';
-import { Dashboard } from './components/Dashboard';
-import { TrackingPage } from './components/TrackingPage';
-import { MetricsDashboard } from './components/MetricsDashboard';
-import { HelpGuide } from './components/HelpGuide';
-import { AdminLogin } from './components/AdminLogin';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import LegalContent from './components/LegalContent';
-import { Changelog } from './components/Changelog';
-import { AlertRecipientsManager } from './components/AlertRecipientsManager';
-import { UserManagement } from './pages/UserManagement';
-import { ResolutionPage } from './pages/ResolutionPage';
-import { SupplementaryInfoPage } from './pages/SupplementaryInfoPage';
-import { MyCases } from './pages/MyCases';
-import { ProcessAuditPage } from './pages/ProcessAuditPage';
-import Presentation from './pages/Presentation';
-import ManualProcedimientos from './components/ManualProcedimientos';
-import ProfileSettings from './pages/ProfileSettings';
-import WeekendAuditPage from './pages/WeekendAuditPage';
-import Register from './pages/Register';
-import Onboarding from './pages/Onboarding';
-import PendingApproval from './pages/PendingApproval';
 import { LogoutModal } from './components/LogoutModal';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+
+// Code-split routes loaded on demand to reduce initial bundle size
+const Dashboard = lazy(() => import('./components/Dashboard').then(m => ({ default: m.Dashboard })));
+const TrackingPage = lazy(() => import('./components/TrackingPage').then(m => ({ default: m.TrackingPage })));
+const MetricsDashboard = lazy(() => import('./components/MetricsDashboard').then(m => ({ default: m.MetricsDashboard })));
+const HelpGuide = lazy(() => import('./components/HelpGuide').then(m => ({ default: m.HelpGuide })));
+const AdminLogin = lazy(() => import('./components/AdminLogin').then(m => ({ default: m.AdminLogin })));
+const LegalContent = lazy(() => import('./components/LegalContent'));
+const Changelog = lazy(() => import('./components/Changelog').then(m => ({ default: m.Changelog })));
+const AlertRecipientsManager = lazy(() => import('./components/AlertRecipientsManager').then(m => ({ default: m.AlertRecipientsManager })));
+const UserManagement = lazy(() => import('./pages/UserManagement').then(m => ({ default: m.UserManagement })));
+const ResolutionPage = lazy(() => import('./pages/ResolutionPage').then(m => ({ default: m.ResolutionPage })));
+const SupplementaryInfoPage = lazy(() => import('./pages/SupplementaryInfoPage').then(m => ({ default: m.SupplementaryInfoPage })));
+const MyCases = lazy(() => import('./pages/MyCases').then(m => ({ default: m.MyCases })));
+const ProcessAuditPage = lazy(() => import('./pages/ProcessAuditPage').then(m => ({ default: m.ProcessAuditPage })));
+const Presentation = lazy(() => import('./pages/Presentation'));
+const ManualProcedimientos = lazy(() => import('./components/ManualProcedimientos'));
+const ProfileSettings = lazy(() => import('./pages/ProfileSettings'));
+const WeekendAuditPage = lazy(() => import('./pages/WeekendAuditPage'));
+const Register = lazy(() => import('./pages/Register'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+const PendingApproval = lazy(() => import('./pages/PendingApproval'));
 import {
   LayoutDashboard,
   BarChart3,
@@ -316,6 +318,13 @@ function App() {
 
           {/* Main Content */}
           <main className="flex-grow py-6 px-4 sm:px-6 lg:px-10 max-w-[1920px] mx-auto w-full">
+            <Suspense
+              fallback={
+                <div className="p-12 flex justify-center items-center">
+                  <div className="w-8 h-8 border-4 border-sanatorio-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              }
+            >
             <Routes>
               {/* Rutas Públicas */}
               <Route path="/" element={<ReportingForm />} />
@@ -360,6 +369,7 @@ function App() {
                 <Route path="/manual" element={<ManualProcedimientos />} />
               </Route>
             </Routes>
+            </Suspense>
           </main>
 
           {/* Enhanced Footer */}

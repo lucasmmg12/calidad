@@ -527,7 +527,12 @@ export const SlaAlertBanner = ({ reports, onResendWhatsApp }: Props) => {
                                                 </span>
 
                                                 <button
-                                                    onClick={() => generateValidationPDF(alert.report)}
+                                                    onClick={() =>
+                                                        generateValidationPDF({
+                                                            ...alert.report,
+                                                            content: alert.report.content || alert.report.ai_summary || '',
+                                                        })
+                                                    }
                                                     className="p-1.5 rounded-lg bg-slate-100 hover:bg-sanatorio-primary hover:text-white text-slate-600 transition-colors"
                                                     title="Descargar Ficha PDF del caso"
                                                 >

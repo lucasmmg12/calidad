@@ -50,17 +50,31 @@ export const SectorTracking = () => {
                 return;
             }
 
-            const { data, error } = await supabase
-                .from('reports')
-                .select('*')
-                .in('reporter_sector', sectors)
-                .not('status', 'eq', 'discarded')
-                .order('created_at', { ascending: false });
+            const [{ data: byReporter, error: err1 }, { data: byOrigin, error: err2 }] = await Promise.all([
+                supabase
+                    .from('reports')
+                    .select('*')
+                    .in('reporter_sector', sectors)
+                    .not('status', 'eq', 'discarded')
+                    .order('created_at', { ascending: false }),
+                supabase
+                    .from('reports')
+                    .select('*')
+                    .in('origin_sector', sectors)
+                    .not('status', 'eq', 'discarded')
+                    .order('created_at', { ascending: false }),
+            ]);
 
-            if (error) {
-                console.error('[SectorTracking] Error:', error);
+            if (err1 && err2) {
+                console.error('[SectorTracking] Error:', err1);
             } else {
-                setReports(data || []);
+                const map = new Map<string, any>();
+                (byReporter || []).forEach(r => map.set(r.id, r));
+                (byOrigin || []).forEach(r => map.set(r.id, r));
+                const merged = Array.from(map.values()).sort(
+                    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                );
+                setReports(merged);
             }
             setLoading(false);
         };

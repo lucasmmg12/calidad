@@ -25,5 +25,19 @@ export default defineConfig({
       modernPolyfills: true,
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-charts': ['chart.js', 'react-chartjs-2'],
+          'vendor-pdf': ['jspdf', 'jspdf-autotable'],
+          'vendor-excel': ['exceljs'],
+          'vendor-pptx': ['pptxgenjs'],
+        },
+      },
+    },
+  },
 })
 

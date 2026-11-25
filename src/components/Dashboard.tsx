@@ -1583,56 +1583,44 @@ export const Dashboard = () => {
         }
 
         const pageSize = 1000;
-        let allReports: any[] = [];
-        let from = 0;
-        let hasMore = true;
 
-        while (hasMore) {
-            const { data: batch, error } = await supabase
-                .from('reports')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .range(from, from + pageSize - 1);
-
-            if (error) {
-                console.error('Error fetching reports:', error);
-                setLoading(false);
-                return;
+        const fetchAllReports = async () => {
+            let rows: any[] = [];
+            let from = 0;
+            while (true) {
+                const { data: batch, error } = await supabase
+                    .from('reports')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .range(from, from + pageSize - 1);
+                if (error || !batch || batch.length === 0) break;
+                rows = rows.concat(batch);
+                if (batch.length < pageSize) break;
+                from += pageSize;
             }
+            return rows;
+        };
 
-            if (batch && batch.length > 0) {
-                allReports = allReports.concat(batch);
-                if (batch.length < pageSize) {
-                    hasMore = false;
-                } else {
-                    from += pageSize;
-                }
-            } else {
-                hasMore = false;
+        const fetchAllAssignments = async () => {
+            let rows: any[] = [];
+            let from = 0;
+            while (true) {
+                const { data: batch, error } = await supabase
+                    .from('sector_assignments')
+                    .select('report_id, sector, status')
+                    .range(from, from + pageSize - 1);
+                if (error || !batch || batch.length === 0) break;
+                rows = rows.concat(batch);
+                if (batch.length < pageSize) break;
+                from += pageSize;
             }
-        }
+            return rows;
+        };
 
-        // Also fetch active sector_assignments so multi-sector or re-derived cases are linked to their destination sectors
-        let allAssignments: any[] = [];
-        let assignFrom = 0;
-        let assignHasMore = true;
-        while (assignHasMore) {
-            const { data: assignBatch, error: assignErr } = await supabase
-                .from('sector_assignments')
-                .select('report_id, sector, status')
-                .range(assignFrom, assignFrom + pageSize - 1);
-
-            if (assignErr || !assignBatch || assignBatch.length === 0) {
-                assignHasMore = false;
-            } else {
-                allAssignments = allAssignments.concat(assignBatch);
-                if (assignBatch.length < pageSize) {
-                    assignHasMore = false;
-                } else {
-                    assignFrom += pageSize;
-                }
-            }
-        }
+        const [allReports, allAssignments] = await Promise.all([
+            fetchAllReports(),
+            fetchAllAssignments(),
+        ]);
 
         const assignedSectorsByReport = new Map<string, Set<string>>();
         allAssignments.forEach(a => {
@@ -2083,10 +2071,16 @@ export const Dashboard = () => {
     const [listDateTo, setListDateTo] = useState('');
     const [listUrgencyFilter, setListUrgencyFilter] = useState<string | null>(initialUrgency);
     const [listCategoryFilter, setListCategoryFilter] = useState<string | null>(initialCategory);
+    const [visibleRowLimit, setVisibleRowLimit] = useState<number>(60);
     
     const [listSectorDropdownOpen, setListSectorDropdownOpen] = useState(false);
     const [listSectorSearch, setListSectorSearch] = useState('');
     const listSectorDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Reset visible row limit when filters change so DOM remains fast
+    useEffect(() => {
+        setVisibleRowLimit(60);
+    }, [searchTerm, statusFilter, listSectorFilter, listDateFrom, listDateTo, listUrgencyFilter, listCategoryFilter]);
 
     // Close sector dropdown on outside click
     useEffect(() => {
@@ -2782,7 +2776,7 @@ export const Dashboard = () => {
                         {/* === MOBILE CARD VIEW === */}
                         <div className="lg:hidden divide-y divide-gray-50">
                             {filteredReports.length > 0 ? (
-                                filteredReports.map((report) => (
+                                filteredReports.slice(0, visibleRowLimit).map((report) => (
                                     <button
                                         key={report.id}
                                         onClick={() => setSelectedReport(report)}
@@ -2874,7 +2868,7 @@ export const Dashboard = () => {
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {filteredReports.length > 0 ? (
-                                        filteredReports.map((report) => {
+                                        filteredReports.slice(0, visibleRowLimit).map((report) => {
                                             const isFelic = isFelicitacionReport(report);
                                             return (
                                                 <tr
@@ -2982,6 +2976,31 @@ export const Dashboard = () => {
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Progressive Load More Controls (keeps DOM lightweight while allowing full access) */}
+                        {filteredReports.length > visibleRowLimit && (
+                            <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                                <span className="text-xs text-slate-500 font-medium">
+                                    Mostrando <strong>{Math.min(visibleRowLimit, filteredReports.length)}</strong> de <strong>{filteredReports.length}</strong> casos filtrados (las exportaciones Excel/PDF incluyen los {filteredReports.length} casos)
+                                </span>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setVisibleRowLimit(prev => prev + 100)}
+                                        className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-sanatorio-primary text-xs font-bold hover:bg-blue-50 transition-colors cursor-pointer shadow-2xs"
+                                    >
+                                        Cargar 100 más
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setVisibleRowLimit(filteredReports.length)}
+                                        className="px-4 py-2 rounded-xl bg-sanatorio-primary/10 text-sanatorio-primary text-xs font-bold hover:bg-sanatorio-primary hover:text-white transition-colors cursor-pointer"
+                                    >
+                                        Mostrar todos ({filteredReports.length})
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

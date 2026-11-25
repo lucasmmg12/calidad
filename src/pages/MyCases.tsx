@@ -81,72 +81,136 @@ export const MyCases = () => {
             if (!profile) return;
 
             try {
-                // Fetch assignments where the phone matches or the sector is in user's assigned sectors
                 const userPhone = profile.phone_number || '';
+                const pageSize = 1000;
 
-                let query = supabase
-                    .from('sector_assignments')
-                    .select(`
-                        id,
-                        report_id,
-                        sector,
-                        assigned_phone,
-                        management_type,
-                        status,
-                        immediate_action,
-                        created_at,
-                        resolved_at,
-                        reports!inner (
+                // 1. Fetch all sector_assignments for user's sectors (paginated, no 1000-row cap)
+                let allAssignData: any[] = [];
+                let from = 0;
+                let hasMore = true;
+
+                while (hasMore) {
+                    let query = supabase
+                        .from('sector_assignments')
+                        .select(`
+                            id,
+                            report_id,
+                            sector,
+                            assigned_phone,
+                            management_type,
+                            status,
+                            immediate_action,
+                            created_at,
+                            resolved_at,
+                            reports!inner (
+                                id,
+                                tracking_id,
+                                content,
+                                ai_summary,
+                                status,
+                                created_at,
+                                sector,
+                                evidence_urls,
+                                quality_observations,
+                                ai_urgency,
+                                ai_category,
+                                finding_type
+                            )
+                        `)
+                        .order('created_at', { ascending: false })
+                        .range(from, from + pageSize - 1);
+
+                    if (sectors.length > 0) {
+                        query = query.in('sector', sectors);
+                    } else if (userPhone) {
+                        query = query.eq('assigned_phone', userPhone);
+                    } else {
+                        query = query.eq('id', '00000000-0000-0000-0000-000000000000');
+                    }
+
+                    const { data, error } = await query;
+                    if (error) {
+                        console.error('[MyCases] Error:', error);
+                        hasMore = false;
+                    } else if (data && data.length > 0) {
+                        allAssignData = allAssignData.concat(data);
+                        if (data.length < pageSize) hasMore = false;
+                        else from += pageSize;
+                    } else {
+                        hasMore = false;
+                    }
+                }
+
+                // 2. Also fetch reports where reports.sector is in user's sectors (in case a report was assigned directly on reports.sector without a sector_assignments row)
+                let directReports: any[] = [];
+                if (sectors.length > 0) {
+                    const { data: repData } = await supabase
+                        .from('reports')
+                        .select(`
                             id,
                             tracking_id,
                             content,
                             ai_summary,
                             status,
                             created_at,
+                            resolved_at,
                             sector,
+                            assigned_to,
+                            management_type,
+                            resolution_notes,
+                            immediate_action,
                             evidence_urls,
                             quality_observations,
                             ai_urgency,
                             ai_category,
                             finding_type
-                        )
-                    `)
-                    .order('created_at', { ascending: false });
-
-                // Filter by user's assigned sectors ONLY.
-                // Phone-based matching is intentionally removed because a user's phone
-                // can appear in sector_assignments for sectors they don't belong to
-                // (e.g., same person receiving ASMED notifications while being a FAR responsable).
-                // This caused cross-sector case leakage (bug: Farmacia seeing ASMED cases).
-                if (sectors.length > 0) {
-                    query = query.in('sector', sectors);
-                } else if (userPhone) {
-                    // Fallback: if no sectors assigned, use phone as last resort
-                    query = query.eq('assigned_phone', userPhone);
-                } else {
-                    // No phone and no sectors -> avoid fetching database completely for safety
-                    query = query.eq('id', '00000000-0000-0000-0000-000000000000'); 
+                        `)
+                        .in('sector', sectors)
+                        .not('status', 'in', '("discarded","assignment_rejected")')
+                        .order('created_at', { ascending: false });
+                    directReports = repData || [];
                 }
 
-                const { data, error } = await query;
+                // Deduplicate assignments by report_id and sector (keep most recent)
+                const uniqueAssignments = allAssignData.reduce((acc: any[], current: any) => {
+                    const rStatus = current.reports?.status;
+                    if (rStatus === 'discarded' || rStatus === 'assignment_rejected') return acc;
+                    const isDuplicate = acc.find(
+                        item => item.report_id === current.report_id && item.sector === current.sector
+                    );
+                    if (!isDuplicate) {
+                        acc.push(current);
+                    }
+                    return acc;
+                }, []);
 
-                if (error) {
-                    console.error('[MyCases] Error:', error);
-                } else {
-                    // Deduplicate assignments by report_id and sector
-                    // Since query is ordered by created_at desc, we keep the most recent one
-                    const uniqueAssignments = (data || []).reduce((acc: any[], current: any) => {
-                        const isDuplicate = acc.find(
-                            item => item.report_id === current.report_id && item.sector === current.sector
-                        );
-                        if (!isDuplicate) {
-                            acc.push(current);
-                        }
-                        return acc;
-                    }, []);
-                    
-                    setAssignments(uniqueAssignments);
-                }
+                // Add any direct reports that don't yet have a sector_assignment row for that sector
+                const existingPairs = new Set(uniqueAssignments.map((a: any) => `${a.report_id}__${a.sector}`));
+                directReports.forEach(rep => {
+                    const pairKey = `${rep.id}__${rep.sector}`;
+                    if (!existingPairs.has(pairKey)) {
+                        existingPairs.add(pairKey);
+                        const isFelic = isFelicitacionReport(rep);
+                        uniqueAssignments.push({
+                            id: `direct-${rep.id}`,
+                            report_id: rep.id,
+                            sector: rep.sector,
+                            assigned_phone: rep.assigned_to || userPhone,
+                            management_type: isFelic ? 'felicitacion' : (rep.management_type || 'simple'),
+                            status: rep.status === 'resolved' ? 'resolved' : rep.status === 'quality_validation' ? 'quality_validation' : 'pending',
+                            immediate_action: rep.immediate_action || rep.resolution_notes || null,
+                            created_at: rep.created_at,
+                            resolved_at: rep.resolved_at || null,
+                            reports: rep,
+                        });
+                    }
+                });
+
+                uniqueAssignments.sort(
+                    (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                );
+
+                setAssignments(uniqueAssignments);
             } catch (err) {
                 console.error('[MyCases] Unexpected error:', err);
             } finally {
@@ -417,7 +481,9 @@ export const MyCases = () => {
                                 const statusInfo = STATUS_MAP[assignment.status] || STATUS_MAP.pending;
                                 const typeInfo = TYPE_MAP[assignment.management_type] || TYPE_MAP.simple;
                                 const sectorLabel = SECTOR_OPTIONS.find(s => s.value === assignment.sector)?.label || assignment.sector;
-                                const resolutionLink = `/resolver-caso/${report.tracking_id}/${assignment.id}`;
+                                const resolutionLink = String(assignment.id).startsWith('direct-')
+                                    ? `/resolver-caso/${report.tracking_id}`
+                                    : `/resolver-caso/${report.tracking_id}/${assignment.id}`;
 
                                 return (
                                     <div

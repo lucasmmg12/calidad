@@ -1,6 +1,8 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback, type ReactNode } from 'react';
 import { supabase } from '../utils/supabase';
 import type { Session } from '@supabase/supabase-js';
+
+const EMPTY_SECTORS: string[] = [];
 
 export interface UserProfile {
     id: string;
@@ -58,10 +60,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [session, setSession] = useState<Session | null>(null);
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
+    const lastFetchedUserIdRef = useRef<string | null>(null);
 
-    const fetchProfile = async (userId: string, userEmail?: string): Promise<UserProfile | null> => {
+    const fetchProfile = useCallback(async (userId: string, userEmail?: string): Promise<UserProfile | null> => {
         try {
-            console.log('[Auth] Fetching profile for:', userId);
             const { data, error } = await supabase
                 .from('user_profiles')
                 .select('*')
@@ -69,8 +71,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 .single();
 
             if (error && error.code === 'PGRST116') {
-                // Profile doesn't exist yet — create default one
-                console.log('[Auth] Profile not found, creating...');
                 const { data: newProfile, error: insertError } = await supabase
                     .from('user_profiles')
                     .insert({
@@ -89,51 +89,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     console.error('[Auth] Error creating profile:', insertError);
                     return null;
                 }
-                console.log('[Auth] Profile created:', newProfile?.role);
                 return newProfile;
             } else if (error) {
                 console.error('[Auth] Error fetching profile:', error);
                 return null;
             } else {
-                console.log('[Auth] Profile loaded:', data.role);
                 return data;
             }
         } catch (err) {
             console.error('[Auth] Unexpected error:', err);
             return null;
         }
-    };
+    }, []);
 
-    const refreshProfile = async () => {
+    const refreshProfile = useCallback(async () => {
         if (session?.user?.id) {
             const p = await fetchProfile(session.user.id, session.user.email || undefined);
             if (p) setProfile(p);
         }
-    };
+    }, [session?.user?.id, session?.user?.email, fetchProfile]);
 
     useEffect(() => {
-        // Use onAuthStateChange as the SOLE source of session truth.
-        // It fires INITIAL_SESSION immediately for existing sessions on page load.
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             (event, currentSession) => {
-                console.log('[Auth] Event:', event, currentSession ? '(session exists)' : '(no session)');
-
-                // Synchronous state update is safe inside callback
                 setSession(currentSession);
 
                 if (currentSession?.user?.id) {
-                    // CRITICAL: defer Supabase DB calls with setTimeout to avoid
-                    // "AbortError: signal is aborted without reason" which happens
-                    // when making Supabase requests inside the auth callback
                     const userId = currentSession.user.id;
                     const userEmail = currentSession.user.email || undefined;
 
+                    // Avoid re-fetching profile on TOKEN_REFRESHED when user hasn't changed
+                    if (event === 'TOKEN_REFRESHED' && lastFetchedUserIdRef.current === userId) {
+                        return;
+                    }
+
+                    lastFetchedUserIdRef.current = userId;
                     setTimeout(async () => {
                         const p = await fetchProfile(userId, userEmail);
                         if (p) setProfile(p);
                         setLoading(false);
                     }, 0);
                 } else {
+                    lastFetchedUserIdRef.current = null;
                     setProfile(null);
                     setLoading(false);
                 }
@@ -141,16 +138,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         );
 
         return () => subscription.unsubscribe();
-    }, []);
+    }, [fetchProfile]);
 
     const role = profile?.role || null;
-    const sectors = profile?.assigned_sectors || [];
+    const sectorsKey = profile?.assigned_sectors ? profile.assigned_sectors.join('|') : '';
+    const sectors = useMemo(
+        () => (profile?.assigned_sectors && profile.assigned_sectors.length > 0 ? profile.assigned_sectors : EMPTY_SECTORS),
+        [sectorsKey]
+    );
 
     const isApproved = profile?.account_status === 'approved';
     const isPending = profile?.account_status === 'pending';
     const needsOnboarding = profile?.onboarding_completed === false;
 
-    const value: AuthContextType = {
+    const value: AuthContextType = useMemo(() => ({
         session,
         profile,
         loading,
@@ -163,7 +164,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isPending,
         needsOnboarding,
         refreshProfile,
-    };
+    }), [session, profile, loading, role, sectors, isApproved, isPending, needsOnboarding, refreshProfile]);
 
     return (
         <AuthContext.Provider value={value}>

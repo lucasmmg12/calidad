@@ -5,6 +5,7 @@ interface Report {
     id: string;
     created_at: string;
     sector: string;
+    effective_sectors?: string[];
     ai_urgency: string;
     ai_category: string;
     status: string;
@@ -50,11 +51,16 @@ export const AdvancedAnalytics = ({ reports }: Props) => {
         const matrix: Record<string, Record<number, number>> = {};
 
         reports.forEach(r => {
-            const sector = r.sector || 'Otros';
+            const effSectors =
+                Array.isArray(r.effective_sectors) && r.effective_sectors.length > 0
+                    ? r.effective_sectors
+                    : [r.sector || 'Otros'];
             const day = new Date(r.created_at).getDay();
-            sectorSet.add(sector);
-            if (!matrix[sector]) matrix[sector] = {};
-            matrix[sector][day] = (matrix[sector][day] || 0) + 1;
+            effSectors.forEach(sector => {
+                sectorSet.add(sector);
+                if (!matrix[sector]) matrix[sector] = {};
+                matrix[sector][day] = (matrix[sector][day] || 0) + 1;
+            });
         });
 
         const sectors = Array.from(sectorSet).sort();
@@ -73,12 +79,19 @@ export const AdvancedAnalytics = ({ reports }: Props) => {
     // RECURRENCE: Map BY SECTOR → classifications
     // ────────────────────────────────────────
     const recurrenceData = useMemo(() => {
-        // Step 1: Count occurrences per sector+classification combo
+        // Step 1: Count occurrences per sector+classification combo (including multi-sector assignments)
         const combos: Record<string, { count: number; sector: string; category: string }> = {};
         reports.forEach(r => {
-            const key = `${r.sector}__${r.ai_category || 'Sin clasificar'}`;
-            if (!combos[key]) combos[key] = { count: 0, sector: r.sector || 'Otros', category: r.ai_category || 'Sin clasificar' };
-            combos[key].count++;
+            const effSectors =
+                Array.isArray(r.effective_sectors) && r.effective_sectors.length > 0
+                    ? r.effective_sectors
+                    : [r.sector || 'Otros'];
+            const category = r.ai_category || 'Sin clasificar';
+            effSectors.forEach(sec => {
+                const key = `${sec}__${category}`;
+                if (!combos[key]) combos[key] = { count: 0, sector: sec, category };
+                combos[key].count++;
+            });
         });
 
         // Step 2: Group by sector — only classifications with ≥2 occurrences

@@ -340,61 +340,48 @@ export const MetricsDashboard = () => {
         }
     }, [filters, roleFilteredReports]);
 
-    // ─── Step 1: Fetch all reports + sector_assignments without 1000-row cap and apply ROLE-BASED filter ───
+    // ─── Step 1: Fetch all reports + sector_assignments in parallel without 1000-row cap ───
     const fetchAndFilterByRole = async () => {
         setLoading(true);
-
         const pageSize = 1000;
-        let allReports: any[] = [];
-        let from = 0;
-        let hasMore = true;
 
-        while (hasMore) {
-            const { data: batch, error } = await supabase
-                .from('reports')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .range(from, from + pageSize - 1);
-
-            if (error) {
-                console.error('Error fetching metrics reports:', error);
-                setLoading(false);
-                return;
+        const fetchAllReports = async () => {
+            let rows: any[] = [];
+            let from = 0;
+            while (true) {
+                const { data: batch, error } = await supabase
+                    .from('reports')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .range(from, from + pageSize - 1);
+                if (error || !batch || batch.length === 0) break;
+                rows = rows.concat(batch);
+                if (batch.length < pageSize) break;
+                from += pageSize;
             }
+            return rows;
+        };
 
-            if (batch && batch.length > 0) {
-                allReports = allReports.concat(batch);
-                if (batch.length < pageSize) {
-                    hasMore = false;
-                } else {
-                    from += pageSize;
-                }
-            } else {
-                hasMore = false;
+        const fetchAllAssignments = async () => {
+            let rows: any[] = [];
+            let from = 0;
+            while (true) {
+                const { data: batch, error } = await supabase
+                    .from('sector_assignments')
+                    .select('report_id, sector, status')
+                    .range(from, from + pageSize - 1);
+                if (error || !batch || batch.length === 0) break;
+                rows = rows.concat(batch);
+                if (batch.length < pageSize) break;
+                from += pageSize;
             }
-        }
+            return rows;
+        };
 
-        // Fetch all active sector_assignments so multi-sector or re-derived cases are accurately linked to their destination sectors
-        let allAssignments: any[] = [];
-        let assignFrom = 0;
-        let assignHasMore = true;
-        while (assignHasMore) {
-            const { data: assignBatch, error: assignErr } = await supabase
-                .from('sector_assignments')
-                .select('report_id, sector, status')
-                .range(assignFrom, assignFrom + pageSize - 1);
-
-            if (assignErr || !assignBatch || assignBatch.length === 0) {
-                assignHasMore = false;
-            } else {
-                allAssignments = allAssignments.concat(assignBatch);
-                if (assignBatch.length < pageSize) {
-                    assignHasMore = false;
-                } else {
-                    assignFrom += pageSize;
-                }
-            }
-        }
+        const [allReports, allAssignments] = await Promise.all([
+            fetchAllReports(),
+            fetchAllAssignments(),
+        ]);
 
         const assignedSectorsByReport = new Map<string, Set<string>>();
         allAssignments.forEach(a => {
