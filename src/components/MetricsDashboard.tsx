@@ -26,6 +26,7 @@ import { AdvancedAnalytics } from './AdvancedAnalytics';
 import { SlaAlertBanner } from './SlaAlerts';
 import { PdcaPanel } from './PdcaPanel';
 import { DoraOrb3D } from './DoraOrb3D';
+import { TemporalEvolution3D } from './TemporalEvolution3D';
 import { MetricsFilters, type MetricsFilterState } from './MetricsFilters';
 import { SECTOR_OPTIONS } from '../constants/sectors';
 import {
@@ -82,6 +83,7 @@ export const MetricsDashboard = () => {
     const [modalStatusFilter, setModalStatusFilter] = useState<'all' | 'pending' | 'resolved'>('all');
     const [isExportingModalPdf, setIsExportingModalPdf] = useState(false);
     const [isExportingModalExcel, setIsExportingModalExcel] = useState(false);
+    const [evolutionViewMode, setEvolutionViewMode] = useState<'3d' | '2d'>('3d');
 
     const handleMetricClick = (nextFilter: {
         urgency?: string;
@@ -845,120 +847,152 @@ export const MetricsDashboard = () => {
                 </div>
             </div>
 
-            {/* ── GRÁFICO DE LÍNEA EXPLICATIVO: Evolución Temporal (Ingresos vs. Resueltos) ── */}
+            {/* ── EVOLUCIÓN TEMPORAL (3D CARRILES SEPARADOS DE ALTO CONTRASTE + 2D LÍNEAS) ── */}
             <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200/80">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
                     <div>
                         <span className="text-[11px] font-black uppercase tracking-widest text-sanatorio-primary">
-                            Tendencia Histórica · Gráfico de Línea Comparativo
+                            Progresión del Período · Evolución Temporal 3D & 2D
                         </span>
                         <h3 className="text-xl font-black text-slate-800 mt-0.5 flex items-center gap-2">
                             <TrendingUp className="w-5 h-5 text-sanatorio-primary" />
-                            Evolución Temporal: Casos Ingresados vs. Casos Resueltos
+                            Evolución Temporal: Ingresos, Resueltos, Gravedad y Felicitaciones
                         </h3>
                         <p className="text-xs text-slate-500 mt-1">
-                            Compara el flujo de entrada de reportes con la capacidad real de cierre en cada período.
+                            Visualización espacial a ancho completo con carriles Z separados y paleta de alto contraste para distinguir cada serie sin superposiciones.
                         </p>
                     </div>
-                    <div className="flex items-center gap-4 text-xs font-bold">
-                        <span className="flex items-center gap-1.5 text-sanatorio-primary">
-                            <span className="w-3 h-3 rounded-full bg-[#00548B] inline-block"></span>
-                            Casos Ingresados ({stats.total})
-                        </span>
-                        <span className="flex items-center gap-1.5 text-emerald-600">
-                            <span className="w-3 h-3 rounded-full bg-[#16A34A] inline-block"></span>
-                            Casos Resueltos ({stats.resolved})
-                        </span>
-                        <span className="flex items-center gap-1.5 text-red-600">
-                            <span className="w-3 h-3 rounded-full bg-[#DC2626] inline-block"></span>
-                            Riesgo Crítico ({stats.urgentCount})
-                        </span>
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold">
+                            <button
+                                type="button"
+                                onClick={() => setEvolutionViewMode('3d')}
+                                className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                                    evolutionViewMode === '3d'
+                                        ? 'bg-sanatorio-primary text-white shadow-xs'
+                                        : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                            >
+                                3D Espacial (Ancho Completo)
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setEvolutionViewMode('2d')}
+                                className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                                    evolutionViewMode === '2d'
+                                        ? 'bg-sanatorio-primary text-white shadow-xs'
+                                        : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                            >
+                                2D Líneas
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <div className="h-[320px] w-full">
-                    <Line
-                        data={{
-                            labels: timeSeries.labels,
-                            datasets: [
-                                {
-                                    label: 'Casos Ingresados',
-                                    data: timeSeries.totalSeries,
-                                    borderColor: '#00548B',
-                                    backgroundColor: 'rgba(0, 84, 139, 0.10)',
-                                    fill: true,
-                                    tension: 0.35,
-                                    borderWidth: 3,
-                                    pointRadius: 5,
-                                    pointHoverRadius: 7,
-                                    pointBackgroundColor: '#FFFFFF',
-                                    pointBorderColor: '#00548B',
-                                    pointBorderWidth: 2.5,
-                                },
-                                {
-                                    label: 'Casos Resueltos',
-                                    data: timeSeries.resolvedSeries,
-                                    borderColor: '#16A34A',
-                                    backgroundColor: 'rgba(22, 163, 74, 0.08)',
-                                    fill: true,
-                                    tension: 0.35,
-                                    borderWidth: 3,
-                                    pointRadius: 5,
-                                    pointHoverRadius: 7,
-                                    pointBackgroundColor: '#FFFFFF',
-                                    pointBorderColor: '#16A34A',
-                                    pointBorderWidth: 2.5,
-                                },
-                                {
-                                    label: 'Críticos (Rojo)',
-                                    data: timeSeries.criticalSeries,
-                                    borderColor: '#DC2626',
-                                    backgroundColor: 'rgba(220, 38, 38, 0.04)',
-                                    borderDash: [5, 4],
-                                    fill: false,
-                                    tension: 0.3,
-                                    borderWidth: 2,
-                                    pointRadius: 4,
-                                    pointHoverRadius: 6,
-                                    pointBackgroundColor: '#DC2626',
-                                    pointBorderColor: '#FFFFFF',
-                                    pointBorderWidth: 1.5,
-                                }
-                            ]
-                        }}
-                        options={{
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            interaction: { mode: 'index', intersect: false },
-                            plugins: {
-                                legend: { display: false },
-                                tooltip: {
-                                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                                    titleColor: '#F8FAFC',
-                                    bodyColor: '#E2E8F0',
-                                    padding: 12,
-                                    cornerRadius: 10,
-                                }
-                            },
-                            scales: {
-                                x: {
-                                    grid: { color: '#F1F5F9' },
-                                    ticks: { font: { family: "'Inter', sans-serif", weight: 'bold', size: 11 }, color: '#475569' }
-                                },
-                                y: {
-                                    beginAtZero: true,
-                                    grid: { color: '#F1F5F9' },
-                                    ticks: { precision: 0, font: { family: "'Inter', sans-serif", size: 11 }, color: '#64748B' }
-                                }
-                            }
-                        }}
-                    />
-                </div>
+                {evolutionViewMode === '3d' ? (
+                    <TemporalEvolution3D reports={rawReports} />
+                ) : (
+                    <>
+                        <div className="flex items-center gap-4 text-xs font-bold mb-4">
+                            <span className="flex items-center gap-1.5 text-sanatorio-primary">
+                                <span className="w-3 h-3 rounded-full bg-[#00548B] inline-block"></span>
+                                Casos Ingresados ({stats.total})
+                            </span>
+                            <span className="flex items-center gap-1.5 text-emerald-600">
+                                <span className="w-3 h-3 rounded-full bg-[#16A34A] inline-block"></span>
+                                Casos Resueltos ({stats.resolved})
+                            </span>
+                            <span className="flex items-center gap-1.5 text-red-600">
+                                <span className="w-3 h-3 rounded-full bg-[#DC2626] inline-block"></span>
+                                Riesgo Crítico ({stats.urgentCount})
+                            </span>
+                        </div>
+                        <div className="h-[320px] w-full">
+                            <Line
+                                data={{
+                                    labels: timeSeries.labels,
+                                    datasets: [
+                                        {
+                                            label: 'Casos Ingresados',
+                                            data: timeSeries.totalSeries,
+                                            borderColor: '#00548B',
+                                            backgroundColor: 'rgba(0, 84, 139, 0.10)',
+                                            fill: true,
+                                            tension: 0.35,
+                                            borderWidth: 3,
+                                            pointRadius: 5,
+                                            pointHoverRadius: 7,
+                                            pointBackgroundColor: '#FFFFFF',
+                                            pointBorderColor: '#00548B',
+                                            pointBorderWidth: 2.5,
+                                        },
+                                        {
+                                            label: 'Casos Resueltos',
+                                            data: timeSeries.resolvedSeries,
+                                            borderColor: '#16A34A',
+                                            backgroundColor: 'rgba(22, 163, 74, 0.08)',
+                                            fill: true,
+                                            tension: 0.35,
+                                            borderWidth: 3,
+                                            pointRadius: 5,
+                                            pointHoverRadius: 7,
+                                            pointBackgroundColor: '#FFFFFF',
+                                            pointBorderColor: '#16A34A',
+                                            pointBorderWidth: 2.5,
+                                        },
+                                        {
+                                            label: 'Críticos (Rojo)',
+                                            data: timeSeries.criticalSeries,
+                                            borderColor: '#DC2626',
+                                            backgroundColor: 'rgba(220, 38, 38, 0.04)',
+                                            borderDash: [5, 4],
+                                            fill: false,
+                                            tension: 0.3,
+                                            borderWidth: 2,
+                                            pointRadius: 4,
+                                            pointHoverRadius: 6,
+                                            pointBackgroundColor: '#DC2626',
+                                            pointBorderColor: '#FFFFFF',
+                                            pointBorderWidth: 1.5,
+                                        }
+                                    ]
+                                }}
+                                options={{
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    interaction: { mode: 'index', intersect: false },
+                                    plugins: {
+                                        legend: { display: false },
+                                        tooltip: {
+                                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                            titleColor: '#F8FAFC',
+                                            bodyColor: '#E2E8F0',
+                                            padding: 12,
+                                            cornerRadius: 10,
+                                        }
+                                    },
+                                    scales: {
+                                        x: {
+                                            grid: { color: '#F1F5F9' },
+                                            ticks: { font: { family: "'Inter', sans-serif", weight: 'bold', size: 11 }, color: '#475569' }
+                                        },
+                                        y: {
+                                            beginAtZero: true,
+                                            grid: { color: '#F1F5F9' },
+                                            ticks: { precision: 0, font: { family: "'Inter', sans-serif", size: 11 }, color: '#64748B' }
+                                        }
+                                    }
+                                }}
+                            />
+                        </div>
+                    </>
+                )}
 
                 <div className="mt-5 p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
                     <div className="w-1.5 self-stretch rounded-full bg-sanatorio-primary shrink-0" />
                     <p className="text-xs text-slate-600 leading-relaxed">
-                        <strong className="text-slate-800">Cómo interpretar este gráfico de línea:</strong> La curva azul muestra la demanda de reportes recibidos y la curva verde los cierres efectivos. Cuando ambas curvas se mantienen próximas, el sanatorio absorbe la demanda sin acumular pasivo pendiente; si la brecha se amplía, indica acumulación de casos abiertos en ese período.
+                        <strong className="text-slate-800">Cómo interpretar la vista 3D por carriles:</strong> Cada serie corre en su propio carril de profundidad con un color de alto contraste (<strong>Cian = Total Ingresados</strong>, <strong>Esmeralda = Resueltos</strong>, <strong>Ámbar = Moderados</strong>, <strong>Rojo Coral = Críticos</strong> y <strong>Violeta = Felicitaciones</strong>). Podés alternar entre <strong>3D Carriles</strong>, <strong>3D Columnas</strong> o <strong>2D Líneas</strong>, activar o desactivar series y pasar el cursor para leer los valores exactos de cada fecha.
                     </p>
                 </div>
             </div>
