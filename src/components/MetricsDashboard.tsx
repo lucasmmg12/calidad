@@ -25,6 +25,7 @@ import { Bar, Line } from 'react-chartjs-2';
 import { AdvancedAnalytics } from './AdvancedAnalytics';
 import { SlaAlertBanner } from './SlaAlerts';
 import { PdcaPanel } from './PdcaPanel';
+import { DoraOrb3D } from './DoraOrb3D';
 import { MetricsFilters, type MetricsFilterState } from './MetricsFilters';
 import { SECTOR_OPTIONS } from '../constants/sectors';
 import {
@@ -653,17 +654,24 @@ export const MetricsDashboard = () => {
         <div className="w-full py-2 sm:py-4 space-y-8 animate-in fade-in duration-500">
             {/* Header */}
             <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-                <div className="space-y-1.5">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sanatorio-primary/10 text-sanatorio-primary text-[11px] font-black uppercase tracking-widest">
-                        <BrainCircuit className="w-3.5 h-3.5" />
-                        Observatorio Clínico & Gestión de Calidad
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+                    <DoraOrb3D
+                        size={96}
+                        mode={isExporting ? 'processing' : 'clinical'}
+                        withBackdrop={true}
+                    />
+                    <div className="space-y-1.5">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sanatorio-primary/10 text-sanatorio-primary text-[11px] font-black uppercase tracking-widest">
+                            <BrainCircuit className="w-3.5 h-3.5" />
+                            Observatorio Clínico & Núcleo Dora IA 3D
+                        </div>
+                        <h1 className="text-3xl sm:text-4xl font-display font-black text-sanatorio-primary tracking-tight">
+                            Inteligencia de Calidad
+                        </h1>
+                        <p className="text-slate-500 text-sm sm:text-base font-medium max-w-2xl">
+                            Lectura explicativa de indicadores hospitalarios, curvas de evolución temporal y diagnóstico asistido por IA.
+                        </p>
                     </div>
-                    <h1 className="text-3xl sm:text-4xl font-display font-black text-sanatorio-primary tracking-tight">
-                        Inteligencia de Calidad
-                    </h1>
-                    <p className="text-slate-500 text-sm sm:text-base font-medium max-w-2xl">
-                        Lectura explicativa de indicadores hospitalarios, curvas de evolución temporal y diagnóstico asistido por IA.
-                    </p>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
@@ -1695,30 +1703,45 @@ export const MetricsDashboard = () => {
                 <PdcaPanel />
             </div>
 
-            <div className="bg-gradient-to-r from-[#002b4d] to-[#004270] rounded-3xl p-8 text-white relative overflow-hidden">
+            <div className="bg-gradient-to-r from-[#041527] via-[#002b4d] to-[#004270] rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden border border-sky-400/20">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
 
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2 relative z-10">
-                    <TrendingUp className="w-6 h-6 text-sanatorio-secondary" />
-                    Insights Automáticos
-                </h3>
-
-                <div className="grid md:grid-cols-2 gap-6 relative z-10">
-                    <div className="bg-white/10 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
-                        <p className="text-[#00D1FF] text-xs font-bold uppercase mb-1 tracking-widest">Área Crítica Detectada</p>
-                        <p className="font-medium text-sm text-gray-100">
-                            {stats.bySector.length > 0 ? stats.bySector[0].sector : 'N/A'} es el sector con más reportes ({stats.bySector.length > 0 ? stats.bySector[0].count : 0}).
-                            Se sugiere revisión de procesos en esta área.
-                        </p>
+                <div className="flex flex-col lg:flex-row items-center gap-6 relative z-10">
+                    <div className="flex flex-col items-center shrink-0">
+                        <DoraOrb3D
+                            size={136}
+                            mode={isExporting ? 'processing' : 'clinical'}
+                            withBackdrop={false}
+                        />
+                        <span className="text-[10px] font-mono uppercase tracking-widest text-sky-300/80 -mt-1">
+                            Núcleo Dora IA · Interactivo 3D
+                        </span>
                     </div>
-                    <div className="bg-white/10 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
-                        <p className="text-[#00D1FF] text-xs font-bold uppercase mb-1 tracking-widest">Eficiencia de Respuesta</p>
-                        <p className="font-medium text-sm text-gray-100">
-                            El tiempo promedio de resolución es de {stats.avgResolutionTimeDays} días.
-                            {stats.avgResolutionTimeDays > 2
-                                ? ' Se recomienda mejorar los tiempos para casos urgentes.'
-                                : ' El equipo está respondiendo dentro de los parámetros esperados.'}
-                        </p>
+
+                    <div className="flex-1 w-full">
+                        <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                            <TrendingUp className="w-6 h-6 text-sanatorio-secondary" />
+                            Insights Automáticos del Núcleo de Inteligencia
+                        </h3>
+
+                        <div className="grid md:grid-cols-2 gap-6">
+                            <div className="bg-white/10 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
+                                <p className="text-[#00D1FF] text-xs font-bold uppercase mb-1 tracking-widest">Área Crítica Detectada</p>
+                                <p className="font-medium text-sm text-gray-100">
+                                    {stats.bySector.length > 0 ? stats.bySector[0].sector : 'N/A'} es el sector con más reportes ({stats.bySector.length > 0 ? stats.bySector[0].count : 0}).
+                                    Se sugiere revisión de procesos en esta área.
+                                </p>
+                            </div>
+                            <div className="bg-white/10 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
+                                <p className="text-[#00D1FF] text-xs font-bold uppercase mb-1 tracking-widest">Eficiencia de Respuesta</p>
+                                <p className="font-medium text-sm text-gray-100">
+                                    El tiempo promedio de resolución es de {stats.avgResolutionTimeDays} días.
+                                    {stats.avgResolutionTimeDays > 2
+                                        ? ' Se recomienda mejorar los tiempos para casos urgentes.'
+                                        : ' El equipo está respondiendo dentro de los parámetros esperados.'}
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

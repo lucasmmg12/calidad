@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Laboratorio 3D · Calidad & Seguridad · Sanatorio Argentino</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .scene-perspective { perspective: 1000px; }
+    .preserve-3d { transform-style: preserve-3d; }
+    .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans p-6 md:p-10">
+  <div class="max-w-7xl mx-auto space-y-8">
+    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+      <div>
+        <span class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest bg-sky-500/15 text-sky-400 border border-sky-500/30">
+          Figma MCP 3D Transforms + Shaders · Sanatorio Argentino
+        </span>
+        <h1 class="text-3xl md:text-4xl font-black tracking-tight mt-2 text-white">
+          Laboratorio de Animaciones y Objetos 3D — Calidad QOAG
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">
+          Prototipos interactivos basados en las recetas 3D de Figma MCP (<code class="text-sky-300">scene3d</code>, <code class="text-sky-300">transform3d</code>, <code class="text-sky-300">Glowing particles</code> y <code class="text-sky-300">Moving gradient</code>).
+        </p>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Card 1: 6-Face KPI Cube -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between h-[420px]">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-sky-400">01 · Para Métricas (/metrics)</span>
+          <h2 class="text-lg font-black text-white mt-1">Cubo 3D de 6 Caras (KPIs)</h2>
+          <p class="text-xs text-slate-400 mt-1">Permite rotar los 6 indicadores clave del Sanatorio en un volumen compacto.</p>
+        </div>
+        <div id="cube-stage" class="scene-perspective flex-1 flex items-center justify-center cursor-grab active:cursor-grabbing">
+          <div id="demo-cube" class="preserve-3d relative" style="width: 150px; height: 150px; transform: rotateX(-22deg) rotateY(38deg);">
+            <div class="preserve-3d absolute inset-0 rounded-2xl p-4 flex flex-col justify-between bg-gradient-to-br from-[#00548B] to-[#0284C7] border border-white/20 shadow-xl" style="transform: translateZ(75px);">
+              <span class="text-[10px] font-bold uppercase opacity-80">Demanda</span>
+              <div><div class="text-3xl font-black">912</div><div class="text-xs">Recibidos</div></div>
+            </div>
+            <div class="preserve-3d absolute inset-0 rounded-2xl p-4 flex flex-col justify-between bg-gradient-to-br from-teal-600 to-emerald-600 border border-white/20 shadow-xl" style="transform: rotateY(180deg) translateZ(75px);">
+              <span class="text-[10px] font-bold uppercase opacity-80">PDCA</span>
+              <div><div class="text-3xl font-black">100%</div><div class="text-xs">Efectividad</div></div>
+            </div>
+            <div class="preserve-3d absolute inset-0 rounded-2xl p-4 flex flex-col justify-between bg-gradient-to-br from-emerald-600 to-green-700 border border-white/20 shadow-xl" style="transform: rotateY(90deg) translateZ(75px);">
+              <span class="text-[10px] font-bold uppercase opacity-80">Resolución</span>
+              <div><div class="text-3xl font-black">86%</div><div class="text-xs">Meta ≥ 80%</div></div>
+            </div>
+            <div class="preserve-3d absolute inset-0 rounded-2xl p-4 flex flex-col justify-between bg-gradient-to-br from-red-600 to-rose-700 border border-white/20 shadow-xl" style="transform: rotateY(-90deg) translateZ(75px);">
+              <span class="text-[10px] font-bold uppercase opacity-80">Triage IA</span>
+              <div><div class="text-3xl font-black">47</div><div class="text-xs">Críticos Rojos</div></div>
+            </div>
+            <div class="preserve-3d absolute inset-0 rounded-2xl p-4 flex flex-col justify-between bg-gradient-to-br from-amber-500 to-orange-600 border border-white/20 shadow-xl" style="transform: rotateX(90deg) translateZ(75px);">
+              <span class="text-[10px] font-bold uppercase opacity-80">Humanización</span>
+              <div><div class="text-3xl font-black">★ 75</div><div class="text-xs">Felicitaciones</div></div>
+            </div>
+            <div class="preserve-3d absolute inset-0 rounded-2xl p-4 flex flex-col justify-between bg-gradient-to-br from-indigo-600 to-violet-700 border border-white/20 shadow-xl" style="transform: rotateX(-90deg) translateZ(75px);">
+              <span class="text-[10px] font-bold uppercase opacity-80">Respuesta</span>
+              <div><div class="text-3xl font-black">3.2d</div><div class="text-xs">SLA Promedio</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="text-xs text-slate-400 text-center">Arrastrá el cubo con el mouse para inspeccionar cada cara</div>
+      </div>
+
+      <!-- Card 2: 3D Procedural Medical Cross + Particles -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between h-[420px]">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-teal-400">02 · Para Inicio (/) y Presentación</span>
+          <h2 class="text-lg font-black text-white mt-1">Cruz Clínica 3D + Bokeh Shader</h2>
+          <p class="text-xs text-slate-400 mt-1">Geometría 3D con iluminación direccional y partículas orbitales.</p>
+        </div>
+        <canvas id="standalone-canvas" width="340" height="240" class="w-full flex-1 cursor-grab"></canvas>
+        <div class="text-xs text-slate-400 text-center">Renderizado 3D en tiempo real a 60 FPS</div>
+      </div>
+
+      <!-- Card 3: 3D Flip Certificate Card -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between h-[420px]">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-amber-400">03 · Para Felicitaciones y Mis Casos</span>
+          <h2 class="text-lg font-black text-white mt-1">Certificado 3D Flip & Parallax</h2>
+          <p class="text-xs text-slate-400 mt-1">Capas flotantes en eje Z (<code class="text-amber-300">translateZ</code>) y reverso de validación.</p>
+        </div>
+        <div class="scene-perspective flex-1 flex items-center justify-center">
+          <div id="demo-flip" onclick="this.style.transform = this.dataset.flipped === '1' ? 'rotateY(0deg)' : 'rotateY(180deg)'; this.dataset.flipped = this.dataset.flipped === '1' ? '0' : '1';" class="preserve-3d relative w-full h-48 cursor-pointer transition-transform duration-700">
+            <div class="backface-hidden preserve-3d absolute inset-0 rounded-2xl p-5 bg-gradient-to-br from-[#003E6B] via-[#00548B] to-teal-700 border border-amber-400/50 flex flex-col justify-between shadow-xl">
+              <span class="text-[10px] font-black uppercase bg-amber-400 text-slate-900 px-2.5 py-0.5 rounded-full w-fit" style="transform: translateZ(25px);">★ Reconocimiento Oficial</span>
+              <div style="transform: translateZ(45px);">
+                <div class="text-base font-black">UCI — Cuidados Intensivos</div>
+                <p class="text-xs text-sky-100 mt-1">"Excelente trato humano y dedicación con el paciente."</p>
+              </div>
+              <span class="text-[11px] text-amber-300 font-bold" style="transform: translateZ(25px);">Click para girar 180° →</span>
+            </div>
+            <div class="backface-hidden preserve-3d absolute inset-0 rounded-2xl p-5 bg-gradient-to-br from-emerald-900 to-teal-800 border border-emerald-400/50 flex flex-col justify-between shadow-xl" style="transform: rotateY(180deg);">
+              <span class="text-[10px] font-black uppercase bg-emerald-300 text-emerald-950 px-2.5 py-0.5 rounded-full w-fit">✓ Validado por Comité de Calidad</span>
+              <p class="text-xs text-emerald-100">Certificado institucional listo para descargar en PDF de alta resolución.</p>
+              <span class="text-[11px] text-amber-200 font-bold">← Click para volver</span>
+            </div>
+          </div>
+        </div>
+        <div class="text-xs text-slate-400 text-center">Hacé clic sobre la tarjeta para invertirla en 3D</div>
+      </div>
+    </div>
+  </div>
+  <script>
+    let rx = -22, ry = 38;
+    const cube = document.getElementById('demo-cube');
+    setInterval(() => {
+      ry += 0.4;
+      cube.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
+    }, 16);
+  </script>
+</body>
+</html>

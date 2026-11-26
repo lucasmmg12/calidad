@@ -5,6 +5,7 @@ import { DoraAssistant } from './DoraAssistant';
 import { SearchableSelect } from './SearchableSelect';
 import { SECTOR_OPTIONS } from '../constants/sectors';
 import { VoiceRecorder } from './VoiceRecorder';
+import { DoraOrb3D } from './DoraOrb3D';
 import { generateValidationPDF } from '../utils/validationPdfExport';
 
 type ReportMode = 'hallazgo' | 'felicitacion';
@@ -313,6 +314,13 @@ export const ReportingForm = () => {
     return (
         <div className="max-w-3xl mx-auto p-4 md:p-6 mb-20 relative">
             <div className="mb-9 text-center space-y-3">
+                <div className="flex justify-center mb-2">
+                    <DoraOrb3D
+                        size={84}
+                        mode={loading ? 'processing' : reportMode === 'felicitacion' ? 'gold' : 'clinical'}
+                        withBackdrop={true}
+                    />
+                </div>
                 <h1 className="text-3xl md:text-5xl font-display font-black text-sanatorio-primary tracking-tight">
                     Canal de Calidad y Reconocimiento
                 </h1>
